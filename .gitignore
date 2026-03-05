@@ -1,0 +1,20 @@
+# Folders
+data/
+models/
+logs/
+drafts/
+
+# Secrets
+.env
+
+# Python-generated files
+__pycache__/
+*.py[oc]
+build/
+dist/
+wheels/
+*.egg-info
+.vscode/
+
+# Virtual environments
+.venv
