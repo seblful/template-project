@@ -1,0 +1,85 @@
+# Cursor AI - Files and directories to ignore during indexing
+
+# Python cache and build files
+
+**pycache**/
+_.py[cod]
+_$py.class
+\*.so
+
+# Virtual environments
+
+.venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution and packaging
+
+dist/
+build/
+_.egg-info/
+_.egg
+wheels/
+
+# Testing and coverage
+
+.tox/
+.nox/
+.coverage
+.coverage.\*
+.pytest_cache/
+htmlcov/
+cover/
+
+# IDE specific files
+
+.vscode/
+.idea/
+_.swp
+_.swo
+\*~
+
+# OS generated files
+
+.DS_Store
+Thumbs.db
+
+# Logs and data
+
+logs/
+data/
+models/
+
+# Secrets and credentials
+
+.env
+_.key
+_.pem
+secrets/
+credentials/
+
+# Documentation builds
+
+docs/\_build/
+site/
+
+# Large generated files
+
+_.log
+_.sqlite
+\*.sqlite3
+
+# Jupyter notebook checkpoints
+
+.ipynb_checkpoints/
+
+# Node modules (if using web frameworks)
+
+node_modules/
+
+# Database files
+
+_.db
+_.db-journal
