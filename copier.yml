@@ -14,12 +14,11 @@ package_name:
 author_name:
   type: str
   help: What is the author name?
-  default: seblful
+  default: Aliaksei Chymba
 
 author_email:
   type: str
   help: What is the author email?
-  default: alesha.chimba@gmail.com
 
 license:
   type: str
@@ -28,7 +27,7 @@ license:
     - MIT
     - Apache
     - CC0
-    - Proprietary
+    - EULA
   default: MIT
 
 python_version:
