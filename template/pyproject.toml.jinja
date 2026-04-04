@@ -3,7 +3,7 @@ name = "{{ project_name }}"
 description = "{{ project_description }}"
 readme = "README.md"
 requires-python = ">={{ python_version }}"
-dynamic = ["version"]
+version = "0.1.0"
 {% if license %}
 license = { text = "{{ license }}" }
 {% endif %}
@@ -46,10 +46,6 @@ docs = [
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
-
-[tool.hatch.version]
-source = "static"
-version = "0.1.0"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/{{ package_name }}"]
