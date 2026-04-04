@@ -4,14 +4,14 @@ project_name:
   type: str
   help: What is your project name?
 
+package_name:
+  type: str
+  help: What is your Python package name? (snake_case)
+
 project_description:
   type: str
   help: What is the project description?
   default: A Python project.
-
-package_name:
-  type: str
-  help: What is your Python package name? (snake_case)
 
 author_name:
   type: str
