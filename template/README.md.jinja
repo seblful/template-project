@@ -1,137 +1,23 @@
 # {{ project_name }}
 
-A modern Python project following industry best practices for professional Python development.
+{{ project_description | default("A Python project.") }}
 
-## Features
-
-- **Modern Python Setup**: Supports Python 3.12+
-- **Configuration Management**: Pydantic-based settings with environment variable support
-- **Structured Logging**: Advanced logging with structlog, color support, JSON output, and Rich integration
-- **Testing**: Comprehensive test suite with pytest and coverage reporting
-- **CLI Interface**: Built-in command-line interface using Typer
-- **Type Safety**: Full type hints and mypy configuration
-
-## Quick Start
-
-### Installation
-
-```bash
-# Clone repository
-git clone <your-repo-url>
-cd {{ project_name }}
-
-# Create virtual environment
-python -m venv .venv
-source .venv/bin/activate  # On Windows: .venv\Scripts\activate
-
-# Install with development dependencies
-pip install -e ".[dev]"
-```
-
-### Basic Usage
+## Usage
 
 ```python
-from {{ package_name }} import settings, setup_logging
-
-# Get application settings
-print(f"Running {settings.app.app_name} v{settings.app.app_version}")
-
-# Setup logging
-setup_logging()
+import {{ package_name }}
 ```
 
-### Command Line Interface
+## Environment Variables
 
-```bash
-# Show help
-{{ project_name }} --help
-
-# Say hello
-{{ project_name }} hello
-
-# Display project information
-{{ project_name }} info
-
-# Initialize project directories
-{{ project_name }} init
-```
-
-## Project Structure
-
-```
-{{ project_name }}/
-├── src/
-│   └── {{ package_name }}/          # Main package
-│       ├── __init__.py
-│       ├── cli.py                   # Command-line interface
-│       ├── settings.py              # Pydantic settings
-│       └── logging.py               # Structlog logging
-├── tests/                           # Test suite
-│   └── conftest.py                  # Pytest configuration
-├── scripts/                         # Utility scripts
-├── docs/                            # Documentation
-{% if include_notebooks %}
-├── notebooks/                       # Jupyter notebooks
-{% endif %}
-├── logs/                            # Log files
-├── pyproject.toml                   # Project configuration
-├── README.md                        # This file
-├── LICENSE                          # License
-└── .gitignore                      # Git ignore patterns
-```
-
-## Configuration
-
-### Environment Variables
-
-Create a `.env` file in project root:
-
-```env
-# Application
-APP__APP_NAME={{ project_name }}
-APP__DEBUG=false
-APP__ENVIRONMENT=development
-
-# Logging
-LOGGING__LOG_LEVEL=INFO
-LOGGING__LOG_FILE=logs/app.log
-
-# Paths
-PATHS__DATA_DIR=data
-PATHS__LOGS_DIR=logs
-```
-
-## Development
-
-### Code Quality Tools
-
-```bash
-# Format code with Ruff
-ruff format src/ tests/
-
-# Lint with Ruff
-ruff check src/ tests/
-
-# Type checking with mypy
-mypy src/
-
-# Type checking with ty (faster alternative)
-ty src/
-
-# Run all quality checks
-ruff format src/ tests/ && ruff check src/ tests/ && mypy src/
-```
-
-### Testing
-
-```bash
-# Run tests
-pytest
-
-# Run specific test file
-pytest tests/
-```
+| Variable | Description | Default |
+|----------|-------------|---------|
+| `APP__APP_NAME` | Application name | `{{ project_name }}` |
+| `APP__DEBUG` | Enable debug mode | `false` |
+| `APP__ENVIRONMENT` | Environment | `development` |
+| `LOGGING__LOG_LEVEL` | Log level | `INFO` |
+| `LOGGING__LOG_FILE` | Log file path | `logs/app.log` |
 
 ## License
 
-This project is licensed under the {% if license %}{{ license }}{% else %}MIT{% endif %} License - see the [LICENSE](LICENSE) file for details.
+{{ license }} License - see [LICENSE](LICENSE) for details.

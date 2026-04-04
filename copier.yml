@@ -37,6 +37,11 @@ python_version:
   help: What Python version should the project target?
   default: "3.13"
 
+project_description:
+  type: str
+  help: What is the project description?
+  default: A Python project.
+
 include_notebooks:
   type: bool
   help: Should notebooks directory be included?
@@ -45,3 +50,4 @@ include_notebooks:
 _tasks:
   - ["uv", "sync"]
   - ["git", "init"]
+
