@@ -2,8 +2,8 @@
 
 import typer
 
-from {{ package_name }}.settings import settings
 from {{ package_name }}.logging import setup_logging
+from {{ package_name }}.settings import settings
 
 app = typer.Typer(
     help="{{ project_name }} CLI",

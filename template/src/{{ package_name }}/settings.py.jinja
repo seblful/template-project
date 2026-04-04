@@ -31,7 +31,10 @@ class LoggingSettings(BaseSettings):
 
 
 class Settings(BaseSettings):
-    """Application settings with environment variable support using __ delimiter for nested groups."""
+    """
+    Application settings with environment variable support
+    using __ delimiter for nested groups.
+    """
 
     app: AppSettings = Field(default_factory=AppSettings)
     paths: PathsSettings = Field(default_factory=PathsSettings)
