@@ -1,0 +1,72 @@
+# Files and directories to ignore (ripgrep, etc.)
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytype/
+
+# Virtual environments
+.venv/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# Distribution / packaging
+dist/
+build/
+*.egg-info/
+*.egg/
+
+# Testing / coverage
+.tox/
+.nox/
+.coverage
+.coverage.*
+.pytest_cache/
+htmlcov/
+cover/
+.hypothesis/
+
+# Logs
+logs/
+*.log
+
+# Environments
+.env
+.env.local
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Secrets
+*.key
+*.pem
+secrets/
+credentials/
+
+# Docs
+docs/_build/
+site/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Data (project-specific)
+data/
+models/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
