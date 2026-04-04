@@ -22,7 +22,6 @@ class PathsSettings(BaseSettings):
     base_dir: Path = Field(default_factory=lambda: Path.cwd())
     data_dir: Path = Field(default_factory=lambda: Path("data"))
     logs_dir: Path = Field(default_factory=lambda: Path("logs"))
-    models_dir: Path = Field(default_factory=lambda: Path("models"))
 
 
 class LoggingSettings(BaseSettings):
@@ -60,7 +59,6 @@ def get_settings() -> Settings:
         _settings.paths.base_dir.mkdir(parents=True, exist_ok=True)
         _settings.paths.data_dir.mkdir(parents=True, exist_ok=True)
         _settings.paths.logs_dir.mkdir(parents=True, exist_ok=True)
-        _settings.paths.models_dir.mkdir(parents=True, exist_ok=True)
     return _settings
 
 
