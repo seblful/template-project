@@ -1,7 +1,7 @@
+_subdirectory: template
 _exclude:
   - licenses
-  - .git
-  - copier.yml
+  - uv.lock
 
 project_name:
   type: str
@@ -19,6 +19,10 @@ author_name:
 author_email:
   type: str
   help: What is the author email?
+
+current_year:
+  type: str
+  help: What year should be in the copyright notice?
 
 license:
   type: str
@@ -39,3 +43,6 @@ include_notebooks:
   type: bool
   help: Should notebooks directory be included?
   default: true
+
+_tasks:
+  - ["uv", "sync"]
