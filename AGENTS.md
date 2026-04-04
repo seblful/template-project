@@ -50,12 +50,15 @@ _Note: Sort imports alphabetically within each group. Use absolute imports for p
 ## Logging
 
 - Use **structlog** for all logging. Never use standard `logging` directly.
+- Configure via `setup_logging()` from `template_project.logging`.
+- Use `structlog.get_logger()` to create loggers.
 - Log levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
 
 ## Settings
 
 - Use **Pydantic Settings** with structured groups for all configuration.
-- All settings live in `src/project/settings.py` using a single `Settings` class.
+- All settings live in `src/template_project/settings.py`.
+- Import settings directly: `from template_project.settings import settings`.
 - Use nested models with `__` delimiter for environment variables (e.g., `APP__DEBUG`, `LOGGING__LEVEL`).
 
 ## CLI & Scripts

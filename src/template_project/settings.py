@@ -47,23 +47,4 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
     )
 
-
-_settings: Optional[Settings] = None
-
-
-def get_settings() -> Settings:
-    """Get the global settings instance, creating it if necessary."""
-    global _settings
-    if _settings is None:
-        _settings = Settings()
-        _settings.paths.base_dir.mkdir(parents=True, exist_ok=True)
-        _settings.paths.data_dir.mkdir(parents=True, exist_ok=True)
-        _settings.paths.logs_dir.mkdir(parents=True, exist_ok=True)
-    return _settings
-
-
-def reload_settings() -> Settings:
-    """Reload settings from environment variables."""
-    global _settings
-    _settings = Settings()
-    return _settings
+settings = Settings()
