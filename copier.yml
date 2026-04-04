@@ -49,4 +49,5 @@ include_notebooks:
 
 _tasks:
   - ["uv", "sync"]
+  - ["uv", "run", "ruff", "format", "."]
   - ["git", "init"]
