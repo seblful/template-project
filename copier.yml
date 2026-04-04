@@ -1,6 +1,4 @@
 _subdirectory: template
-_exclude:
-  - licenses
 
 project_name:
   type: str
@@ -32,7 +30,6 @@ license:
     - Apache
     - MIT
     - EULA
-    - CC0
   default: Apache
 
 python_version:
