@@ -3,39 +3,35 @@
 import sys
 from pathlib import Path
 
-# Add parent directory to path to import project modules
-sys.path.insert(0, str(Path(__file__).parent.parent))
+sys.path.insert(0, str(Path(__file__).parent.parent / "src"))
 
-from config import get_settings, setup_logging, get_logger
+from {{ package_name }}.settings import settings
+from {{ package_name }}.logging import setup_logging
+import structlog
 
 
 def main():
     """Set up the project."""
-    print("Setting up Template Project...")
+    print("Setting up {{ project_name }}...")
 
-    # Get settings and ensure directories exist
-    settings = get_settings()
-    settings.ensure_directories()
+    for dir_path in [settings.paths.data_dir, settings.paths.logs_dir]:
+        dir_path.mkdir(parents=True, exist_ok=True)
 
     print(f"✓ Created directories:")
-    print(f"  - {settings.data_dir}")
-    print(f"  - {settings.logs_dir}")
-    print(f"  - {settings.models_dir}")
+    print(f"  - {settings.paths.data_dir}")
+    print(f"  - {settings.paths.logs_dir}")
 
-    # Setup logging
     setup_logging()
 
-    # Get logger and log setup completion
-    logger = get_logger(__name__)
+    logger = structlog.get_logger(__name__)
     logger.info("Project setup completed successfully")
 
     print(f"\n✓ Project setup completed!")
-    print(f"  Application: {settings.app_name}")
-    print(f"  Version: {settings.app_version}")
-    print(f"  Environment: {settings.environment}")
-    print(f"  Log Level: {settings.log_level}")
+    print(f"  Application: {settings.app.app_name}")
+    print(f"  Version: {settings.app.app_version}")
+    print(f"  Environment: {settings.app.environment}")
+    print(f"  Log Level: {settings.logging.log_level}")
 
-    # Check for .env file
     env_file = Path(".env")
     if not env_file.exists():
         print(f"\n⚠ Warning: No .env file found.")

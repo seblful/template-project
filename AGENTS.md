@@ -4,7 +4,7 @@ This document outlines the architecture, environment setup, and coding standards
 
 ## Environment Setup
 
-- **Python Version**: `3.13`
+- **Python Version**: `{{ python_version }}`
 - **Package Manager**:(https://docs.astral.sh/uv/)
 
 **Workflow:**
@@ -40,7 +40,7 @@ _Note: Sort imports alphabetically within each group. Use absolute imports for p
 
 - **Strict Rule**: Type hints are mandatory for **all** function signatures (arguments and return types).
 - **Syntax**: Use modern Python 3.10+ syntax (e.g., `list`, `str | None`).
-- **Validation**: We use **ty** for static type checking and LSP integrations. Your code must pass `uvx ty` check with zero errors.
+- **Validation**: We use **ty** for static type checking and LSP integrations. Your code must pass `uvx ty` check with zero errors.
 
 ## File System Operations
 
@@ -50,15 +50,15 @@ _Note: Sort imports alphabetically within each group. Use absolute imports for p
 ## Logging
 
 - Use **structlog** for all logging. Never use standard `logging` directly.
-- Configure via `setup_logging()` from `template_project.logging`.
+- Configure via `setup_logging()` from `{{ package_name }}.logging`.
 - Use `structlog.get_logger()` to create loggers.
 - Log levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
 
 ## Settings
 
 - Use **Pydantic Settings** with structured groups for all configuration.
-- All settings live in `src/template_project/settings.py`.
-- Import settings directly: `from template_project.settings import settings`.
+- All settings live in `src/{{ package_name }}/settings.py`.
+- Import settings directly: `from {{ package_name }}.settings import settings`.
 - Use nested models with `__` delimiter for environment variables (e.g., `APP__DEBUG`, `LOGGING__LEVEL`).
 
 ## CLI & Scripts
@@ -96,8 +96,6 @@ We follow a **Simplified Conventional Commits** format. This keeps history clean
 _(Keep the description lowercase, concise, and do not end with a period)._
 
 ## Allowed Types
-
-Use only the following core types:
 
 | Type           | Description                                                               |
 | :------------- | :------------------------------------------------------------------------ |

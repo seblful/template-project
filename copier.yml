@@ -1,0 +1,33 @@
+project_name:
+  type: str
+  help: What is your project name?
+  pattern: "^[a-zA-Z][a-zA-Z0-9_-]*$"
+
+package_name:
+  type: str
+  help: What is your Python package name? (snake_case)
+  validator: "^[a-z_][a-z0-9_]*$"
+
+author_name:
+  type: str
+  help: What is the author name?
+  default: seblful
+
+author_email:
+  type: str
+  help: What is the author email?
+  default: ""
+
+license:
+  type: str
+  help: What license should the project use?
+
+python_version:
+  type: str
+  help: What Python version should the project target?
+  default: "3.13"
+
+include_notebooks:
+  type: bool
+  help: Should notebooks directory be included?
+  default: true

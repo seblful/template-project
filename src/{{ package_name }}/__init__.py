@@ -1,0 +1,16 @@
+"""{{ project_name }} - A modern Python project following best practices."""
+
+from {{ package_name }}.logging import setup_logging
+from {{ package_name }}.settings import settings
+
+__version__ = "0.1.0"
+__author__ = "{{ author_name }}"
+__email__ = "{{ author_email }}"
+
+__all__ = [
+    "__version__",
+    "__author__",
+    "__email__",
+    "settings",
+    "setup_logging",
+]

@@ -10,7 +10,7 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 class AppSettings(BaseSettings):
     """Application settings group."""
 
-    app_name: str = Field(default="Template Project", description="Application name")
+    app_name: str = Field(default="{{ project_name }}", description="Application name")
     app_version: str = Field(default="0.1.0", description="Application version")
     debug: bool = Field(default=False, description="Debug mode")
     environment: str = Field(default="development", description="Environment name")
@@ -46,5 +46,6 @@ class Settings(BaseSettings):
         extra="ignore",
         env_nested_delimiter="__",
     )
+
 
 settings = Settings()
