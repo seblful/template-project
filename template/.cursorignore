@@ -1,85 +1,72 @@
 # Cursor AI - Files and directories to ignore during indexing
 
-# Python cache and build files
-
-**pycache**/
-_.py[cod]
-_$py.class
-\*.so
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.pytype/
 
 # Virtual environments
-
 .venv/
 venv/
 ENV/
 env.bak/
 venv.bak/
 
-# Distribution and packaging
-
+# Distribution / packaging
 dist/
 build/
-_.egg-info/
-_.egg
-wheels/
+*.egg-info/
+*.egg/
 
-# Testing and coverage
-
+# Testing / coverage
 .tox/
 .nox/
 .coverage
-.coverage.\*
+.coverage.*
 .pytest_cache/
 htmlcov/
 cover/
+.hypothesis/
 
-# IDE specific files
+# Logs
+logs/
+*.log
 
+# Environments
+.env
+.env.local
+
+# IDE
 .vscode/
 .idea/
-_.swp
-_.swo
-\*~
+*.swp
+*.swo
+*~
 
-# OS generated files
-
+# OS
 .DS_Store
 Thumbs.db
 
-# Logs and data
-
-logs/
-data/
-models/
-
-# Secrets and credentials
-
-.env
-_.key
-_.pem
+# Secrets
+*.key
+*.pem
 secrets/
 credentials/
 
-# Documentation builds
-
-docs/\_build/
+# Docs
+docs/_build/
 site/
 
-# Large generated files
-
-_.log
-_.sqlite
-\*.sqlite3
-
-# Jupyter notebook checkpoints
-
+# Jupyter
 .ipynb_checkpoints/
 
-# Node modules (if using web frameworks)
+# Data (project-specific)
+data/
+models/
 
-node_modules/
-
-# Database files
-
-_.db
-_.db-journal
+# Database
+*.db
+*.sqlite
+*.sqlite3
