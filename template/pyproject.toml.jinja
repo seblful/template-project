@@ -17,7 +17,7 @@ keywords = ["python", "best-practices"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
-    {% if license %}"License :: OSI Approved :: {{ license }} License",{% endif %}
+    {% if license == "MIT" or license == "Apache" %}"License :: OSI Approved :: {{ license }} License",{% endif %}
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: 3.12",
     "Programming Language :: Python :: 3.13",

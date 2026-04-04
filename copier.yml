@@ -18,20 +18,22 @@ author_name:
 author_email:
   type: str
   help: What is the author email?
+  default: alesha.chimba@gmail.com
 
 current_year:
   type: str
   help: What year should be in the copyright notice?
+  default: "2026"
 
 license:
   type: str
   help: What license should the project use?
   choices:
-    - MIT
     - Apache
-    - CC0
+    - MIT
     - EULA
-  default: MIT
+    - CC0
+  default: Apache
 
 python_version:
   type: str
@@ -41,7 +43,7 @@ python_version:
 include_notebooks:
   type: bool
   help: Should notebooks directory be included?
-  default: true
+  default: false
 
 _tasks:
   - ["uv", "sync"]
