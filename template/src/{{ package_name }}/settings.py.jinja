@@ -19,7 +19,7 @@ class PathsSettings(BaseSettings):
 
     root_dir: Path = Field(
         default=Path(__file__).resolve().parent.parent.parent,
-        frozen=True
+        frozen=True,
     )
 
 
