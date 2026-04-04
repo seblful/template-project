@@ -33,12 +33,17 @@ def setup_logging(
     logging.getLogger().handlers[0].setLevel(getattr(logging, f_level))
     logging.getLogger().handlers[1].setLevel(getattr(logging, c_level))
 
+    if settings.app.environment == "production":
+        renderer = structlog.processors.JSONRenderer()
+    else:
+        renderer = structlog.dev.ConsoleRenderer(colors=True)
+
     processors = [
         structlog.contextvars.merge_contextvars,
         structlog.processors.add_log_level,
         structlog.processors.StackInfoRenderer(),
         structlog.dev.set_exc_info,
-        structlog.dev.ConsoleRenderer(colors=True),
+        renderer,
     ]
 
     structlog.configure(

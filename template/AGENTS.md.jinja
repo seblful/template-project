@@ -15,6 +15,17 @@ uv sync
 uv run main.py
 ```
 
+## Dependencies
+
+**Rule of Three**: If you need to add a dependency, use `uv add <package>`. **Never use pip.**
+
+```bash
+uv add <package>        # production dependency
+uv add --dev <package>  # dev dependency
+```
+
+After adding, always run `uv sync` to lock dependencies.
+
 # Code Standards & Conventions
 
 We strictly adhere to **PEP 8** standards. Simplicity is key—avoid over-engineering solutions.
@@ -89,6 +100,14 @@ We use `pytest` as our testing framework. All new features and bug fixes must be
 **Important**: Only create commits when the user **explicitly asks** you to do so. Do not commit changes proactively.
 
 We follow a **Simplified Conventional Commits** format. This keeps history clean and machine-readable without unnecessary complexity.
+
+## Pre-commit Hooks
+
+This project uses [pre-commit](https://pre-commit.com/) to ensure code quality before commits. hooks run automatically on each commit (when installed via `pre-commit install`).
+
+```bash
+uv run pre-commit install
+```
 
 ## Commit Message Format
 

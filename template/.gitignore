@@ -73,6 +73,9 @@ credentials/
 # Ruff
 .ruff_cache/
 
+# Pre-commit
+.pre-commit-cache/
+
 # pyinstaller
 *.manifest
 *.spec
