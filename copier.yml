@@ -1,7 +1,6 @@
 _subdirectory: template
 _exclude:
   - licenses
-  - uv.lock
 
 project_name:
   type: str
@@ -46,3 +45,4 @@ include_notebooks:
 
 _tasks:
   - ["uv", "sync"]
+  - ["git", "init"]
