@@ -1,129 +1,117 @@
 # Agent Instructions & Project Standards
 
-This document outlines the architecture, environment setup, and coding standards for this project. **All AI agents contributing to this repository must strictly adhere to these rules.**
+**All AI agents must strictly adhere to these rules.**
 
-## Environment Setup
+---
 
-- **Python Version**: `{{ python_version }}`
-- **Package Manager**: [uv](https://docs.astral.sh/uv/)
+## Dependencies & Package Manager
 
-**Workflow:**
-Do not rely on standard `pip` or `venv` commands. Consistently use `uv` for dependency management and execution:
+- **Python**: `{{ python_version }}`
+- **Package Manager**: [uv](https://docs.astral.sh/uv/) — **never** use `pip` or `venv`
 
-```bash
-uv sync
-uv run main.py
-```
+| Command | Purpose |
+|:--------|:--------|
+| `uv add <package>` | Add production dependency |
+| `uv add --dev <package>` | Add dev dependency |
+| `uv sync` | Lock dependencies |
+| `uv run <cmd>` | Run commands |
 
-## Dependencies
+---
 
-**Rule of Three**: If you need to add a dependency, use `uv add <package>`. **Never use pip.**
+## Code Standards
 
-```bash
-uv add <package>        # production dependency
-uv add --dev <package>  # dev dependency
-```
+Follow **PEP 8**. Simplicity is key—avoid over-engineering.
 
-After adding, always run `uv sync` to lock dependencies.
+### Naming
+- Variables/Functions: `snake_case`
+- Classes: `CamelCase`
+- Strings: f-strings (`f"..."`)
 
-# Code Standards & Conventions
+### Imports
+- **Order** (enforced by Ruff): stdlib → third-party → local
+- Sort alphabetically within groups, use absolute imports
+- Organize with: `uv run ruff check --select I --fix .`
 
-We strictly adhere to **PEP 8** standards. Simplicity is key—avoid over-engineering solutions.
+### Type Hints
+- Mandatory for all function signatures (arguments and return types)
+- Use Python 3.10+ syntax (`list`, `str | None`)
+- Validate with: `uvx ty` — must pass with zero errors
 
-## Formatting & Naming
+### File System
+- **Always** use `pathlib.Path`
+- **Never** use `os.path.join` or string concatenation
 
-- **Variables/Functions**: Use `snake_case`.
-- **Classes**: Use `CamelCase` (PascalCase).
-- **Docstrings**: Follow the **Google Python Style Guide**.
-- **Strings**: Use f-strings (`f"…"`) for all strings that include variables or expressions.
+### Logging
+- Use **structlog** only (never `logging` directly)
+- Configure via `setup_logging()` from `{{ package_name }}.logging`
+- Create loggers with: `structlog.get_logger()`
 
-## Imports
+### Settings
+- Use **Pydantic Settings** with structured groups
+- Location: `src/{{ package_name }}/settings.py`
+- Import: `from {{ package_name }}.settings import settings`
+- Nest with `__` delimiter: `APP__DEBUG`, `LOGGING__LEVEL`
 
-Ruff handles import organization automatically. Run `uv run ruff check --select I --fix .` to organize imports.
+### CLI & Scripts
+- Use **typer** for all entry points
 
-Required order (enforced by Ruff):
-1. **Standard library** (e.g., `pathlib`, `logging`)
-2. **Third-party** (e.g., `typer`, `chromadb`)
-3. **Local / Project** (e.g., `from my_project.config import …`)
+### Progress Bars
+- Use `tqdm` with `desc` parameter for clarity
 
-_Sort alphabetically within each group. Use absolute imports for project code._
+### Security
+- **Never** hardcode secrets (API keys, passwords, tokens)
+- Store secrets in environment variables or `.env` files (never commit `.env`)
+- Use `pydantic-settings` for secret management
 
-## Type Hinting
+### Datetime
+- **Always** use timezone-aware datetimes
+- Use `datetime.now(timezone.utc)` instead of `datetime.utcnow()`
+- Serialize with `.isoformat()` for JSON; parse with `datetime.fromisoformat()`
 
-- **Strict Rule**: Type hints are mandatory for **all** function signatures (arguments and return types).
-- **Syntax**: Use modern Python 3.10+ syntax (e.g., `list`, `str | None`).
-- **Validation**: We use **ty** for static type checking and LSP integrations. Your code must pass `uvx ty` check with zero errors.
+### ABC & Protocols
+- Use `abc.ABC` for explicit inheritance-based polymorphism
+- Use `typing.Protocol` for structural typing (duck typing)
+- Mark methods with `@abstractmethod` when requiring implementation
 
-## File System Operations
+---
 
-- **Strict Rule**: **NEVER** use `os.path.join` or string concatenation for paths.
-- **Requirement**: **ALWAYS** use `pathlib.Path`.
+## Testing
 
-## Logging
+- **Framework**: pytest
+- **Location**: `tests/` mirroring project structure
+- **Naming**: Functions start with `test_`
+- **Fixtures**: Use pytest fixtures (not class-based setup)
+- **Rule**: All new features and bug fixes require tests
 
-- Use **structlog** for all logging. Never use standard `logging` directly.
-- Configure via `setup_logging()` from `{{ package_name }}.logging`.
-- Use `structlog.get_logger()` to create loggers.
-- Log levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+Run tests with: `uv run pytest`
 
-## Settings
+---
 
-- Use **Pydantic Settings** with structured groups for all configuration.
-- All settings live in `src/{{ package_name }}/settings.py`.
-- Import settings directly: `from {{ package_name }}.settings import settings`.
-- Use nested models with `__` delimiter for environment variables (e.g., `APP__DEBUG`, `LOGGING__LEVEL`).
+## Git Workflow
 
-## CLI & Scripts
+### Rule
+Only create commits when the user **explicitly asks**. Never commit proactively.
 
-- Use `typer` for all scripts and CLI entry points. It natively integrates with our type hints to produce clear help documentation and argument parsing.
-
-## Progress Bars
-
-- Use `tqdm` for progress feedback when iterating over long-running loops.
-- Set the `desc` parameter for clarity (e.g., `tqdm(items, desc="Processing files")`).
-
-# Testing Standards
-
-We use `pytest` as our testing framework. All new features and bug fixes must be accompanied by tests.
-
-- **Location**: Place all tests in the `tests/` directory. Mirror the project structure (e.g., tests for `src/parser.py` go in `tests/test_parser.py`).
-- **Naming**: Test functions must begin with `test_` (e.g., `test_extract_text_returns_string()`).
-- **Fixtures**: Use `pytest` fixtures for setup and teardown instead of standard class-based setups.
-- **Execution**: Always run tests using `uv`:
-
-  ```bash
-  uv run pytest
-  ```
-
-# Git Workflow
-
-**Important**: Only create commits when the user **explicitly asks** you to do so. Do not commit changes proactively.
-
-We follow a **Simplified Conventional Commits** format. This keeps history clean and machine-readable without unnecessary complexity.
-
-## Pre-commit Hooks
-
-This project uses [pre-commit](https://pre-commit.com/) to ensure code quality before commits. hooks run automatically on each commit (when installed via `pre-commit install`).
-
+### Pre-commit
 ```bash
 uv run pre-commit install
 ```
 
-## Commit Message Format
-
-```text
+### Conventional Commits
+```
 <type>: <description>
 ```
+- Lowercase, concise, no trailing period
 
-_(Keep the description lowercase, concise, and do not end with a period)._
+### Types
 
-## Allowed Types
+| Type | Purpose |
+|:-----|:--------|
+| `feat` | New feature |
+| `fix` | Bug fix |
+| `refactor` | Code change without feature/bug change |
+| `test` | Test updates |
+| `docs` | Documentation only |
+| `chore` | Routine tasks, dependency updates |
 
-| Type           | Description                                                               |
-| :------------- | :------------------------------------------------------------------------ |
-| **`feat`**     | A new feature or functionality                                            |
-| **`fix`**      | A bug fix                                                                 |
-| **`refactor`** | A code change that neither fixes a bug nor adds a feature (e.g., cleanup) |
-| **`test`**     | Adding missing tests or correcting existing tests                         |
-| **`docs`**     | Documentation-only changes (like updating README.md)                      |
-| **`chore`**    | Routine tasks, dependency updates (`uv.lock`), or tool configurations     |
+---
