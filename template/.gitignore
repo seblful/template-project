@@ -67,7 +67,8 @@ __pypackages__/
 
 # Environments
 .env
-.venv
+.env.local
+.venv/
 env/
 venv/
 ENV/
@@ -76,6 +77,9 @@ venv.bak/
 
 # pytype static type analyzer
 .pytype/
+
+# Ruff
+.ruff_cache/
 
 # IDEs
 .vscode/

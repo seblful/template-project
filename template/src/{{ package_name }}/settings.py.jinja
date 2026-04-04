@@ -1,7 +1,6 @@
 """Application settings configuration using Pydantic."""
 
 from pathlib import Path
-from typing import Optional
 
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
@@ -19,17 +18,17 @@ class AppSettings(BaseSettings):
 class PathsSettings(BaseSettings):
     """Path settings group."""
 
-    base_dir: Path = Field(default_factory=lambda: Path.cwd())
-    data_dir: Path = Field(default_factory=lambda: Path("data"))
-    logs_dir: Path = Field(default_factory=lambda: Path("logs"))
+    root_dir: Path = Field(
+        default=Path(__file__).resolve().parent.parent.parent,
+        frozen=True
+    )
 
 
 class LoggingSettings(BaseSettings):
     """Logging settings group."""
 
-    log_level: str = Field(default="INFO", description="Logging level")
-    log_file: Optional[str] = Field(default=None, description="Log file path")
-    json_output: bool = Field(default=False, description="Output JSON logs")
+    file_level: str = Field(default="DEBUG", description="File log level")
+    console_level: str = Field(default="INFO", description="Console log level")
 
 
 class Settings(BaseSettings):

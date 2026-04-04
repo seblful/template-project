@@ -28,13 +28,14 @@ We strictly adhere to **PEP 8** standards. Simplicity is key—avoid over-engine
 
 ## Imports
 
-Group imports in this exact order, with a blank line between groups:
+Ruff handles import organization automatically. Run `uv run ruff check --select I --fix .` to organize imports.
 
+Required order (enforced by Ruff):
 1. **Standard library** (e.g., `pathlib`, `logging`)
 2. **Third-party** (e.g., `typer`, `chromadb`)
 3. **Local / Project** (e.g., `from my_project.config import …`)
 
-_Note: Sort imports alphabetically within each group. Use absolute imports for project code._
+_Sort alphabetically within each group. Use absolute imports for project code._
 
 ## Type Hinting
 
