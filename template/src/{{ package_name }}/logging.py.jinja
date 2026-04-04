@@ -10,28 +10,26 @@ from {{ package_name }}.settings import settings
 
 
 def setup_logging(
-    file_level: str | None = None,
-    console_level: str | None = None,
+    log_level: str | None = None,
     log_file: Path | None = None,
 ) -> None:
     """Configure structlog for the application."""
-    f_level = file_level or settings.logging.file_level
-    c_level = console_level or settings.logging.console_level
+    level = log_level or settings.logging.log_level
     file_path = log_file or settings.paths.root_dir / "logs" / "app.log"
 
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     logging.basicConfig(
         format="%(message)s",
-        level=getattr(logging, f_level),
+        level=getattr(logging, level),
         handlers=[
             logging.FileHandler(file_path),
             logging.StreamHandler(sys.stderr),
         ],
     )
 
-    logging.getLogger().handlers[0].setLevel(getattr(logging, f_level))
-    logging.getLogger().handlers[1].setLevel(getattr(logging, c_level))
+    logging.getLogger().handlers[0].setLevel(getattr(logging, level))
+    logging.getLogger().handlers[1].setLevel(getattr(logging, level))
 
     processors = [
         structlog.contextvars.merge_contextvars,
@@ -43,7 +41,7 @@ def setup_logging(
 
     structlog.configure(
         processors=processors,
-        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, f_level)),
+        wrapper_class=structlog.make_filtering_bound_logger(getattr(logging, level)),
         context_class=dict,
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,

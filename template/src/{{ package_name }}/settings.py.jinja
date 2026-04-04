@@ -27,8 +27,7 @@ class PathsSettings(BaseSettings):
 class LoggingSettings(BaseSettings):
     """Logging settings group."""
 
-    file_level: str = Field(default="DEBUG", description="File log level")
-    console_level: str = Field(default="INFO", description="Console log level")
+    log_level: str = Field(default="INFO", description="Log level")
 
 
 class Settings(BaseSettings):
