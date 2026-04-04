@@ -22,7 +22,8 @@ def info() -> None:
     """Display project information."""
     typer.echo(f"{settings.app.app_name} v{settings.app.app_version}")
     typer.echo(f"Environment: {settings.app.environment}")
-    typer.echo(f"Log Level: {settings.logging.log_level}")
+    typer.echo(f"File Level: {settings.logging.file_level}")
+    typer.echo(f"Console Level: {settings.logging.console_level}")
 
 
 if __name__ == "__main__":
