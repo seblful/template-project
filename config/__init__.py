@@ -1,14 +1,11 @@
-"""Configuration package for template-project."""
+"""Configuration package - re-exports from template_project for backward compatibility."""
 
-from config.settings import Settings, get_settings, reload_settings
-from config.logger import get_logger, setup_logging, LoggerMixin, log_exception
+from template_project.logging import setup_logging
+from template_project.settings import Settings, get_settings, reload_settings
 
 __all__ = [
+    "setup_logging",
     "Settings",
     "get_settings",
     "reload_settings",
-    "get_logger",
-    "setup_logging",
-    "LoggerMixin",
-    "log_exception",
 ]

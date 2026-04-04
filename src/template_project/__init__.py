@@ -1,7 +1,7 @@
 """Template Project - A modern Python template following best practices."""
 
-from config import get_settings, Settings, reload_settings
-from config import get_logger, setup_logging, LoggerMixin, log_exception
+from template_project.logging import setup_logging
+from template_project.settings import Settings, get_settings, reload_settings
 
 __version__ = "0.1.0"
 __author__ = "seblful"
@@ -14,10 +14,5 @@ __all__ = [
     "get_settings",
     "Settings",
     "reload_settings",
-    "get_logger",
     "setup_logging",
-    "LoggerMixin",
-    "log_exception",
 ]
-
-logger = get_logger(__name__)

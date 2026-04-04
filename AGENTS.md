@@ -47,6 +47,17 @@ _Note: Sort imports alphabetically within each group. Use absolute imports for p
 - **Strict Rule**: **NEVER** use `os.path.join` or string concatenation for paths.
 - **Requirement**: **ALWAYS** use `pathlib.Path`.
 
+## Logging
+
+- Use **structlog** for all logging. Never use standard `logging` directly.
+- Log levels: `DEBUG`, `INFO`, `WARNING`, `ERROR`, `CRITICAL`.
+
+## Settings
+
+- Use **Pydantic Settings** with structured groups for all configuration.
+- All settings live in `src/project/settings.py` using a single `Settings` class.
+- Use nested models with `__` delimiter for environment variables (e.g., `APP__DEBUG`, `LOGGING__LEVEL`).
+
 ## CLI & Scripts
 
 - Use `typer` for all scripts and CLI entry points. It natively integrates with our type hints to produce clear help documentation and argument parsing.
