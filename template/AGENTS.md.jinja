@@ -90,6 +90,15 @@ Run tests with: `uv run pytest`
 
 ---
 
+## Security & Safety
+
+- **Commands:** Never auto-run destructive ones (`rm -rf`, `del /s`, `curl | sh`, etc.).
+- **Secrets:** Never put API keys, passwords, or tokens in documentation or code. Use env vars.
+- **.cursorignore:** Respect ignored paths. Don't insist on indexing `.env*`, `.ssh/`, `secrets/`.
+- **MCP:** Prefer read-only access. Avoid broad tokens or full admin scopes.
+
+---
+
 ## Git Workflow
 
 ### Rule
@@ -118,6 +127,6 @@ uv run pre-commit install
 | `chore` | Routine tasks, dependency updates |
 
 ### AI-Generated Code
-- Mark AI-generated or AI-assisted commits with `[AI-Generated]` or `Co-authored-by: Cursor/opencode/Claude Code`
+- Mark AI-generated or AI-assisted commits with `Co-authored-by: Cursor/opencode/Claude Code`
 
 ---
