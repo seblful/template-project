@@ -4,6 +4,11 @@ project_name:
   type: str
   help: What is your project name?
 
+project_description:
+  type: str
+  help: What is the project description?
+  default: A Python project.
+
 package_name:
   type: str
   help: What is your Python package name? (snake_case)
@@ -18,11 +23,6 @@ author_email:
   help: What is the author email?
   default: alesha.chimba@gmail.com
 
-current_year:
-  type: str
-  help: What year should be in the copyright notice?
-  default: "2026"
-
 license:
   type: str
   help: What license should the project use?
@@ -32,15 +32,15 @@ license:
     - EULA
   default: Apache
 
+current_year:
+  type: str
+  help: What year should be in the copyright notice?
+  default: "2026"
+
 python_version:
   type: str
   help: What Python version should the project target?
   default: "3.13"
-
-project_description:
-  type: str
-  help: What is the project description?
-  default: A Python project.
 
 include_notebooks:
   type: bool
@@ -50,4 +50,3 @@ include_notebooks:
 _tasks:
   - ["uv", "sync"]
   - ["git", "init"]
-
