@@ -64,7 +64,6 @@ site/
 
 # Data (project-specific)
 data/
-models/
 
 # Database
 *.db
