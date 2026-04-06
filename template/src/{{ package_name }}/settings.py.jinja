@@ -1,7 +1,5 @@
 """Application settings configuration using Pydantic."""
 
-from pathlib import Path
-
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -12,15 +10,6 @@ class AppSettings(BaseSettings):
     app_name: str = Field(default="{{ project_name }}", description="Application name")
     app_version: str = Field(default="0.1.0", description="Application version")
     environment: str = Field(default="development", description="Environment name")
-
-
-class PathsSettings(BaseSettings):
-    """Path settings group."""
-
-    root_dir: Path = Field(
-        default=Path(__file__).resolve().parent.parent.parent,
-        frozen=True,
-    )
 
 
 class LoggingSettings(BaseSettings):
@@ -37,7 +26,6 @@ class Settings(BaseSettings):
     """
 
     app: AppSettings = Field(default_factory=AppSettings)
-    paths: PathsSettings = Field(default_factory=PathsSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
