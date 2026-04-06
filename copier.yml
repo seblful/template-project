@@ -52,6 +52,9 @@ _exclude:
   {% if license == "None" %}
   - LICENSE
   {% endif %}
+  {% if not include_notebooks %}
+  - notebooks/.gitkeep
+  {% endif %}
 
 _tasks:
   - ["uv", "sync"]
