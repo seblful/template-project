@@ -55,6 +55,21 @@ Follow **PEP 8**. Simplicity is key—avoid over-engineering.
 - Import: `from {{ package_name }}.settings import settings`
 - Nest with `__` delimiter: `APP__DEBUG`, `LOGGING__LEVEL`
 
+### Data Classes vs Pydantic
+
+| Use Case | Choice | Reason |
+|:---------|:-------|:--------|
+| Configuration from env vars | `BaseSettings` | Built-in env var loading |
+| Simple data containers | `pydantic.dataclass` | Validation with dataclass syntax |
+| External data validation | `BaseModel` | Runtime validation |
+| Immutable DTOs | `@pydantic.dataclass(frozen=True)` | Immutability |
+
+**Best Practices:**
+- Use **`pydantic.dataclass`** for simple data containers that benefit from light validation
+- Use **`BaseModel`** for data that comes from external sources and needs full validation
+- Use **`BaseSettings`** for configuration that should be customizable via environment variables
+- Keep settings in `settings.py` - don't mix data models with configuration
+
 ### CLI & Scripts
 - Use **typer** for all entry points
 
