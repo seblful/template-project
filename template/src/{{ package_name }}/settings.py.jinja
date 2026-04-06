@@ -6,6 +6,10 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 
+def _project_root() -> Path:
+    return Path(__file__).resolve().parent.parent.parent
+
+
 class AppSettings(BaseSettings):
     """Application settings group."""
 
@@ -18,7 +22,7 @@ class PathsSettings(BaseSettings):
     """Path settings group."""
 
     root_dir: Path = Field(
-        default=Path(__file__).resolve().parent.parent.parent,
+        default=_project_root(),
         frozen=True,
     )
 
