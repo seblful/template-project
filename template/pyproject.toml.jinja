@@ -4,7 +4,7 @@ description = "{{ project_description }}"
 readme = "README.md"
 requires-python = ">={{ python_version }}"
 version = "0.1.0"
-{% if license %}
+{% if license and license != "None" %}
 license = { text = "{{ license }}" }
 {% endif %}
 authors = [

@@ -61,7 +61,7 @@ Edit `copier.yml` to customize project defaults:
 - `project_name` - Your project name
 - `package_name` - Python package name (snake_case)
 - `author_name` / `author_email` - Author information
-- `license` - MIT, Apache, or EULA
+- `license` - None, MIT, Apache, or EULA
 - `python_version` - Target Python version
 - `include_notebooks` - Include notebooks directory
 

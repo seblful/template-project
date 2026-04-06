@@ -18,6 +18,8 @@ import {{ package_name }}
 | `LOGGING__LOG_LEVEL` | Log level | `INFO` |
 | `LOGGING__LOG_FILE` | Log file path | `logs/app.log` |
 
+{% if license and license != "None" %}
 ## License
 
 {{ license }} License - see [LICENSE](LICENSE) for details.
+{% endif %}

@@ -27,10 +27,11 @@ license:
   type: str
   help: What license should the project use?
   choices:
+    - None
     - Apache
     - MIT
     - EULA
-  default: Apache
+  default: None
 
 current_year:
   type: str
@@ -46,6 +47,11 @@ include_notebooks:
   type: bool
   help: Should notebooks directory be included?
   default: false
+
+_exclude:
+  {% if license == "None" %}
+  - LICENSE
+  {% endif %}
 
 _tasks:
   - ["uv", "sync"]
