@@ -43,13 +43,10 @@ python_version:
   help: What Python version should the project target?
   default: "3.13"
 
-include_notebooks:
-  type: bool
-  help: Should notebooks directory be included?
-  default: false
-
 _exclude:
   - notebooks/.gitkeep
+  - scripts/.gitkeep
+  - docs/.gitkeep
 
 _tasks:
   - ["uv", "sync"]
