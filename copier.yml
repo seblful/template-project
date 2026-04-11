@@ -27,11 +27,11 @@ license:
   type: str
   help: What license should the project use?
   choices:
-    - None
+    - "None"
     - Apache
     - MIT
     - EULA
-  default: None
+  default: "None"
 
 current_year:
   type: str
