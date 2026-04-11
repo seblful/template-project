@@ -1,0 +1,25 @@
+"""Shared pytest fixtures for {{ project_name }}."""
+
+import pytest
+from pathlib import Path
+from {{ package_name }}.settings import Settings, SettingsConfigDict
+
+
+@pytest.fixture
+def tmp_env_file(tmp_path: Path) -> Path:
+    """Create a temporary .env file."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("APP__ENVIRONMENT=test\n")
+    return env_file
+
+
+@pytest.fixture
+def test_settings(tmp_env_file: Path) -> Settings:
+    """Create settings with test configuration."""
+    return Settings(
+        _env_file=tmp_env_file,
+        model_config=SettingsConfigDict(
+            env_nested_delimiter="__",
+            extra="ignore",
+        )
+    )
