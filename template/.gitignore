@@ -47,9 +47,6 @@ site/
 # Jupyter
 .ipynb_checkpoints/
 
-# Data (project-specific)
-data/
-
 # Database
 *.db
 *.sqlite
