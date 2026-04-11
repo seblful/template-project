@@ -1,5 +1,6 @@
 """Application settings configuration using Pydantic."""
 
+from pathlib import Path
 from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
@@ -17,6 +18,7 @@ class LoggingSettings(BaseSettings):
 
     file_level: str = Field(default="DEBUG", description="File log level")
     console_level: str = Field(default="INFO", description="Console log level")
+    log_file: Path = Field(default=Path("logs/app.log"), description="Log file path")
 
 
 class Settings(BaseSettings):
@@ -35,6 +37,11 @@ class Settings(BaseSettings):
         extra="ignore",
         env_nested_delimiter="__",
     )
+
+    @property
+    def root_dir(self) -> Path:
+        """Project root directory."""
+        return Path(__file__).parent.parent.parent
 
 
 settings = Settings()
