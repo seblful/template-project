@@ -62,22 +62,20 @@ src = ["src"]
 
 [tool.ruff.lint]
 select = [
-    "E",
-    "W",
-    "F",
-    "I",
-    "B",
-    "C4",
-    "UP",
-    "ARG",
-    "PT",
-    "TCH",
-    "RUF",
+    "E", "W", "F", "I", "B", "C4", "UP", "ARG", "PT", "TCH", "RUF",
+    "PL",    # Pylint rules
+    "SIM",   # flake8-simplify
+    "RET",   # flake8-return
+    "PTH",   # flake8-use-pathlib
 ]
 ignore = [
-    "D100",
-    "D104",
+    "D100", "D104",  # Keep these if you prefer minimal docstrings
+    "PLR0913",       # Too many arguments (context-dependent)
 ]
+
+[tool.ruff.lint.pylint]
+max-args = 8
+max-returns = 10
 
 [tool.ruff.lint.isort]
 known-first-party = ["{{ package_name }}"]
