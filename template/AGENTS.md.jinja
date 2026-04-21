@@ -1,161 +1,174 @@
-## AI Coding Guidelines
+# AI Coding Guidelines
 
-## 1. Think Before Coding
+## Core Principles
 
-**Don't assume. Don't hide confusion. Surface tradeoffs.**
+### 1. Think Before Coding
 
-Before implementing:
-- State your assumptions explicitly. If uncertain, ask.
-- If multiple interpretations exist, present them - don't pick silently.
-- If a simpler approach exists, say so. Push back when warranted.
-- If something is unclear, stop. Name what's confusing. Ask.
+**Don't assume. Surface tradeoffs. Ask when uncertain.**
 
-## 2. Simplicity First
+- State assumptions explicitly
+- Present multiple interpretations when they exist
+- Push back if a simpler approach exists
+- Name what's confusing before proceeding
+
+### 2. Simplicity First
 
 **Minimum code that solves the problem. Nothing speculative.**
 
-- No features beyond what was asked.
-- No abstractions for single-use code.
-- No "flexibility" or "configurability" that wasn't requested.
-- No error handling for impossible scenarios.
-- If you write 200 lines and it could be 50, rewrite it.
+- No features, abstractions, or configurability beyond what was asked
+- No error handling for impossible scenarios
+- If it could be 50 lines but is 200, rewrite it
 
-Ask yourself: "Would a senior engineer say this is overcomplicated?" If yes, simplify.
-
-## 3. Surgical Changes
+### 3. Surgical Changes
 
 **Touch only what you must. Clean up only your own mess.**
 
-When editing existing code:
-- Don't "improve" adjacent code, comments, or formatting.
-- Don't refactor things that aren't broken.
-- Match existing style, even if you'd do it differently.
-- If you notice unrelated dead code, mention it - don't delete it.
+- Don't "improve" adjacent code, comments, or formatting
+- Match existing style even if you'd do it differently
+- Remove only the orphans your changes create
+- Mention unrelated dead code; don't delete it
 
-When your changes create orphans:
-- Remove imports/variables/functions that YOUR changes made unused.
-- Don't remove pre-existing dead code unless asked.
-
-The test: Every changed line should trace directly to the user's request.
-
-## 4. Goal-Driven Execution
+### 4. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
 Transform tasks into verifiable goals:
-- "Add validation" → "Write tests for invalid inputs, then make them pass"
-- "Fix the bug" → "Write a test that reproduces it, then make it pass"
-- "Refactor X" → "Ensure tests pass before and after"
+- "Add validation" → Write tests for invalid inputs, then make them pass
+- "Fix the bug" → Write a test that reproduces it, then make it pass
 
 For multi-step tasks, state a brief plan:
 ```
 1. [Step] → verify: [check]
 2. [Step] → verify: [check]
-3. [Step] → verify: [check]
 ```
-
-Strong success criteria let you loop independently. Weak criteria ("make it work") require constant clarification.
 
 ---
 
-## Project-Specific Standards
+## Project Standards
 
 **All AI agents must strictly adhere to these rules.**
 
-## Dependencies & Package Manager
+### Tooling
 
-- **Python**: `{{ python_version }}`
-- **Package Manager**: [uv](https://docs.astral.sh/uv/) — **never** use `pip` or `venv`
+| Tool | Purpose |
+|:-----|:--------|
+| [uv](https://docs.astral.sh/uv/) | Package manager — **never** use `pip` or `venv` |
+| [Ruff](https://docs.astral.sh/ruff/) | Linting and formatting |
+| [ty](https://github.com/astral-sh/ty) | Type checking |
+| [pytest](https://pytest.org/) | Testing |
 
-| Command | Purpose |
-|:--------|:--------|
-| `uv add <package>` | Add production dependency |
-| `uv add --dev <package>` | Add dev dependency |
-| `uv sync` | Lock dependencies |
-| `uv run <cmd>` | Run commands |
+### Dependencies
+
+```bash
+uv add <package>              # Production dependency
+uv add --dev <package>        # Dev dependency
+uv sync                       # Lock dependencies
+uv run <cmd>                  # Run commands
+```
 
 ---
 
-## Code Standards
+## Code Conventions
 
-Follow **PEP 8**. Simplicity is key—avoid over-engineering.
+### General
+
+- Follow **PEP 8**
+- Use **Python 3.10+** syntax
+- Keep it simple—avoid over-engineering
 
 ### Naming
-- Variables/Functions: `snake_case`
-- Classes: `CamelCase`
-- Strings: f-strings (`f"..."`)
 
-### Docstrings
-- Use Google-style docstrings for all public functions and classes
-
-### Imports
-- **Order** (enforced by Ruff): stdlib → third-party → local
-- Sort alphabetically within groups, use absolute imports
-- Organize with: `uv run ruff check --select I --fix .`
+| Element | Convention |
+|:--------|:-----------|
+| Variables/Functions | `snake_case` |
+| Classes | `CamelCase` |
+| Strings | f-strings (`f"..."`) |
 
 ### Type Hints
-- Mandatory for all function signatures (arguments and return types)
-- Use Python 3.10+ syntax (`list`, `str | None`)
-- Validate with: `uvx ty` — must pass with zero errors
+
+- **Mandatory** for all function signatures (arguments and return types)
+- Use modern syntax: `list[str]`, `str | None`
+- Validate with: `uvx ty`
+
+### Imports
+
+- Order: stdlib → third-party → local (enforced by Ruff)
+- Sort alphabetically within groups
+- Use absolute imports
+- Fix with: `uv run ruff check --select I --fix .`
+
+### Docstrings
+
+- Google-style for all public functions and classes
 
 ### File System
+
 - **Always** use `pathlib.Path`
 - **Never** use `os.path.join` or string concatenation
 
-### Logging
-- Use **structlog** only (never `logging` directly)
-- Configure via `setup_logging()` from `{{ package_name }}.logging`
-- Create loggers with: `structlog.get_logger()`
+---
 
-### Settings
-- Use **Pydantic Settings** with structured groups
+## Libraries & Patterns
+
+### Logging (structlog)
+
+- Configure via `setup_logging()` from `{{ package_name }}.logging`
+- Create loggers with `structlog.get_logger()`
+- Never use `logging` directly
+
+### Settings (Pydantic)
+
 - Location: `src/{{ package_name }}/settings.py`
 - Import: `from {{ package_name }}.settings import settings`
-- Nest with `__` delimiter: `APP__DEBUG`, `LOGGING__LEVEL`
+- Use `__` delimiter for nesting: `APP__DEBUG`, `LOGGING__LEVEL`
 
 ### Data Classes vs Pydantic
 
-| Use Case | Choice | Reason |
-|:---------|:-------|:--------|
-| Configuration from env vars | `BaseSettings` | Built-in env var loading |
-| Simple data containers | `pydantic.dataclass` | Validation with dataclass syntax |
-| External data validation | `BaseModel` | Runtime validation |
-| Immutable DTOs | `@pydantic.dataclass(frozen=True)` | Immutability |
+| Use Case | Choice |
+|:---------|:-------|
+| Configuration from env vars | `BaseSettings` |
+| Simple data containers | `pydantic.dataclass` |
+| External data validation | `BaseModel` |
+| Immutable DTOs | `@pydantic.dataclass(frozen=True)` |
 
-**Best Practices:**
-- Use **`pydantic.dataclass`** for simple data containers that benefit from light validation
-- Use **`BaseModel`** for data that comes from external sources and needs full validation
-- Use **`BaseSettings`** for configuration that should be customizable via environment variables
-- Keep settings in `settings.py` - don't mix data models with configuration
+### CLI (Typer)
 
-### CLI & Scripts
 - Use **typer** for all entry points
-
-### Progress Bars
-- Use `tqdm` with `desc` parameter for clarity
-
-### Security
-- **Never** hardcode secrets (API keys, passwords, tokens)
-- Store secrets in environment variables or `.env` files (never commit `.env`)
-- Use `pydantic-settings` for secret management
-
-### Datetime
-- **Always** use timezone-aware datetimes
-- Use `datetime.now(timezone.utc)` instead of `datetime.utcnow()`
-- Serialize with `.isoformat()` for JSON; parse with `datetime.fromisoformat()`
-
-### ABC & Protocols
-- Use `abc.ABC` for explicit inheritance-based polymorphism
-- Use `typing.Protocol` for structural typing (duck typing)
-- Mark methods with `@abstractmethod` when requiring implementation
 
 ### Async/Await
 
-- Use `async def` only for I/O-bound operations (network, DB, file I/O)
+- Use `async def` only for I/O-bound operations
 - Always `await` async calls; never block the event loop
-- Use `asyncio.gather()` for concurrent independent operations
+- Use `asyncio.gather()` for concurrent operations
 - Use `httpx.AsyncClient` for async HTTP
 - Use `asyncio.run()` only in entry points
+
+### Datetime
+
+- **Always** use timezone-aware datetimes
+- Use `datetime.now(timezone.utc)` instead of `datetime.utcnow()`
+- Serialize with `.isoformat()`; parse with `datetime.fromisoformat()`
+
+### Progress Bars
+
+- Use `tqdm` with `desc` parameter for clarity
+
+### ABC & Protocols
+
+- Use `abc.ABC` for explicit inheritance-based polymorphism
+- Use `typing.Protocol` for structural typing (duck typing)
+- Mark required methods with `@abstractmethod`
+
+---
+
+## Security
+
+- **Never** hardcode secrets (API keys, passwords, tokens)
+- Store secrets in environment variables or `.env` (never commit `.env`)
+- Use `pydantic-settings` for secret management
+- Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
+- Respect `.cursorignore` paths (`.env*`, `.ssh/`, `secrets/`)
+- Prefer read-only MCP access; avoid broad tokens
 
 ---
 
@@ -167,36 +180,31 @@ Follow **PEP 8**. Simplicity is key—avoid over-engineering.
 - **Fixtures**: Use pytest fixtures (not class-based setup)
 - **Rule**: All new features and bug fixes require tests
 
-Run tests with: `uv run pytest`
-
----
-
-## Security & Safety
-
-- **Commands:** Never auto-run destructive ones (`rm -rf`, `del /s`, `curl | sh`, etc.).
-- **Secrets:** Never put API keys, passwords, or tokens in documentation or code. Use env vars.
-- **.cursorignore:** Respect ignored paths. Don't insist on indexing `.env*`, `.ssh/`, `secrets/`.
-- **MCP:** Prefer read-only access. Avoid broad tokens or full admin scopes.
+```bash
+uv run pytest
+```
 
 ---
 
 ## Git Workflow
 
 ### Rule
-Only create commits when the user **explicitly asks**. Never commit proactively.
+
+**Only create commits when the user explicitly asks. Never commit proactively.**
 
 ### Pre-commit
+
 ```bash
 uv run pre-commit install
 ```
 
 ### Conventional Commits
+
 ```
 <type>: <description>
 ```
-- Lowercase, concise, no trailing period
 
-### Types
+- Lowercase, concise, no trailing period
 
 | Type | Purpose |
 |:-----|:--------|
@@ -208,6 +216,8 @@ uv run pre-commit install
 | `chore` | Routine tasks, dependency updates |
 
 ### AI-Generated Code
-- Mark AI-generated or AI-assisted commits with `Co-authored-by: Cursor/opencode/Claude Code`
 
----
+Mark AI-assisted commits with:
+```
+Co-authored-by: Cursor/opencode/Claude Code
+```
