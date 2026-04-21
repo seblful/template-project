@@ -149,6 +149,14 @@ Follow **PEP 8**. Simplicity is key—avoid over-engineering.
 - Use `typing.Protocol` for structural typing (duck typing)
 - Mark methods with `@abstractmethod` when requiring implementation
 
+### Async/Await
+
+- Use `async def` only for I/O-bound operations (network, DB, file I/O)
+- Always `await` async calls; never block the event loop
+- Use `asyncio.gather()` for concurrent independent operations
+- Use `httpx.AsyncClient` for async HTTP
+- Use `asyncio.run()` only in entry points
+
 ---
 
 ## Testing
