@@ -6,7 +6,7 @@ A [Copier](https://copier.readthedocs.io/) template for Python projects with mod
 
 - [uv](https://github.com/astral-sh/uv) for fast dependency management
 - [Ruff](https://github.com/astral-sh/ruff) for linting and formatting
-- [mypy](https://mypy.readthedocs.io/) for type checking
+- [ty](https://github.com/astral-sh/ty) for type checking
 - [pytest](https://pytest.org/) for testing with coverage
 - [Pydantic](https://docs.pydantic.dev/) for settings management
 - [structlog](https://www.structlog.org/) for structured logging
@@ -19,7 +19,7 @@ A [Copier](https://copier.readthedocs.io/) template for Python projects with mod
 ```bash
 copier copy path/to/template-project new-project
 cd new-project
-uv run dev
+make install
 ```
 
 ## Generated Project Structure
@@ -47,11 +47,11 @@ new-project/
 ## Available Commands
 
 ```bash
-uv run dev          # Run CLI application
-uv run test          # Run tests with coverage
-uv run lint          # Run ruff linter with auto-fix
-uv run format       # Format code with ruff
-uv run typecheck    # Run mypy type checker
+make dev          # Run CLI application
+make test         # Run tests with coverage
+make lint         # Run ruff linter and formatter
+make typecheck    # Run ty type checker
+make install      # Install dependencies and pre-commit hooks
 ```
 
 ## Configuration
@@ -68,13 +68,12 @@ Edit `copier.yml` to customize project defaults:
 ## Development
 
 ```bash
-# Format and lint
-uv run format
-uv run lint
+# Lint and format
+make lint
 
 # Run tests
-uv run test
+make test
 
 # Type check
-uv run typecheck
+make typecheck
 ```

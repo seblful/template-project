@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from {{ package_name }}.settings import Settings, SettingsConfigDict
+from {{ package_name }}.settings import Settings
 
 
 @pytest.fixture
@@ -16,10 +16,4 @@ def tmp_env_file(tmp_path: Path) -> Path:
 @pytest.fixture
 def test_settings(tmp_env_file: Path) -> Settings:
     """Create settings with test configuration."""
-    return Settings(
-        _env_file=tmp_env_file,
-        model_config=SettingsConfigDict(
-            env_nested_delimiter="__",
-            extra="ignore",
-        )
-    )
+    return Settings(_env_file=tmp_env_file)
