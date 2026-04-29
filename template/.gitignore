@@ -37,6 +37,7 @@ htmlcov/
 .hypothesis/
 
 # Logs
+logs/
 *.log
 
 # Docs
