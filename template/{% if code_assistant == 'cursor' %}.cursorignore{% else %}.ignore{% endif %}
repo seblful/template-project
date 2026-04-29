@@ -1,4 +1,4 @@
-# Cursor AI - Files and directories to ignore during indexing
+# Files and directories to ignore during indexing
 
 # Python
 __pycache__/

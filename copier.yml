@@ -43,6 +43,15 @@ python_version:
   help: What Python version should the project target?
   default: "3.13"
 
+code_assistant:
+  type: str
+  help: Which code assistant will you use?
+  choices:
+    - claude
+    - opencode
+    - cursor
+  default: claude
+
 _exclude:
   - notebooks/.gitkeep
   - scripts/.gitkeep
