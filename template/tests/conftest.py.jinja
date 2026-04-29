@@ -1,7 +1,10 @@
 """Shared pytest fixtures for {{ project_name }}."""
 
-import pytest
+import os
 from pathlib import Path
+
+import pytest
+
 from {{ package_name }}.settings import Settings
 
 
@@ -14,6 +17,11 @@ def tmp_env_file(tmp_path: Path) -> Path:
 
 
 @pytest.fixture
-def test_settings(tmp_env_file: Path) -> Settings:
-    """Create settings with test configuration."""
+def test_settings(
+    tmp_env_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> Settings:
+    """Settings isolated from the host environment."""
+    for key in list(os.environ):
+        if key.startswith(("APP__", "LOGGING__")):
+            monkeypatch.delenv(key, raising=False)
     return Settings(_env_file=tmp_env_file)

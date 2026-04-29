@@ -2,6 +2,7 @@
 
 import typer
 
+from {{ package_name }} import __version__
 from {{ package_name }}.logging import setup_logging
 from {{ package_name }}.settings import settings
 
@@ -12,15 +13,16 @@ app = typer.Typer(
 
 
 @app.callback()
-def main() -> None:
+def main(ctx: typer.Context) -> None:
     """{{ project_name }} CLI."""
-    setup_logging()
+    if ctx.invoked_subcommand is not None:
+        setup_logging()
 
 
 @app.command()
 def info() -> None:
     """Display project information."""
-    typer.echo(f"{settings.app.app_name} v{settings.app.app_version}")
+    typer.echo(f"{settings.app.app_name} v{__version__}")
     typer.echo(f"Environment: {settings.app.environment}")
     typer.echo(f"File Level: {settings.logging.file_level}")
     typer.echo(f"Console Level: {settings.logging.console_level}")

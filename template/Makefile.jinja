@@ -1,18 +1,24 @@
-.PHONY: dev test lint format typecheck install
+.PHONY: help dev test lint format typecheck install
+.DEFAULT_GOAL := help
 
-dev:
-	uv run {{ package_name }}
+help:  ## Show available targets
+	@grep -E '^[a-zA-Z_-]+:.*?## .*$$' $(MAKEFILE_LIST) | awk 'BEGIN {FS = ":.*?## "}; {printf "  %-12s %s\n", $$1, $$2}'
 
-test:
-	uv run pytest -v
-
-lint:
-	uv run ruff check . --fix
-	uv run ruff format .
-
-typecheck:
-	uv run ty check src/
-
-install:
+install:  ## Install dependencies and pre-commit hooks
 	uv sync --all-extras --dev
 	uv run pre-commit install
+
+dev:  ## Run the CLI application
+	uv run {{ package_name }}
+
+test:  ## Run tests with coverage
+	uv run pytest -v
+
+lint:  ## Lint and auto-fix
+	uv run ruff check . --fix
+
+format:  ## Format code with ruff
+	uv run ruff format .
+
+typecheck:  ## Run static type checker
+	uv run ty check src/ tests/

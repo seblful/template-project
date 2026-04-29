@@ -4,8 +4,14 @@ description = "{{ project_description }}"
 readme = "README.md"
 requires-python = ">={{ python_version }}"
 version = "0.1.0"
-{% if license and license != "None" %}
-license = { text = "{{ license }}" }
+{% if license == "MIT" %}
+license = "MIT"
+license-files = ["LICENSE"]
+{% elif license == "Apache" %}
+license = "Apache-2.0"
+license-files = ["LICENSE"]
+{% elif license == "EULA" %}
+license-files = ["LICENSE"]
 {% endif %}
 authors = [
     { name = "{{ author_name }}", email = "{{ author_email }}" }
