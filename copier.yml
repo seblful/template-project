@@ -49,7 +49,8 @@ _exclude:
   - docs/.gitkeep
 
 _tasks:
+  - ["git", "init"]
   - ["uv", "sync"]
+  - ["uv", "run", "pre-commit", "install"]
   - ["uv", "run", "ruff", "format", "."]
   - ["uv", "run", "mdformat", "."]
-  - ["git", "init"]

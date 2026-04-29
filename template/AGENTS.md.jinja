@@ -120,7 +120,7 @@ uv run <cmd>                  # Run commands
 
 - Location: `src/{{ package_name }}/settings.py`
 - Import: `from {{ package_name }}.settings import settings`
-- Use `__` delimiter for nesting: `APP__DEBUG`, `LOGGING__LEVEL`
+- Use `__` delimiter for nesting: `APP__APP_NAME`, `LOGGING__FILE_LEVEL`
 
 ### Data Classes vs Pydantic
 
@@ -148,10 +148,6 @@ uv run <cmd>                  # Run commands
 - **Always** use timezone-aware datetimes
 - Use `datetime.now(timezone.utc)` instead of `datetime.utcnow()`
 - Serialize with `.isoformat()`; parse with `datetime.fromisoformat()`
-
-### Progress Bars
-
-- Use `tqdm` with `desc` parameter for clarity
 
 ### ABC & Protocols
 

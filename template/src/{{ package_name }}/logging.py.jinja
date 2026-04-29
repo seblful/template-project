@@ -16,13 +16,16 @@ def setup_logging(
     log_file: Path | None = None,
 ) -> None:
     """Configure structlog for the application."""
+    if logging.root.handlers:
+        return
+
     f_level = file_level or settings.logging.file_level
     c_level = console_level or settings.logging.console_level
-    
+
     file_path = log_file or settings.logging.log_file
     if not file_path.is_absolute():
         file_path = settings.root_dir / file_path
-    
+
     file_path.parent.mkdir(parents=True, exist_ok=True)
 
     file_handler = RotatingFileHandler(

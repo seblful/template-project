@@ -67,14 +67,21 @@ select = [
     "SIM",   # flake8-simplify
     "RET",   # flake8-return
     "PTH",   # flake8-use-pathlib
+    "D",     # pydocstyle — enforce Google-style docstrings
 ]
 ignore = [
-    "PLR0913",  # Too many arguments (context-dependent)
+    "D100", "D104",  # Missing docstring in public module/package
+    "D203",          # Conflicts with D211
+    "D213",          # Conflicts with D212
+    "PLR0913",       # Too many arguments (context-dependent)
 ]
 
 [tool.ruff.lint.pylint]
 max-args = 8
 max-returns = 10
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
 
 [tool.ruff.lint.isort]
 known-first-party = ["{{ package_name }}"]
