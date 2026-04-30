@@ -59,6 +59,9 @@ site/
 .opencode/
 .superpowers/
 
+# Claude Code local settings (contains secrets/proxy credentials)
+.claude/settings.local.json
+
 # OS
 .DS_Store
 Thumbs.db
