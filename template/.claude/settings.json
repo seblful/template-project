@@ -40,7 +40,7 @@
   },
   "statusLine": {
     "type": "command",
-    "command": "bash ~/.claude/statusline-command.sh"
+    "command": "jq -r '\"[\\(.model.display_name)] \\(.context_window.used_percentage // 0)% context\"'"
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
@@ -48,13 +48,22 @@
     "pyright-lsp@claude-plugins-official": true,
     "huggingface-skills@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
-    "agents@ai-research-skills": true
+    "agents@ai-research-skills": true,
+    "observability@ai-research-skills": true,
+    "serena@claude-plugins-official": true,
+    "obsidian@obsidian-skills": true
   },
   "extraKnownMarketplaces": {
     "ai-research-skills": {
       "source": {
         "source": "github",
         "repo": "Orchestra-Research/AI-Research-SKILLs"
+      }
+    },
+    "obsidian-skills": {
+      "source": {
+        "source": "github",
+        "repo": "kepano/obsidian-skills"
       }
     }
   },
