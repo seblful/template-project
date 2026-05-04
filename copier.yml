@@ -52,11 +52,25 @@ code_assistant:
     - cursor
   default: claude
 
+environments:
+  type: list
+  help: Which environment-specific .env files should be created?
+  multiselect: true
+  choices:
+    - development
+    - staging
+    - production
+  default:
+    - development
+
 _exclude:
   - notebooks/.gitkeep
   - scripts/.gitkeep
   - docs/.gitkeep
   - "{% if code_assistant != 'claude' %}.claude/**{% endif %}"
+  - "{% if 'development' not in environments %}.env.development{% endif %}"
+  - "{% if 'staging' not in environments %}.env.staging{% endif %}"
+  - "{% if 'production' not in environments %}.env.production{% endif %}"
 
 _tasks:
   - ["git", "init"]

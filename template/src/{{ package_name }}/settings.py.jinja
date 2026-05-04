@@ -1,5 +1,6 @@
 """Application settings configuration using Pydantic."""
 
+import os
 from pathlib import Path
 from typing import Literal
 
@@ -7,6 +8,16 @@ from pydantic import Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+
+
+def _env_files() -> tuple[str, ...]:
+    """Return env files to load: base .env, then environment-specific override."""
+    env = os.getenv("APP__ENVIRONMENT") or os.getenv("ENVIRONMENT", "development")
+    files: list[str] = [".env"]
+    specific = f".env.{env}"
+    if Path(specific).exists():
+        files.append(specific)
+    return tuple(files)
 
 
 class AppSettings(BaseSettings):
@@ -31,7 +42,7 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
-        env_file=".env",
+        env_file=_env_files(),
         env_file_encoding="utf-8",
         case_sensitive=False,
         extra="forbid",

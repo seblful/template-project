@@ -25,6 +25,9 @@ venv.bak/
 # Environments
 .env
 .env.local
+.env.development
+.env.staging
+.env.production
 
 # Testing / coverage
 .tox/
