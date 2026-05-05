@@ -48,172 +48,30 @@ For multi-step tasks, state a brief plan:
 
 **All AI agents must strictly adhere to these rules.**
 
-### Tooling
+- **Code**: Follow patterns in `python-patterns` — see `python-testing` for tests, `commits` for git
+- **Tests**: All features and bug fixes require tests
+- **Commits**: Only commit when explicitly asked
 
 | Tool | Purpose |
 |:-----|:--------|
-| [uv](https://docs.astral.sh/uv/) | Package manager — **never** use `pip` or `venv` |
+| [uv](https://docs.astral.sh/uv/) | Package manager — never use `pip` or `venv` |
 | [Ruff](https://docs.astral.sh/ruff/) | Linting and formatting |
 | [ty](https://github.com/astral-sh/ty) | Type checking |
-| [pytest](https://pytest.org/) | Testing |
-
-### Dependencies
-
-```bash
-uv add <package>              # Production dependency
-uv add --dev <package>        # Dev dependency
-uv sync                       # Lock dependencies
-uv run <cmd>                  # Run commands
-```
-
----
-
-## Code Conventions
-
-### General
-
-- Follow **PEP 8**
-- Use **Python 3.10+** syntax
-- Keep it simple—avoid over-engineering
-
-### Naming
-
-| Element | Convention |
-|:--------|:-----------|
-| Variables/Functions | `snake_case` |
-| Classes | `CamelCase` |
-| Strings | f-strings (`f"..."`) |
-
-### Type Hints
-
-- **Mandatory** for all function signatures (arguments and return types)
-- Use modern syntax: `list[str]`, `str | None`
-- Validate with: `uvx ty`
-
-### Imports
-
-- Order: stdlib → third-party → local (enforced by Ruff)
-- Sort alphabetically within groups
-- Use absolute imports
-- Fix with: `uv run ruff check --select I --fix .`
-
-### Docstrings
-
-- Google-style for all public functions and classes
-
-### File System
-
-- **Always** use `pathlib.Path`
-- **Never** use `os.path.join` or string concatenation
-
----
-
-## Libraries & Patterns
-
-### Logging (structlog)
-
-- Configure via `setup_logging()` from `{{ package_name }}.logging`
-- Create loggers with `structlog.get_logger()`
-- Never use `logging` directly
-
-### Settings (Pydantic)
-
-- Location: `src/{{ package_name }}/settings.py`
-- Import: `from {{ package_name }}.settings import settings`
-- Use `__` delimiter for nesting: `APP__APP_NAME`, `LOGGING__FILE_LEVEL`
-
-### Data Classes vs Pydantic
-
-| Use Case | Choice |
-|:---------|:-------|
-| Configuration from env vars | `BaseSettings` |
-| Simple data containers | `pydantic.dataclass` |
-| External data validation | `BaseModel` |
-| Immutable DTOs | `@pydantic.dataclass(frozen=True)` |
-
-### CLI (Typer)
-
-- Use **typer** for all entry points
-
-### Async/Await
-
-- Use `async def` only for I/O-bound operations
-- Always `await` async calls; never block the event loop
-- Use `asyncio.gather()` for concurrent operations
-- Use `httpx.AsyncClient` for async HTTP
-- Use `asyncio.run()` only in entry points
-
-### Datetime
-
-- **Always** use timezone-aware datetimes
-- Use `datetime.now(timezone.utc)` instead of `datetime.utcnow()`
-- Serialize with `.isoformat()`; parse with `datetime.fromisoformat()`
-
-### ABC & Protocols
-
-- Use `abc.ABC` for explicit inheritance-based polymorphism
-- Use `typing.Protocol` for structural typing (duck typing)
-- Mark required methods with `@abstractmethod`
+| [pytest](https://pytest.org/) | Testing + coverage |
+| [pre-commit](https://pre-commit.com/) | Git hooks |
+| [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
+| [structlog](https://www.structlog.org/) | Structured logging |
+| [pydantic](https://docs.pydantic.dev/) | Data validation and settings |
+| [typer](https://typer.tiangolo.com/) | CLI entry points |
+| [httpx](https://www.python-httpx.org/) | HTTP client (sync + async) |
+| [mkdocs](https://www.mkdocs.org/) | Documentation |
 
 ---
 
 ## Security
 
 - **Never** hardcode secrets (API keys, passwords, tokens)
-- Store secrets in environment variables or `.env` (never commit `.env`)
+- Store secrets in environment variables or `.env` — never commit `.env`
 - Use `pydantic-settings` for secret management
 - Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
-- Respect `.cursorignore` paths (`.env*`, `.ssh/`, `secrets/`)
-- Prefer read-only MCP access; avoid broad tokens
-
----
-
-## Testing
-
-- **Framework**: pytest
-- **Location**: `tests/` mirroring project structure
-- **Naming**: Functions start with `test_`
-- **Fixtures**: Use pytest fixtures (not class-based setup)
-- **Rule**: All new features and bug fixes require tests
-
-```bash
-uv run pytest
-```
-
----
-
-## Git Workflow
-
-### Rule
-
-**Only create commits when the user explicitly asks. Never commit proactively.**
-
-### Pre-commit
-
-```bash
-uv run pre-commit install
-```
-
-### Conventional Commits
-
-```
-<type>: <description>
-```
-
-- Lowercase, concise, no trailing period
-
-| Type | Purpose |
-|:-----|:--------|
-| `feat` | New feature |
-| `fix` | Bug fix |
-| `refactor` | Code change without feature/bug change |
-| `test` | Test updates |
-| `docs` | Documentation only |
-| `chore` | Routine tasks, dependency updates |
-
-### AI-Generated Code
-
-Mark AI-assisted commits with:
-```
-Co-authored-by: Cursor/opencode/Claude Code
-```
+- Respect `.ignore` paths (`.env*`, `.ssh/`, `secrets/`)
