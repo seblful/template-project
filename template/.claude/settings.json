@@ -10,10 +10,7 @@
       "Bash(pre-commit *)",
       "Bash(ty *)"
     ],
-    "deny": [
-      "Bash(rm -rf *)",
-      "Bash(git push --force *)"
-    ]
+    "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
   },
   "hooks": {
     "PostToolUse": [
@@ -50,7 +47,6 @@
     "context7@claude-plugins-official": true,
     "agents@ai-research-skills": true,
     "observability@ai-research-skills": true,
-    "serena@claude-plugins-official": true,
     "obsidian@obsidian-skills": true
   },
   "extraKnownMarketplaces": {
