@@ -66,7 +66,21 @@
     "context7@claude-plugins-official": true,
     "agents@ai-research-skills": true,
     "observability@ai-research-skills": true,
-    "obsidian@obsidian-skills": true
+    "obsidian@obsidian-skills": true,
+    "fine-tuning@ai-research-skills": true,
+    "ideation@ai-research-skills": true,
+    "inference-serving@ai-research-skills": true,
+    "mlops@ai-research-skills": true,
+    "optimization@ai-research-skills": true,
+    "prompt-engineering@ai-research-skills": true,
+    "rag@ai-research-skills": true,
+    "tokenization@ai-research-skills": true,
+    "github@claude-plugins-official": true,
+    "claude-md-management@claude-plugins-official": true,
+    "commit-commands@claude-plugins-official": true,
+    "claude-code-setup@claude-plugins-official": true,
+    "gitlab@claude-plugins-official": true,
+    "pydantic-ai@claude-plugins-official": true
   },
   "extraKnownMarketplaces": {
     "ai-research-skills": {
