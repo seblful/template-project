@@ -87,13 +87,15 @@
       "source": {
         "source": "github",
         "repo": "Orchestra-Research/AI-Research-SKILLs"
-      }
+      },
+      "autoUpdate": true
     },
     "obsidian-skills": {
       "source": {
         "source": "github",
         "repo": "kepano/obsidian-skills"
-      }
+      },
+      "autoUpdate": true
     }
   },
   "effortLevel": "medium",
