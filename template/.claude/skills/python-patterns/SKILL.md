@@ -1,646 +1,279 @@
 ---
 name: python-patterns
-description: Pythonic idioms, PEP 8 standards, type hints, and project-specific best practices for building robust, efficient, and maintainable Python applications with uv, ruff, ty, structlog, and pydantic.
+description: Professional Python coding practices — PEP 8, type hints, modern idioms, and the project stack (uv, ruff, ty, structlog, pydantic, typer).
 origin: ECC
 ---
 
-# Python Development Patterns
-
-Idiomatic Python patterns and project-specific best practices for building robust, efficient, and maintainable applications.
-
-## When to Activate
-
-- Writing new Python code
-- Reviewing Python code
-- Refactoring existing Python code
-- Designing Python packages/modules
+# Python Coding Practices
 
 ## Core Principles
 
-### 1. Readability Counts
+- **Readability counts.** Clear names over clever tricks.
+- **Explicit over implicit.** No magic, no hidden side effects.
+- **EAFP over LBYL.** Prefer `try/except` over pre-checks.
+- **One obvious way.** Follow PEP 8 and PEP 20.
 
-Python prioritizes readability. Code should be obvious and easy to understand.
-
-```python
-# Good: Clear and readable
-def get_active_users(users: list[User]) -> list[User]:
-    """Return only active users from the provided list."""
-    return [user for user in users if user.is_active]
-
-
-# Bad: Clever but confusing
-def get_active_users(u):
-    return [x for x in u if x.a]
-```
-
-### 2. Explicit is Better Than Implicit
-
-Avoid magic; be clear about what your code does.
-
-### 3. EAFP - Easier to Ask Forgiveness Than Permission
-
-Python prefers exception handling over checking conditions.
-
-```python
-# Good: EAFP style
-def get_value(dictionary: dict, key: str) -> Any:
-    try:
-        return dictionary[key]
-    except KeyError:
-        return default_value
-
-# Bad: LBYL (Look Before You Leap) style
-def get_value(dictionary: dict, key: str) -> Any:
-    if key in dictionary:
-        return dictionary[key]
-    else:
-        return default_value
-```
-
----
-
-## Project Standards
-
-### Tooling
+## Tooling
 
 | Tool | Purpose |
 |:-----|:--------|
-| [uv](https://docs.astral.sh/uv/) | Package manager — **never** use `pip` or `venv` |
-| [Ruff](https://docs.astral.sh/ruff/) | Linting and formatting |
-| [ty](https://github.com/astral-sh/ty) | Type checking |
-| [pytest](https://pytest.org/) | Testing |
+| [uv](https://docs.astral.sh/uv/) | Package manager — **never** `pip` or `venv` |
+| [Ruff](https://docs.astral.sh/ruff/) | Lint + format |
+| [ty](https://github.com/astral-sh/ty) | Type checker |
+| [pytest](https://pytest.org/) | Tests |
 
 ```bash
-uv add <package>          # Production dependency
-uv add --dev <package>    # Dev dependency
-uv run <cmd>              # Run any command
-uv run ruff format .      # Format code
-uv run ruff check . --fix # Lint and auto-fix
-uv run ty check src/ tests/  # Type check
-uv run pytest             # Run tests
+uv add <pkg>                 # prod dep
+uv add --dev <pkg>           # dev dep
+uv run ruff format .
+uv run ruff check . --fix
+uv run ty check src/ tests/
+uv run pytest
 ```
 
-### Naming Conventions
+## Naming & Style
 
-| Element | Convention |
-|:--------|:-----------|
-| Variables/Functions | `snake_case` |
-| Classes | `CamelCase` |
-| Strings | f-strings (`f"..."`) |
-
-### Docstrings
-
-Google-style for all public functions and classes.
+- `snake_case` for variables, functions, modules.
+- `CamelCase` for classes.
+- `UPPER_SNAKE` for constants.
+- f-strings for all formatting.
+- Google-style docstrings on public functions/classes.
 
 ```python
 def fetch_user(user_id: str, active: bool = True) -> User | None:
     """Fetch a user by ID.
 
     Args:
-        user_id: The unique identifier of the user.
+        user_id: Unique identifier.
         active: If True, only return active users.
 
     Returns:
-        The User object, or None if not found.
+        The user, or None if not found.
 
     Raises:
-        DatabaseError: If the database query fails.
+        DatabaseError: If the query fails.
     """
 ```
 
----
+## Type Hints (mandatory on all signatures)
 
-## Type Hints
-
-### Modern Syntax (Python 3.10+)
-
-Type hints are **mandatory** for all function signatures.
+Modern syntax, Python 3.10+: built-in generics, `|` unions, no `Optional`/`Union`.
 
 ```python
-# Use built-in types and | for unions — no Optional, no Union
-def process_user(
-    user_id: str,
-    data: dict[str, Any],
-    active: bool = True,
-) -> User | None:
-    """Process a user and return the updated User or None."""
-    if not active:
-        return None
-    return User(user_id, data)
+def process(user_id: str, data: dict[str, Any]) -> User | None: ...
 
-
-def process_items(items: list[str]) -> dict[str, int]:
-    return {item: len(item) for item in items}
-```
-
-### Type Aliases and TypeVar
-
-```python
-from typing import TypeVar
-
-# Type alias for complex types
 JSON = dict[str, Any] | list[Any] | str | int | float | bool | None
 
-# Generic types
 T = TypeVar("T")
-
 def first(items: list[T]) -> T | None:
-    """Return the first item or None if list is empty."""
     return items[0] if items else None
 ```
 
-### Protocol-Based Duck Typing
+- `typing.Protocol` for structural (duck) typing.
+- `abc.ABC` only when explicit inheritance is required.
 
-```python
-from typing import Protocol
+## File System — `pathlib` only
 
-
-class Renderable(Protocol):
-    def render(self) -> str:
-        """Render the object to a string."""
-
-
-def render_all(items: list[Renderable]) -> str:
-    return "\n".join(item.render() for item in items)
-```
-
-### ABC vs Protocol
-
-```python
-from abc import ABC, abstractmethod
-
-# Use abc.ABC for explicit inheritance-based polymorphism
-class BaseProcessor(ABC):
-    @abstractmethod
-    def process(self, data: str) -> str: ...
-
-# Use typing.Protocol for structural typing (duck typing)
-class Processable(Protocol):
-    def process(self, data: str) -> str: ...
-```
-
----
-
-## File System
-
-**Always** use `pathlib.Path`. **Never** use `os.path.join` or string concatenation.
+Never `os.path.join` or string concatenation.
 
 ```python
 from pathlib import Path
 
-# Reading files
-config_path = Path("config") / "settings.toml"
-content = config_path.read_text(encoding="utf-8")
+cfg = Path("config") / "settings.toml"
+text = cfg.read_text(encoding="utf-8")
 
-# Writing files
-output = Path("output") / "result.json"
-output.parent.mkdir(parents=True, exist_ok=True)
-output.write_text(json.dumps(data), encoding="utf-8")
+out = Path("output/result.json")
+out.parent.mkdir(parents=True, exist_ok=True)
+out.write_text(json.dumps(data), encoding="utf-8")
 
-# Iterating files
-src = Path("src")
-for py_file in src.rglob("*.py"):
-    print(py_file.relative_to(src))
-
-# Common operations
-path = Path("data/users.csv")
-path.exists()           # Check existence
-path.suffix             # ".csv"
-path.stem               # "users"
-path.parent             # Path("data")
+for py in Path("src").rglob("*.py"): ...
 ```
 
----
+## Logging — structlog
 
-## Logging (structlog)
-
-Never use `logging` directly. Always use structlog.
+Never use `logging` directly. Configure once via `setup_logging()`.
 
 ```python
 import structlog
-
 logger = structlog.get_logger()
 
-
-def process_user(user_id: str) -> User:
-    logger.info("processing_user", user_id=user_id)
-
-    try:
-        user = db.find(user_id)
-        logger.info("user_found", user_id=user_id, name=user.name)
-        return user
-    except NotFoundError:
-        logger.warning("user_not_found", user_id=user_id)
-        raise
+logger.info("user_processed", user_id=user_id, duration_ms=42)
 ```
 
-Configure once at startup via `setup_logging()` from `{package_name}.logging`. Import: `from {package_name}.logging import setup_logging`.
+Event names: lowercase, snake_case, past-tense verbs. Pass context as kwargs, never f-string the message.
 
----
-
-## Settings (Pydantic)
+## Settings — Pydantic
 
 ```python
-from pydantic_settings import BaseSettings
-
+from pydantic_settings import BaseSettings, SettingsConfigDict
 
 class AppSettings(BaseSettings):
     app_name: str = "myapp"
-    debug: bool = False
     database_url: str
 
-    model_config = SettingsConfigDict(
-        env_prefix="APP__",
-        env_nested_delimiter="__",
-    )
-
+    model_config = SettingsConfigDict(env_prefix="APP__", env_nested_delimiter="__")
 
 settings = AppSettings()
 ```
 
-- Location: `src/{package_name}/settings.py`
-- Import: `from {package_name}.settings import settings`
-- Use `__` delimiter for nesting: `APP__APP_NAME`, `APP__LOGGING__LEVEL`
-
-### Data Classes vs Pydantic
-
-| Use Case | Choice |
+| Use case | Choice |
 |:---------|:-------|
-| Configuration from env vars | `BaseSettings` |
-| Simple data containers | `pydantic.dataclass` |
+| Env-var config | `BaseSettings` |
 | External data validation | `BaseModel` |
-| Immutable DTOs | `@pydantic.dataclass(frozen=True)` |
-
----
+| Internal data containers | `@dataclass` or `pydantic.dataclass` |
+| Immutable DTOs | `@dataclass(frozen=True)` |
 
 ## Error Handling
 
-### Specific Exception Handling
+- Catch specific exceptions; never bare `except`.
+- Chain with `raise ... from e` to preserve context.
+- Define a project-rooted exception hierarchy.
 
 ```python
-# Good: Catch specific exceptions and chain them
-def load_config(path: Path) -> Config:
-    try:
-        return Config.from_json(path.read_text())
-    except FileNotFoundError as e:
-        raise ConfigError(f"Config file not found: {path}") from e
-    except json.JSONDecodeError as e:
-        raise ConfigError(f"Invalid JSON in config: {path}") from e
+class AppError(Exception): ...
+class ValidationError(AppError): ...
+class NotFoundError(AppError): ...
 
-# Bad: Bare except
-def load_config(path: Path) -> Config:
-    try:
-        return Config.from_json(path.read_text())
-    except:
-        return None  # Silent failure!
+try:
+    return Config.from_json(path.read_text())
+except FileNotFoundError as e:
+    raise ConfigError(f"missing: {path}") from e
 ```
-
-### Custom Exception Hierarchy
-
-```python
-class AppError(Exception):
-    """Base exception for all application errors."""
-
-
-class ValidationError(AppError):
-    """Raised when input validation fails."""
-
-
-class NotFoundError(AppError):
-    """Raised when a requested resource is not found."""
-```
-
----
 
 ## Context Managers
 
+Use `with` for every resource. Build custom ones with `@contextmanager` or `__enter__/__exit__`.
+
 ```python
-from contextlib import contextmanager
-
-
 @contextmanager
 def timer(name: str):
-    """Time a block of code."""
     start = time.perf_counter()
-    yield
-    elapsed = time.perf_counter() - start
-    logger.info("timed_block", name=name, elapsed=elapsed)
-
-
-class DatabaseTransaction:
-    def __init__(self, connection):
-        self.connection = connection
-
-    def __enter__(self):
-        self.connection.begin_transaction()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb):
-        if exc_type is None:
-            self.connection.commit()
-        else:
-            self.connection.rollback()
-        return False
+    try:
+        yield
+    finally:
+        logger.info("timed", name=name, elapsed=time.perf_counter() - start)
 ```
 
----
+## Comprehensions & Generators
 
-## Comprehensions and Generators
+- List/dict/set comprehensions for simple transforms.
+- Generators for streaming or large datasets.
+- If logic spans more than a couple of clauses, write a function.
 
 ```python
-# List comprehension for simple transformations
-names = [user.name for user in users if user.is_active]
-
-# Generator for lazy evaluation — prefer over list for large data
+active = [u.name for u in users if u.is_active]
 total = sum(x * x for x in range(1_000_000))
 
-# Generator function for streaming large files
-def read_large_file(path: Path) -> Iterator[str]:
+def read_lines(path: Path) -> Iterator[str]:
     with path.open() as f:
         for line in f:
             yield line.strip()
-
-# Expand complex comprehensions into a function
-def filter_and_transform(items: Iterable[int]) -> list[int]:
-    result = []
-    for x in items:
-        if x > 0 and x % 2 == 0:
-            result.append(x * 2)
-    return result
 ```
 
----
-
-## Data Classes
-
-```python
-from dataclasses import dataclass, field
-from datetime import datetime
-
-
-@dataclass
-class User:
-    """User entity with automatic __init__, __repr__, and __eq__."""
-    id: str
-    name: str
-    email: str
-    created_at: datetime = field(default_factory=datetime.now)
-    is_active: bool = True
-
-    def __post_init__(self):
-        if "@" not in self.email:
-            raise ValueError(f"Invalid email: {self.email}")
-
-
-# Immutable value object
-from typing import NamedTuple
-
-class Point(NamedTuple):
-    x: float
-    y: float
-
-    def distance(self, other: "Point") -> float:
-        return ((self.x - other.x) ** 2 + (self.y - other.y) ** 2) ** 0.5
-```
-
----
-
-## Datetime
-
-**Always** use timezone-aware datetimes.
+## Datetime — always timezone-aware
 
 ```python
 from datetime import datetime, timezone
-
-# Good
-now = datetime.now(timezone.utc)
-serialized = now.isoformat()
-parsed = datetime.fromisoformat(serialized)
-
-# Bad
-now = datetime.utcnow()  # naive datetime, don't use
+now = datetime.now(timezone.utc)   # never datetime.utcnow() or datetime.now()
 ```
 
----
+## Async/Await (I/O-bound only)
 
-## Async/Await
-
-Use `async def` only for I/O-bound operations.
+- `httpx.AsyncClient` for HTTP — not `aiohttp` or `urllib`.
+- `asyncio.gather` for concurrency; never block the loop.
+- `asyncio.run` only at entry points.
 
 ```python
-import asyncio
-import httpx
-
-
 async def fetch(url: str) -> dict:
     async with httpx.AsyncClient() as client:
-        response = await client.get(url)
-        response.raise_for_status()
-        return response.json()
+        r = await client.get(url)
+        r.raise_for_status()
+        return r.json()
 
-
-async def fetch_all(urls: list[str]) -> list[dict]:
-    """Fetch multiple URLs concurrently."""
-    return await asyncio.gather(*[fetch(url) for url in urls])
-
-
-# asyncio.run() only in entry points
-if __name__ == "__main__":
-    asyncio.run(fetch_all(urls))
+results = await asyncio.gather(*(fetch(u) for u in urls))
 ```
 
-Rules:
-- Use `httpx.AsyncClient` for async HTTP (not `aiohttp` or `urllib`)
-- Always `await` async calls; never block the event loop
-- Use `asyncio.gather()` for concurrent operations
-- Use `asyncio.run()` only in entry points
-
----
-
-## CLI (Typer)
-
-Use **typer** for all entry points.
+## CLI — Typer
 
 ```python
 import typer
-
 app = typer.Typer()
 
-
 @app.command()
-def process(
-    input_path: Path = typer.Argument(..., help="Input file"),
-    verbose: bool = typer.Option(False, "--verbose", "-v"),
-) -> None:
+def process(input_path: Path, verbose: bool = typer.Option(False, "-v")) -> None:
     """Process the input file."""
-    if verbose:
-        typer.echo(f"Processing {input_path}")
-    # ...
-
 
 if __name__ == "__main__":
     app()
 ```
 
----
-
 ## Decorators
 
+Always `@functools.wraps` to preserve metadata.
+
 ```python
-import functools
-
-
-def timer(func: Callable) -> Callable:
+def timed(func):
     @functools.wraps(func)
     def wrapper(*args, **kwargs):
         start = time.perf_counter()
-        result = func(*args, **kwargs)
-        elapsed = time.perf_counter() - start
-        logger.info("function_timed", name=func.__name__, elapsed=elapsed)
-        return result
+        try:
+            return func(*args, **kwargs)
+        finally:
+            logger.info("timed", name=func.__name__, elapsed=time.perf_counter() - start)
     return wrapper
-
-
-def repeat(times: int):
-    def decorator(func: Callable) -> Callable:
-        @functools.wraps(func)
-        def wrapper(*args, **kwargs):
-            return [func(*args, **kwargs) for _ in range(times)]
-        return wrapper
-    return decorator
 ```
 
----
+## Performance
 
-## Memory and Performance
+- `"".join(...)` over `+=` in loops.
+- Generators over lists for large/streamed data.
+- `__slots__` on classes with many instances.
+- Profile before optimizing — `cProfile`, `timeit`.
 
-```python
-# __slots__ reduces memory usage for many instances
-class Point:
-    __slots__ = ["x", "y"]
-
-    def __init__(self, x: float, y: float):
-        self.x = x
-        self.y = y
-
-
-# String joining — never concatenate in a loop
-result = "".join(str(item) for item in items)  # O(n)
-# result = ""; for item in items: result += str(item)  # O(n²)
-```
-
----
-
-## Package Organization
+## Package Layout
 
 ```
 src/{package_name}/
-├── __init__.py
-├── cli.py          # Typer entry point
-├── logging.py      # structlog setup
-├── settings.py     # Pydantic settings
-├── py.typed        # PEP 561 marker
+├── __init__.py      # __version__, public exports, __all__
+├── cli.py           # Typer entry point
+├── logging.py       # structlog setup
+├── settings.py      # Pydantic settings
+├── py.typed         # PEP 561 marker
 └── utils/
-    └── __init__.py
 tests/
 ├── conftest.py
 └── test_*.py
 ```
 
-### Imports
+Import order (ruff-enforced): stdlib → third-party → local. Absolute imports only.
+
+## Anti-Patterns
 
 ```python
-# Order: stdlib → third-party → local (enforced by ruff)
-import os
-from pathlib import Path
-
-import structlog
-from pydantic import BaseModel
-
-from {package_name}.settings import settings
+def f(items=[]): ...                # mutable default — shared across calls
+if type(x) == list: ...             # use isinstance(x, list)
+if x == None: ...                   # use x is None
+from os.path import *               # no wildcard imports
+try: ...                            # no bare except
+except: pass
+datetime.utcnow()                   # naive — use datetime.now(timezone.utc)
+os.path.join(a, b)                  # use Path(a) / b
 ```
-
-### `__init__.py` Exports
-
-```python
-# {package_name}/__init__.py
-__version__ = "0.1.0"
-
-from {package_name}.models import User
-from {package_name}.utils import format_name
-
-__all__ = ["User", "format_name"]
-```
-
----
-
-## Anti-Patterns to Avoid
-
-```python
-# Bad: Mutable default argument
-def append_to(item, items=[]):  # shared across calls!
-    items.append(item)
-
-# Good
-def append_to(item, items=None):
-    if items is None:
-        items = []
-    items.append(item)
-
-
-# Bad: type() check
-if type(obj) == list: ...
-
-# Good
-if isinstance(obj, list): ...
-
-
-# Bad: comparing to None with ==
-if value == None: ...
-
-# Good
-if value is None: ...
-
-
-# Bad: wildcard import
-from os.path import *
-
-# Good
-from os.path import join, exists
-
-
-# Bad: bare except
-try:
-    risky()
-except:
-    pass
-
-# Good
-try:
-    risky()
-except SpecificError as e:
-    logger.error("operation_failed", error=str(e))
-```
-
----
 
 ## Quick Reference
 
-| Idiom | Description |
-|-------|-------------|
-| EAFP | Try/except over condition checks |
-| `with` | Context managers for all resources |
-| List comprehension | Simple in-line transformations |
-| Generator | Lazy evaluation, large datasets |
-| Type hints | Mandatory on all function signatures |
-| `pydantic.dataclass` | Simple data containers |
-| `BaseSettings` | Config from env vars |
-| `BaseModel` | External data validation |
-| `__slots__` | Memory optimization for many instances |
-| f-strings | All string formatting |
-| `pathlib.Path` | All file system operations |
+| Use | For |
+|-----|-----|
+| Type hints | Every signature |
+| `pathlib.Path` | All filesystem ops |
+| f-strings | All formatting |
 | `structlog` | All logging |
-| `typer` | All CLI entry points |
-| `httpx.AsyncClient` | Async HTTP requests |
+| `typer` | All CLIs |
+| `httpx.AsyncClient` | Async HTTP |
+| `BaseSettings` | Env config |
+| `BaseModel` | External data |
+| `@dataclass` | Internal data |
+| `__slots__` | Hot, many-instance classes |
+| EAFP + specific `except` | Error handling |
 
-**Remember**: Python code should be readable, explicit, and follow the principle of least surprise. When in doubt, prioritize clarity over cleverness.
+**Prioritize clarity over cleverness. When in doubt, write the obvious version.**
