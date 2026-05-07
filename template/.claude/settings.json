@@ -80,7 +80,10 @@
     "commit-commands@claude-plugins-official": true,
     "claude-code-setup@claude-plugins-official": true,
     "gitlab@claude-plugins-official": true,
-    "pydantic-ai@claude-plugins-official": true
+    "pydantic-ai@claude-plugins-official": true,
+    "python-skills@seblful-claude-plugins": true,
+    "code-review@seblful-claude-plugins": true,
+    "refactoring@seblful-claude-plugins": true
   },
   "extraKnownMarketplaces": {
     "ai-research-skills": {
@@ -94,6 +97,13 @@
       "source": {
         "source": "github",
         "repo": "kepano/obsidian-skills"
+      },
+      "autoUpdate": true
+    },
+    "seblful-claude-plugins": {
+      "source": {
+        "source": "github",
+        "repo": "seblful/seblful-claude-plugins"
       },
       "autoUpdate": true
     }
