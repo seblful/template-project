@@ -13,20 +13,8 @@
     "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
   },
   "hooks": {
-    "PreToolUse": [
+    "Stop": [
       {
-        "matcher": "Bash(git commit *)",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run pre-commit run --all-files"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Edit|Write",
         "hooks": [
           {
             "type": "command",
@@ -35,13 +23,7 @@
           {
             "type": "command",
             "command": "uv run mdformat . 2>/dev/null || true"
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
+          },
           {
             "type": "command",
             "command": "uv run ty check src/ tests/ 2>/dev/null || true"
