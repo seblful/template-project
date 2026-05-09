@@ -40,15 +40,21 @@
             "type": "command",
             "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.md) mdformat \"$f\" 2>/dev/null ;; esac; true",
             "statusMessage": "Formatting Markdown..."
-          },
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) ty check src/ tests/ 2>/dev/null || true ;; esac; true",
+            "command": "ty check src/ tests/ 2>/dev/null || true",
             "statusMessage": "Type checking..."
           },
           {
             "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) pytest -q 2>/dev/null || true ;; esac; true",
+            "command": "pytest -q 2>/dev/null || true",
             "statusMessage": "Running tests..."
           }
         ]
