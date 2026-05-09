@@ -75,3 +75,4 @@ _tasks:
   - ["uv", "sync"]
   - ["uv", "run", "ruff", "format", "."]
   - ["uv", "run", "mdformat", "."]
+  - ["uv", "run", "pre-commit", "install"]
