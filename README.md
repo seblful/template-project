@@ -66,11 +66,11 @@ new-project/
 ## Commands
 
 ```bash
-uv run dev          # Run CLI application
-uv run test         # Run tests with coverage
-uv run lint         # Lint and auto-fix
-uv run format       # Format code
-uv run typecheck    # Type check
+uv run <package_name>           # Run CLI application
+uv run pytest -v                # Run tests with coverage
+uv run ruff check . --fix       # Lint and auto-fix
+uv run ruff format .            # Format code
+uv run ty check src/ tests/     # Type check
 ```
 
 ## Configuration
