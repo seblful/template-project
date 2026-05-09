@@ -51,6 +51,9 @@ docs = [
 [project.scripts]
 {{ project_name }} = "{{ package_name }}.cli:app"
 
+[tool.uv]
+preview = true
+
 [tool.uv.scripts]
 dev = "{{ package_name }}"
 test = "pytest -v"
