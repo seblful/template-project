@@ -16,8 +16,10 @@ A [Copier](https://copier.readthedocs.io/) template for Python projects with mod
 
 ## Usage
 
+Copy directly from GitHub:
+
 ```bash
-copier copy path/to/template-project new-project
+copier copy gh:seblful/template-project new-project
 cd new-project
 make install
 ```
