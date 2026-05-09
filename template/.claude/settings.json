@@ -49,8 +49,13 @@
         "hooks": [
           {
             "type": "command",
-            "command": "changed=$(git diff --name-only HEAD 2>/dev/null | grep -E '[.]py$'); [ -z \"$changed\" ] && exit 0; echo \"Changed Python files since last commit — decide whether to run ty on them and pytest on corresponding tests:\"; echo \"$changed\"; exit 2",
-            "statusMessage": "Checking for changed Python files..."
+            "command": "ty check || exit 2",
+            "statusMessage": "Running ty type check..."
+          },
+          {
+            "type": "command",
+            "command": "echo \"Consider running pytest on the corresponding tests for any files\"",
+            "statusMessage": "pytest reminder"
           }
         ]
       }
