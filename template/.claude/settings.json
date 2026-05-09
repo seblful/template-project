@@ -4,13 +4,14 @@
     "allow": [
       "Bash(uv *)",
       "Bash(uvx *)",
-"Bash(git *)",
+      "Bash(git *)",
       "Bash(ruff *)",
       "Bash(pre-commit *)",
       "Bash(ty *)"
     ],
     "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
   },
+  "skillListingBudgetFraction": 0.02,
   "statusLine": {
     "type": "command",
     "command": "jq -r '(.context_window.used_percentage // 0) as $pct | (.cost.total_cost_usd // 0) as $cost | (.effort.level // \"?\") as $effort | \"[\\(.model.id)] | \\($effort) | \\($pct)% | $\\(($cost * 1000 | round | . / 1000))\"'"
@@ -26,24 +27,29 @@
         ]
       }
     ],
-    "Stop": [
+    "PostToolUse": [
       {
+        "matcher": "Write|Edit",
         "hooks": [
           {
             "type": "command",
-            "command": "ruff format . && ruff check . --fix --silent"
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) ruff format \"$f\" 2>/dev/null && ruff check --fix --silent \"$f\" 2>/dev/null ;; esac; true",
+            "statusMessage": "Formatting Python..."
           },
           {
             "type": "command",
-            "command": "mdformat . 2>/dev/null || true"
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.md) mdformat \"$f\" 2>/dev/null ;; esac; true",
+            "statusMessage": "Formatting Markdown..."
           },
           {
             "type": "command",
-            "command": "ty check src/ tests/ 2>/dev/null || true"
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) ty check src/ tests/ 2>/dev/null || true ;; esac; true",
+            "statusMessage": "Type checking..."
           },
           {
             "type": "command",
-            "command": "pytest -q 2>/dev/null || true"
+            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) pytest -q 2>/dev/null || true ;; esac; true",
+            "statusMessage": "Running tests..."
           }
         ]
       }
