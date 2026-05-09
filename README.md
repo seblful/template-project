@@ -24,7 +24,7 @@ A [Copier](https://copier.readthedocs.io/) template for Python projects with mod
 ## Create a Project
 
 ```bash
-copier copy gh:seblful/template-project new-project
+copier copy --trust gh:seblful/template-project new-project
 cd new-project
 ```
 

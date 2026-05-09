@@ -73,5 +73,6 @@ _exclude:
 _tasks:
   - ["git", "init"]
   - ["uv", "sync"]
-  - ["uv", "run", "ruff", "format", "."]
-  - ["uv", "run", "mdformat", "."]
+  - "for cmd in ruff ty pytest mdformat pre-commit; do command -v $cmd >/dev/null 2>&1 || echo \"⚠️ '$cmd' not found — run uv sync\"; done"
+  - ["ruff", "format", "."]
+  - ["mdformat", "."]
