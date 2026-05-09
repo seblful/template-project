@@ -11,6 +11,10 @@
     ],
     "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
   },
+  "statusLine": {
+    "type": "command",
+    "command": "jq -r '(.context_window.used_percentage // 0) as $pct | (.cost.total_cost_usd // 0) as $cost | (.effort.level // \"?\") as $effort | \"[\\(.model.id)] | \\($effort) | \\($pct)% | $\\(($cost * 1000 | round | . / 1000))\"'"
+  },
   "hooks": {
     "SessionStart": [
       {
@@ -45,14 +49,9 @@
       }
     ]
   },
-  "statusLine": {
-    "type": "command",
-    "command": "jq -r '(.context_window.used_percentage // 0) as $pct | (.cost.total_cost_usd // 0) as $cost | (.effort.level // \"?\") as $effort | \"[\\(.model.id)] | \\($effort) | \\($pct)% | $\\(($cost * 1000 | round | . / 1000))\"'"
-  },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
     "code-simplifier@claude-plugins-official": true,
-    "pyright-lsp@claude-plugins-official": true,
     "context7@claude-plugins-official": true,
     "obsidian@obsidian-skills": true,
     "github@claude-plugins-official": true,
@@ -62,7 +61,8 @@
     "pydantic-ai@claude-plugins-official": true,
     "code-review@seblful-claude-plugins": true,
     "refactoring@seblful-claude-plugins": true,
-    "python-skills@seblful-claude-plugins": true
+    "python-plugin@seblful-claude-plugins": true,
+    "lenses@seblful-claude-plugins": true
   },
   "extraKnownMarketplaces": {
     "obsidian-skills": {
