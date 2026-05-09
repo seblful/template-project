@@ -53,15 +53,13 @@ code_assistant:
   default: claude
 
 environments:
-  type: list
   help: Which environment-specific .env files should be created?
   multiselect: true
   choices:
     - development
     - staging
     - production
-  default:
-    - development
+  default: []
 
 _exclude:
   - notebooks/.gitkeep
