@@ -49,7 +49,7 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ty check || exit 2",
+            "command": "uv run ty check || exit 2",
             "statusMessage": "Running ty type check..."
           },
           {
