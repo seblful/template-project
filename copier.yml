@@ -73,5 +73,5 @@ _exclude:
 _tasks:
   - ["git", "init"]
   - ["uv", "sync"]
-  - ["ruff", "format", "."]
-  - ["mdformat", "."]
+  - ["uv", "run", "ruff", "format", "."]
+  - ["uv", "run", "mdformat", "."]
