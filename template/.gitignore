@@ -1,5 +1,4 @@
 # Project specific
-data/
 
 # Python
 __pycache__/
@@ -55,12 +54,6 @@ site/
 *.db
 *.sqlite
 *.sqlite3
-
-# IDE
-.vscode/
-.idea/
-.opencode/
-.superpowers/
 
 # Claude Code local settings (contains secrets/proxy credentials)
 .claude/settings.local.json

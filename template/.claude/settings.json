@@ -12,7 +12,7 @@
     "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
   },
   "hooks": {
-    "UserPromptSubmit": [
+    "SessionStart": [
       {
         "hooks": [
           {
