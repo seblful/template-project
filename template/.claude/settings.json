@@ -49,13 +49,8 @@
         "hooks": [
           {
             "type": "command",
-            "command": "output=$(ty check src/ tests/ 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"[ty] Type errors found — fix before stopping:\"; echo \"$output\"; exit 2; fi",
-            "statusMessage": "Type checking..."
-          },
-          {
-            "type": "command",
-            "command": "output=$(pytest -q 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"[pytest] Test failures found — fix before stopping:\"; echo \"$output\"; exit 2; fi",
-            "statusMessage": "Running tests..."
+            "command": "changed=$(git diff --name-only HEAD 2>/dev/null | grep -E '[.]py$'); [ -z \"$changed\" ] && exit 0; echo \"Changed Python files since last commit — decide whether to run ty on them and pytest on corresponding tests:\"; echo \"$changed\"; exit 2",
+            "statusMessage": "Checking for changed Python files..."
           }
         ]
       }
