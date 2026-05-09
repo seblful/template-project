@@ -2,80 +2,87 @@
 
 A [Copier](https://copier.readthedocs.io/) template for Python projects with modern tooling.
 
-## Features
+## Stack
 
-- [uv](https://github.com/astral-sh/uv) for fast dependency management
-- [Ruff](https://github.com/astral-sh/ruff) for linting and formatting
-- [ty](https://github.com/astral-sh/ty) for type checking
-- [pytest](https://pytest.org/) for testing with coverage
-- [Pydantic](https://docs.pydantic.dev/) for settings management
-- [structlog](https://www.structlog.org/) for structured logging
-- [Typer](https://typer.tiangolo.com/) for CLI interface
-- [mdformat](https://mdformat.readthedocs.io/) for markdown formatting
-- [pre-commit hooks](https://pre-commit.com/) for automated quality checks
+| Tool | Purpose |
+|------|---------|
+| [uv](https://github.com/astral-sh/uv) | Dependency management |
+| [Ruff](https://github.com/astral-sh/ruff) | Linting and formatting |
+| [ty](https://github.com/astral-sh/ty) | Type checking |
+| [pytest](https://pytest.org/) | Testing with coverage |
+| [Pydantic](https://docs.pydantic.dev/) | Settings management |
+| [structlog](https://www.structlog.org/) | Structured logging |
+| [Typer](https://typer.tiangolo.com/) | CLI interface |
+| [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
+| [pre-commit](https://pre-commit.com/) | Automated quality checks |
 
-## Usage
+## Prerequisites
 
-Copy directly from GitHub:
+- [uv](https://github.com/astral-sh/uv)
+- [copier](https://copier.readthedocs.io/) — `uvx copier` or `uv tool install copier`
+
+## Create a Project
 
 ```bash
 copier copy gh:seblful/template-project new-project
 cd new-project
-make install
 ```
 
-## Generated Project Structure
+Copier automatically runs `uv sync`, `pre-commit install`, and formats the project after generation.
+
+## Update a Project
+
+Pull the latest template changes into an existing generated project:
+
+```bash
+cd your-project
+copier update --trust
+```
+
+Copier re-applies the template, preserving your answers from `.copier-answers.yml`.
+
+## Project Structure
 
 ```
 new-project/
 ├── src/
-│   └── {{ package_name }}/      # Main package source
+│   └── <package_name>/
 │       ├── __init__.py
-│       ├── cli.py               # CLI entry point
-│       ├── logging.py           # Logging configuration
-│       ├── settings.py          # Pydantic settings
-│       ├── py.typed             # PEP 561 type marker
+│       ├── cli.py
+│       ├── logging.py
+│       ├── settings.py
+│       ├── py.typed
 │       └── utils/
 ├── tests/
 ├── docs/
 ├── scripts/
 ├── pyproject.toml
-├── .env                         # Environment template
+├── .env.development        # created based on environments answer
 ├── .python-version
-├── AGENTS.md                    # AI coding standards
+├── CLAUDE.md               # or AGENTS.md depending on code_assistant
 └── README.md
 ```
 
-## Available Commands
+## Commands
 
 ```bash
-make dev          # Run CLI application
-make test         # Run tests with coverage
-make lint         # Run ruff linter and formatter
-make typecheck    # Run ty type checker
-make install      # Install dependencies and pre-commit hooks
+uv run dev          # Run CLI application
+uv run test         # Run tests with coverage
+uv run lint         # Lint and auto-fix
+uv run format       # Format code
+uv run typecheck    # Type check
 ```
 
 ## Configuration
 
-Edit `copier.yml` to customize project defaults:
+Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 
-- `project_name` - Your project name
-- `package_name` - Python package name (snake_case)
-- `author_name` / `author_email` - Author information
-- `license` - None, MIT, Apache, or EULA
-- `python_version` - Target Python version
-- `include_notebooks` - Include notebooks directory
-
-## Development
-
-```bash
-# Lint and format
-make lint
-
-# Run tests
-make test
-
-# Type check
-make typecheck
-```
+| Variable | Description |
+|----------|-------------|
+| `project_name` | Project name |
+| `package_name` | Python package name (snake_case) |
+| `author_name` / `author_email` | Author information |
+| `license` | None, MIT, Apache, or EULA |
+| `python_version` | Target Python version |
+| `code_assistant` | Claude, Opencode, or Cursor |
+| `environments` | Environment-specific .env files to generate |
