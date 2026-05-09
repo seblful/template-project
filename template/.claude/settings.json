@@ -49,12 +49,12 @@
         "hooks": [
           {
             "type": "command",
-            "command": "ty check src/ tests/ 2>/dev/null || true",
+            "command": "output=$(ty check src/ tests/ 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"[ty] Type errors found — fix before stopping:\"; echo \"$output\"; exit 2; fi",
             "statusMessage": "Type checking..."
           },
           {
             "type": "command",
-            "command": "pytest -q 2>/dev/null || true",
+            "command": "output=$(pytest -q 2>&1); rc=$?; if [ $rc -ne 0 ]; then echo \"[pytest] Test failures found — fix before stopping:\"; echo \"$output\"; exit 2; fi",
             "statusMessage": "Running tests..."
           }
         ]
