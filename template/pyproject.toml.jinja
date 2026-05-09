@@ -51,6 +51,13 @@ docs = [
 [project.scripts]
 {{ project_name }} = "{{ package_name }}.cli:app"
 
+[tool.uv.scripts]
+dev = "{{ package_name }}"
+test = "pytest -v"
+lint = "ruff check . --fix"
+format = "ruff format ."
+typecheck = "ty check src/ tests/"
+
 [build-system]
 requires = ["hatchling"]
 build-backend = "hatchling.build"
