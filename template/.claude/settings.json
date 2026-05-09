@@ -4,8 +4,7 @@
     "allow": [
       "Bash(uv *)",
       "Bash(uvx *)",
-      "Bash(make *)",
-      "Bash(git *)",
+"Bash(git *)",
       "Bash(ruff *)",
       "Bash(pre-commit *)",
       "Bash(ty *)"
@@ -13,24 +12,34 @@
     "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
   },
   "hooks": {
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "for cmd in uv uvx git pre-commit ruff ty pytest mdformat; do command -v $cmd >/dev/null 2>&1 || echo \"⚠️ '$cmd' not found — run uv sync\"; done"
+          }
+        ]
+      }
+    ],
     "Stop": [
       {
         "hooks": [
           {
             "type": "command",
-            "command": "uv run ruff format . && uv run ruff check . --fix --silent"
+            "command": "ruff format . && ruff check . --fix --silent"
           },
           {
             "type": "command",
-            "command": "uv run mdformat . 2>/dev/null || true"
+            "command": "mdformat . 2>/dev/null || true"
           },
           {
             "type": "command",
-            "command": "uv run ty check src/ tests/ 2>/dev/null || true"
+            "command": "ty check src/ tests/ 2>/dev/null || true"
           },
           {
             "type": "command",
-            "command": "uv run pytest -q 2>/dev/null || true"
+            "command": "pytest -q 2>/dev/null || true"
           }
         ]
       }
