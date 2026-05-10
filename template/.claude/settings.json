@@ -33,7 +33,8 @@
     "refactoring@seblful-claude-plugins": true,
     "planning@seblful-claude-plugins": true,
     "python-plugin@seblful-claude-plugins": true,
-    "lenses@seblful-claude-plugins": true
+    "lenses@seblful-claude-plugins": true,
+    "obsidian-vault@seblful-claude-plugins": true
   },
   "extraKnownMarketplaces": {
     "obsidian-skills": {
