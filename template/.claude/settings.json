@@ -9,57 +9,15 @@
       "Bash(pre-commit *)",
       "Bash(ty *)"
     ],
-    "deny": ["Bash(rm -rf *)", "Bash(git push --force *)"]
+    "deny": [
+      "Bash(rm -rf *)",
+      "Bash(git push --force *)"
+    ]
   },
   "skillListingBudgetFraction": 0.02,
   "statusLine": {
     "type": "command",
     "command": "jq -r '(.context_window.used_percentage // 0) as $pct | (.cost.total_cost_usd // 0) as $cost | (.effort.level // \"?\") as $effort | \"[\\(.model.id)] | \\($effort) | \\($pct)% | $\\(($cost * 1000 | round | . / 1000))\"'"
-  },
-  "hooks": {
-    "SessionStart": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "for cmd in uv uvx git pre-commit ruff ty pytest mdformat; do command -v $cmd >/dev/null 2>&1 || echo \"⚠️ '$cmd' not found — run uv sync\"; done"
-          }
-        ]
-      }
-    ],
-    "PostToolUse": [
-      {
-        "matcher": "Write|Edit",
-        "hooks": [
-          {
-            "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.py) ruff format \"$f\" 2>/dev/null && ruff check --fix --silent \"$f\" 2>/dev/null ;; esac; true",
-            "statusMessage": "Formatting Python..."
-          },
-          {
-            "type": "command",
-            "command": "f=$(jq -r '.tool_input.file_path // empty'); case \"$f\" in *.md) mdformat \"$f\" 2>/dev/null ;; esac; true",
-            "statusMessage": "Formatting Markdown..."
-          }
-        ]
-      }
-    ],
-    "Stop": [
-      {
-        "hooks": [
-          {
-            "type": "command",
-            "command": "uv run ty check || exit 2",
-            "statusMessage": "Running ty type check..."
-          },
-          {
-            "type": "command",
-            "command": "echo \"Consider running pytest on the corresponding tests for any files\"",
-            "statusMessage": "pytest reminder"
-          }
-        ]
-      }
-    ]
   },
   "enabledPlugins": {
     "skill-creator@claude-plugins-official": true,
@@ -73,6 +31,7 @@
     "pydantic-ai@claude-plugins-official": true,
     "code-review@seblful-claude-plugins": true,
     "refactoring@seblful-claude-plugins": true,
+    "planning@seblful-claude-plugins": true,
     "python-plugin@seblful-claude-plugins": true,
     "lenses@seblful-claude-plugins": true
   },

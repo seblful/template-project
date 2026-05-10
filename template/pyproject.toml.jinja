@@ -59,7 +59,12 @@ packages = ["src/{{ package_name }}"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/{{ package_name }} --cov-report=term-missing"
+addopts = "--cov=src/{{ package_name }} --cov-report=term-missing --cov-fail-under=80"
+markers = [
+    "unit: fast, isolated unit tests",
+    "integration: tests that hit real I/O (DB, filesystem, network)",
+    "slow: tests that take more than a second",
+]
 
 [tool.ruff]
 target-version = "py{{ python_version | replace('.', '') }}"
