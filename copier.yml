@@ -61,11 +61,17 @@ environments:
     - production
   default: []
 
+include_claude_settings:
+  type: bool
+  help: Include Claude Code settings files (.claude/settings.json, .claude/settings.local.json)?
+  default: false
+
 _exclude:
   - notebooks/.gitkeep
   - scripts/.gitkeep
   - docs/.gitkeep
   - "{% if code_assistant != 'claude' %}.claude/**{% endif %}"
+  - "{% if not include_claude_settings %}.claude/settings.json{% endif %}"
   - "{% if 'development' not in environments %}.env.development{% endif %}"
   - "{% if 'staging' not in environments %}.env.staging{% endif %}"
   - "{% if 'production' not in environments %}.env.production{% endif %}"
@@ -74,5 +80,6 @@ _tasks:
   - ["git", "init"]
   - ["uv", "sync"]
   - ["uv", "run", "ruff", "format", "."]
+  - ["uv", "run", "ruff", "check", "--fix", "."]
   - ["uv", "run", "mdformat", "."]
   - ["uv", "run", "pre-commit", "install"]
