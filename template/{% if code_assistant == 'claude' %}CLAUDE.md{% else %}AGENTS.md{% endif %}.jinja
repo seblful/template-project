@@ -28,7 +28,18 @@
 - Remove only the orphans your changes create
 - Mention unrelated dead code; don't delete it
 
-### 4. Goal-Driven Execution
+### 4. Honest Pushback
+
+**Flag bad ideas. Don't silently comply.**
+
+Before executing, raise a concern if the request:
+- Conflicts with an established project standard or convention
+- Is an antipattern for this stack, context, or scale
+- Would introduce security, correctness, or maintainability risk
+
+State the concern in one sentence, name the specific tension, then proceed or ask — don't lecture. If the user confirms anyway, comply and move on.
+
+### 5. Goal-Driven Execution
 
 **Define success criteria. Loop until verified.**
 
@@ -48,11 +59,13 @@ For multi-step tasks, state a brief plan:
 
 **All AI agents must strictly adhere to these rules.**
 
-- **Code**: Follow patterns in `python-patterns` — see `python-testing` for tests, `commits` for git
-- **Tests**: All features and bug fixes require tests
-- **Commits**: Only when asked — use [Conventional Commits](https://www.conventionalcommits.org/) (`feat`, `fix`, `chore`, `refactor`, `docs`, `test`)
-- **Type checking**: Run `uv run ty check` after adding or modifying any Python code
-- **Tests**: Run `uv run pytest` after writing or changing code that is covered by tests
+- **Code**: Follow patterns in `python-patterns` — see `python-testing` for tests
+- **Tests**: Every feature and bug fix requires tests; write the test first, then make it pass
+- **Type checking**: Run `uv run ty check` after adding or modifying any Python code; fix all errors before proceeding
+- **Test suite**: Run `uv run pytest` after writing or changing code covered by tests; all tests must pass
+- **Commits**: Commit when explicitly asked, for commits use [Conventional Commits](https://www.conventionalcommits.org/).
+- **Logging**: Use `structlog` — log at `DEBUG` for internal state, `INFO` for significant lifecycle events, `WARNING` for recoverable anomalies, `ERROR` for failures that need attention; never log secrets or PII; prefer structured key-value pairs over interpolated strings
+
 
 | Tool | Purpose |
 |:-----|:--------|
