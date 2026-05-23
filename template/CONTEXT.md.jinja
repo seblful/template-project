@@ -16,6 +16,15 @@ flowchart LR
     D[External Service] --> A
 ```
 
+### Modules
+
+| Module | Purpose |
+|--------|---------|
+| `src/{{ package_name }}/cli.py` | Entry point — parses commands and delegates to domain logic |
+| `src/{{ package_name }}/settings.py` | Typed configuration loaded from environment |
+| `src/{{ package_name }}/logging.py` | Logging setup and logger factory |
+| `src/{{ package_name }}/utils/` | Shared helpers with no external dependencies |
+
 ---
 
 ## Key Design Decisions
