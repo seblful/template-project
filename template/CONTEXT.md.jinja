@@ -1,0 +1,70 @@
+# {{ project_name }} — Project Context
+
+## Project Overview
+
+{{ project_description | default("A Python project.") }}
+
+This document captures the architecture, module layout, and domain vocabulary for `{{ project_name }}`. It is the first file to read when orienting in the codebase.
+
+## Module Map
+
+| Module | Path | Purpose |
+|--------|------|---------|
+| `cli` | `src/{{ package_name }}/cli.py` | Typer-based CLI entry point |
+| `settings` | `src/{{ package_name }}/settings.py` | Pydantic settings loaded from environment |
+| `logging` | `src/{{ package_name }}/logging.py` | structlog configuration and logger factory |
+| `utils` | `src/{{ package_name }}/utils/` | Shared utilities with no external dependencies |
+
+## Key Abstractions
+
+- **Settings** (`settings.py`) — single Pydantic `Settings` model; all configuration flows through it, never from raw `os.environ`.
+- **Logger** (`logging.py`) — call `get_logger(__name__)` to get a bound structlog logger; do not instantiate loggers directly.
+- **CLI** (`cli.py`) — all user-facing commands live here; business logic belongs in domain modules, not in command callbacks.
+
+## Domain Vocabulary
+
+| Term | Meaning |
+|------|---------|
+| *package* | The importable Python package at `src/{{ package_name }}/` |
+| *environment* | Runtime tier — `development`, `staging`, or `production`; controls config and log verbosity |
+| *settings* | Typed configuration object populated from `.env` and environment variables |
+
+## Data Flow
+
+```
+CLI command (cli.py)
+  → load Settings from environment (.env / os.environ)
+  → initialize logger (logging.py)
+  → call domain logic (utils/ or feature modules)
+  → return result / write output
+```
+
+## Test Structure
+
+| Layer | Path | What it covers |
+|-------|------|----------------|
+| Unit | `tests/unit/` | Pure logic, no I/O, no external calls |
+| Integration | `tests/integration/` | Real file system, real config, no network |
+| E2E | `tests/e2e/` | Full CLI command execution |
+
+Run all tests: `uv run pytest`
+Run by layer: `uv run pytest -m unit`, `uv run pytest -m integration`
+
+## Entry Points
+
+```bash
+# Run the CLI
+uv run python -m {{ package_name }}
+
+# Or via the installed script
+uv run {{ package_name | replace("_", "-") }}
+```
+
+All public commands are defined in `src/{{ package_name }}/cli.py`.
+
+## Known Constraints
+
+- **Settings are loaded once** at startup; mutating them at runtime has no effect on already-resolved values.
+- **Logger must be initialized before first use** — call the setup function in `logging.py` before importing modules that log at import time.
+- **Environment variables take precedence** over `.env` file values (standard Pydantic Settings behavior).
+- **Add project-specific constraints here** as the codebase grows.
