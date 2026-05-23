@@ -2,27 +2,24 @@
 
 ## Overview
 
-<!-- TODO: Replace with a 2–3 sentence description of what this project does, the problem it solves, and who uses it. -->
-
 {{ project_description | default("A Python project.") }}
 
 ---
 
 ## Architecture
 
-<!-- TODO: Update the diagram to reflect actual components and data flow once the domain takes shape. -->
+High-level description of how the system is structured — major components and how they connect.
 
 ```mermaid
 flowchart LR
-    CLI["cli.py\n(entry point)"] --> Settings["settings.py\n(config)"]
-    CLI --> Logging["logging.py\n(observability)"]
-    CLI --> Domain["domain logic\n(utils/ + feature modules)"]
-    Env[".env / environment"] --> Settings
+    Input([Input]) --> A[Component A]
+    A --> B[Component B]
+    B --> C[Component C]
+    B --> D[(Storage)]
+    C --> Output([Output])
 ```
 
 ### Modules
-
-<!-- TODO: Add new modules as they are created. Remove rows that no longer exist. -->
 
 | Module | Purpose |
 |--------|---------|
@@ -35,13 +32,13 @@ flowchart LR
 
 ## Key Design Decisions
 
-- **uv over pip/poetry** — faster installs, lockfile-based reproducibility, unified tool and package management
-- **structlog over stdlib logging** — structured key-value output, easier to query in log aggregators
-- **pydantic-settings for config** — type-safe env var parsing with validation at startup, not at use-site
-- **ty over mypy** — faster incremental type checking, same Pyright-compatible semantics
-- **pytest with coverage gate** — 80% minimum enforced in `pyproject.toml`; tests written before implementation
+- **Decision** — rationale
 
-<!-- TODO: Add project-specific decisions as they are made. -->
+---
+
+## Non-Goals / Out of Scope
+
+- Item
 
 ---
 
@@ -57,5 +54,3 @@ flowchart LR
 ├── docs/                     # Documentation
 └── scripts/                  # Utility scripts
 ```
-
-<!-- TODO: Note any non-obvious layout choices specific to this project. -->
