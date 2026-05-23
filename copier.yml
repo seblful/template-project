@@ -21,6 +21,9 @@ author_name:
 author_email:
   type: str
   help: What is the author email?
+  choices:
+    - alesha.chimba@gmail.com
+    - achimba@twelvedevs.com
   default: alesha.chimba@gmail.com
 
 license:
