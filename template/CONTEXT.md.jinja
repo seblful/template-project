@@ -2,16 +2,7 @@
 
 ## Overview
 
-**What it is**: {{ project_description | default("A Python project.") }}
-**Problem it solves**: What pain or need this addresses.
-
----
-
-## Goals
-
-- Primary goal
-- Secondary goal
-- What is explicitly out of scope
+{{ project_description | default("A Python project.") }}
 
 ---
 
@@ -25,10 +16,12 @@ High-level description of how the system is structured — major components and 
     [External Service]
 ```
 
-**Key design decisions:**
+---
 
-- Why X over Y (e.g. "monolith over microservices because...")
-- Any non-obvious structural choices
+## Key Design Decisions
+
+- Decision and rationale
+- Decision and rationale
 
 ---
 
@@ -37,18 +30,7 @@ High-level description of how the system is structured — major components and 
 ```
 /
 ├── src/{{ package_name }}/   # Application source
-├── tests/                    # Test suite (unit/, integration/, e2e/)
+├── tests/                    # Test suite
 ├── docs/                     # Documentation
 └── scripts/                  # Utility scripts
 ```
-
-Describe any non-obvious layout choices.
-
----
-
-## Domain Model
-
-Core concepts and how they relate. Define terms that have specific meaning in this project.
-
-- **Term A**: what it means here
-- **Term B**: what it means here
