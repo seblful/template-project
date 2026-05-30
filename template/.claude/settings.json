@@ -7,59 +7,20 @@
       "Bash(git *)",
       "Bash(ruff *)",
       "Bash(pre-commit *)",
-      "Bash(ty *)"
+      "Bash(ty *)",
+      "Bash(pytest *)",
+      "Bash(mdformat *)",
+      "Bash(mkdocs *)",
+      "Bash(python *)",
+      "Bash(python3 *)"
     ],
     "deny": [
       "Bash(rm -rf *)",
-      "Bash(git push --force *)"
+      "Bash(git push --force *)",
+      "Bash(git reset --hard *)",
+      "Bash(uv publish *)",
+      "Read(.env)",
+      "Read(.env.*)"
     ]
-  },
-  "skillListingBudgetFraction": 0.02,
-  "statusLine": {
-    "type": "command",
-    "command": "jq -r '(.context_window.used_percentage // 0) as $pct | (.cost.total_cost_usd // 0) as $cost | (.effort.level // \"?\") as $effort | \"[\\(.model.id)] | \\($effort) | \\($pct)% | $\\(($cost * 1000 | round | . / 1000))\"'"
-  },
-  "enabledPlugins": {
-    "skill-creator@claude-plugins-official": true,
-    "code-simplifier@claude-plugins-official": true,
-    "context7@claude-plugins-official": true,
-    "obsidian@obsidian-skills": true,
-    "github@claude-plugins-official": true,
-    "claude-md-management@claude-plugins-official": true,
-    "claude-code-setup@claude-plugins-official": true,
-    "gitlab@claude-plugins-official": true,
-    "pydantic-ai@claude-plugins-official": true,
-    "code-review@seblful-claude-plugins": true,
-    "refactoring@seblful-claude-plugins": true,
-    "planning@seblful-claude-plugins": true,
-    "python-plugin@seblful-claude-plugins": true,
-    "lenses@seblful-claude-plugins": true,
-    "obsidian-vault@seblful-claude-plugins": true
-  },
-  "extraKnownMarketplaces": {
-    "obsidian-skills": {
-      "source": {
-        "source": "github",
-        "repo": "kepano/obsidian-skills"
-      },
-      "autoUpdate": true
-    },
-    "seblful-claude-plugins": {
-      "source": {
-        "source": "github",
-        "repo": "seblful/seblful-claude-plugins"
-      },
-      "autoUpdate": true
-    }
-  },
-  "effortLevel": "medium",
-  "autoUpdatesChannel": "latest",
-  "cleanupPeriodDays": 90,
-  "tui": "fullscreen",
-  "voice": {
-    "enabled": true,
-    "mode": "hold"
-  },
-  "theme": "auto",
-  "skipAutoPermissionPrompt": true
+  }
 }

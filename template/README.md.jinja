@@ -1,4 +1,4 @@
-# {{ project_name }}
+# {{ project_slug }}
 
 {{ project_description | default("A Python project.") }}
 
@@ -12,7 +12,7 @@ import {{ package_name }}
 
 | Variable | Description | Default |
 |----------|-------------|---------|
-| `APP__APP_NAME` | Application name | `{{ project_name }}` |
+| `APP__APP_NAME` | Application name | `{{ project_slug }}` |
 | `APP__ENVIRONMENT` | Environment | `development` |
 | `LOGGING__FILE_LEVEL` | File log level | `DEBUG` |
 | `LOGGING__CONSOLE_LEVEL` | Console log level | `INFO` |

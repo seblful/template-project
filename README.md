@@ -19,12 +19,14 @@ A [Copier](https://copier.readthedocs.io/) template for Python projects with mod
 ## Prerequisites
 
 - [uv](https://github.com/astral-sh/uv)
-- [copier](https://copier.readthedocs.io/) — `uvx copier` or `uv tool install copier`
+- [copier](https://copier.readthedocs.io/) with the `jinja2-time` extension (used to stamp the current year into the license):
+  - `uvx --with jinja2-time copier`, or
+  - `uv tool install copier --with jinja2-time`
 
 ## Create a Project
 
 ```bash
-copier copy --trust gh:seblful/template-project new-project
+uvx --with jinja2-time copier copy --trust gh:seblful/template-project new-project
 cd new-project
 ```
 
@@ -36,7 +38,7 @@ Pull the latest template changes into an existing generated project:
 
 ```bash
 cd your-project
-copier update --trust
+uvx --with jinja2-time copier update --trust
 ```
 
 Copier re-applies the template, preserving your answers from `.copier-answers.yml`.

@@ -1,12 +1,25 @@
 _subdirectory: template
 
-project_name:
+_jinja_extensions:
+  - jinja2_time.TimeExtension
+
+project_slug:
   type: str
-  help: What is your project name?
+  help: What is your project name? (kebab-case)
+  default: "{{ _copier_conf.dst_path.name | lower | replace('_', '-') | replace(' ', '-') }}"
+  validator: >-
+    {% if not (project_slug | regex_search('^[a-z0-9]+(-[a-z0-9]+)*$')) %}
+    project_slug must be kebab-case: lowercase letters and digits separated by single hyphens (e.g. my-cool-project)
+    {% endif %}
 
 package_name:
   type: str
   help: What is your Python package name? (snake_case)
+  default: "{{ project_slug | replace('-', '_') }}"
+  validator: >-
+    {% if not (package_name | regex_search('^[a-z][a-z0-9_]*$')) %}
+    package_name must be a valid Python identifier: lowercase letter first, then lowercase letters, digits or underscores (e.g. my_cool_project)
+    {% endif %}
 
 project_description:
   type: str
@@ -36,11 +49,6 @@ license:
     - EULA
   default: None
 
-current_year:
-  type: str
-  help: What year should be in the copyright notice?
-  default: "2026"
-
 python_version:
   type: str
   help: What Python version should the project target?
@@ -64,17 +72,11 @@ environments:
     - production
   default: []
 
-include_claude_settings:
-  type: bool
-  help: Include Claude Code settings files (.claude/settings.json, .claude/settings.local.json)?
-  default: false
-
 _exclude:
   - notebooks/.gitkeep
   - scripts/.gitkeep
   - docs/.gitkeep
   - "{% if code_assistant != 'claude' %}.claude/**{% endif %}"
-  - "{% if not include_claude_settings %}.claude/settings.json{% endif %}"
   - "{% if 'development' not in environments %}.env.development{% endif %}"
   - "{% if 'staging' not in environments %}.env.staging{% endif %}"
   - "{% if 'production' not in environments %}.env.production{% endif %}"

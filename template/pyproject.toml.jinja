@@ -1,5 +1,5 @@
 [project]
-name = "{{ project_name }}"
+name = "{{ project_slug }}"
 description = "{{ project_description }}"
 readme = "README.md"
 requires-python = ">={{ python_version }}"
@@ -48,7 +48,7 @@ docs = [
 ]
 
 [project.scripts]
-{{ project_name }} = "{{ package_name }}.cli:app"
+{{ project_slug }} = "{{ package_name }}.cli:app"
 
 [build-system]
 requires = ["hatchling"]

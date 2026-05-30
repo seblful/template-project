@@ -1,4 +1,4 @@
-"""Command line interface for {{ project_name }}."""
+"""Command line interface for {{ project_slug }}."""
 
 import typer
 
@@ -6,12 +6,12 @@ from {{ package_name }} import __version__
 from {{ package_name }}.logging import setup_logging
 from {{ package_name }}.settings import settings
 
-app = typer.Typer(help="{{ project_name }} CLI", no_args_is_help=True)
+app = typer.Typer(help="{{ project_slug }} CLI", no_args_is_help=True)
 
 
 @app.callback()
 def main(ctx: typer.Context) -> None:
-    """{{ project_name }} CLI."""
+    """{{ project_slug }} CLI."""
     if ctx.invoked_subcommand is not None:
         setup_logging()
 
