@@ -21,8 +21,10 @@ def setup_logging(
         return
 
     settings = get_settings()
-    f_level = logging.getLevelName((file_level or settings.logging.file_level).upper())
-    c_level = logging.getLevelName((console_level or settings.logging.console_level).upper())
+    # Level names are constrained by the LogLevel Literal, so each maps to a logging
+    # constant. getattr is unambiguous and works on every supported Python version.
+    f_level: int = getattr(logging, (file_level or settings.logging.file_level).upper())
+    c_level: int = getattr(logging, (console_level or settings.logging.console_level).upper())
 
     file_path = (log_file or settings.logging.log_file).resolve()
     file_path.parent.mkdir(parents=True, exist_ok=True)

@@ -44,7 +44,6 @@ logs/
 
 # Docs
 docs/_build/
-docs/superpowers/
 site/
 
 # Jupyter

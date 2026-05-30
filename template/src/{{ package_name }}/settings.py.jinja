@@ -5,7 +5,7 @@ from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -20,6 +20,9 @@ class AppSettings(BaseModel):
 
     app_name: str = Field(default="{{ project_slug }}", description="Application name")
     environment: str = Field(default="development", description="Environment name")
+    # Example secret (set via APP__SECRET_KEY). SecretStr keeps it out of logs/repr;
+    # read the value with secret_key.get_secret_value().
+    secret_key: SecretStr | None = Field(default=None, description="Example secret value")
 
 
 class LoggingSettings(BaseModel):
