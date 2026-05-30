@@ -1,10 +1,11 @@
 """Application settings configuration using Pydantic."""
 
 import os
+from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import Field
+from pydantic import BaseModel, Field
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -14,14 +15,14 @@ LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 _ENVIRONMENT = os.getenv("APP__ENVIRONMENT", "development")
 
 
-class AppSettings(BaseSettings):
+class AppSettings(BaseModel):
     """Application settings group."""
 
     app_name: str = Field(default="{{ project_slug }}", description="Application name")
     environment: str = Field(default="development", description="Environment name")
 
 
-class LoggingSettings(BaseSettings):
+class LoggingSettings(BaseModel):
     """Logging settings group."""
 
     file_level: LogLevel = Field(default="DEBUG", description="File log level")
@@ -44,4 +45,7 @@ class Settings(BaseSettings):
     )
 
 
-settings = Settings()
+@lru_cache
+def get_settings() -> Settings:
+    """Return the cached application settings, loaded on first use."""
+    return Settings()

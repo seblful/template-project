@@ -8,7 +8,7 @@ from pathlib import Path
 
 import structlog
 
-from {{ package_name }}.settings import settings
+from {{ package_name }}.settings import get_settings
 
 
 def setup_logging(
@@ -20,9 +20,9 @@ def setup_logging(
     if logging.root.handlers:
         return
 
-    levels = logging.getLevelNamesMapping()
-    f_level = levels[(file_level or settings.logging.file_level).upper()]
-    c_level = levels[(console_level or settings.logging.console_level).upper()]
+    settings = get_settings()
+    f_level = logging.getLevelName((file_level or settings.logging.file_level).upper())
+    c_level = logging.getLevelName((console_level or settings.logging.console_level).upper())
 
     file_path = (log_file or settings.logging.log_file).resolve()
     file_path.parent.mkdir(parents=True, exist_ok=True)

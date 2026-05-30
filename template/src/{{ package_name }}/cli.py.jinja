@@ -4,7 +4,7 @@ import typer
 
 from {{ package_name }} import __version__
 from {{ package_name }}.logging import setup_logging
-from {{ package_name }}.settings import settings
+from {{ package_name }}.settings import get_settings
 
 app = typer.Typer(help="{{ project_slug }} CLI", no_args_is_help=True)
 
@@ -19,6 +19,7 @@ def main(ctx: typer.Context) -> None:
 @app.command()
 def info() -> None:
     """Display project information."""
+    settings = get_settings()
     typer.echo(f"{settings.app.app_name} v{__version__}")
     typer.echo(f"Environment: {settings.app.environment}")
 
