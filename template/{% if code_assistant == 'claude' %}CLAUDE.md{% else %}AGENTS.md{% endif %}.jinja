@@ -57,7 +57,7 @@ For multi-step tasks, state a brief plan:
 
 ## Project Context
 
-`CONTEXT.md` is the authoritative reference for this project — what it does, its architecture, module map, key design decisions, non-goals, and project structure. If it does not exist, create it before starting work. Read it at the start of any non-trivial task. Keep it current: update it whenever modules are added or removed, design decisions are made, non-goals change, or the data flow shifts.
+`CONTEXT.md` is the authoritative reference for this project — what it does, its architecture, module map, key design decisions, and non-goals. If it does not exist, create it before starting work. Read it at the start of any non-trivial task. Keep it high-level and project-relevant, not detailed — capture decisions and structure that aren't obvious from the code, not things the code already states. Update it when modules, design decisions, non-goals, or data flow change.
 
 ---
 
@@ -66,10 +66,10 @@ For multi-step tasks, state a brief plan:
 **All AI agents must strictly adhere to these rules.**
 
 - **Code**: Follow patterns in `python-patterns` — see `python-testing` for tests
-- **Tests**: Every feature and bug fix requires tests; write the test first, then make it pass
+- **Tests**: Every feature and bug fix requires tests
 - **Type checking**: Run `uv run ty check` after adding or modifying any Python code; fix all errors before proceeding
 - **Test suite**: Run `uv run pytest` after writing or changing code covered by tests; all tests must pass
-- **Commits**: Commit when explicitly asked, for commits use [Conventional Commits](https://www.conventionalcommits.org/).
+- **Commits**: Commit only when explicitly asked one message before, for commits use [Conventional Commits](https://www.conventionalcommits.org/).
 - **Logging**: Use `structlog` — log at `DEBUG` for internal state, `INFO` for significant lifecycle events, `WARNING` for recoverable anomalies, `ERROR` for failures that need attention; never log secrets or PII; prefer structured key-value pairs over interpolated strings
 
 
