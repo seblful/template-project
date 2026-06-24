@@ -28,7 +28,7 @@ class AppSettings(BaseModel):
 class LoggingSettings(BaseModel):
     """Logging settings group."""
 
-    file_level: LogLevel = Field(default="DEBUG", description="File log level")
+    file_level: LogLevel = Field(default="INFO", description="File log level")
     console_level: LogLevel = Field(default="INFO", description="Console log level")
     log_file: Path = Field(default=Path("logs/app.log"), description="Log file path")
 
