@@ -1,4 +1,7 @@
 {
+  "env": {
+    "CLAUDE_ISSUES_REPO": "seblful/seblful-claude-plugins"
+  },
   "permissions": {
     "defaultMode": "auto",
     "allow": [

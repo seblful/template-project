@@ -96,3 +96,9 @@ For multi-step tasks, state a brief plan:
 - Use `pydantic-settings` for secret management
 - Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
 - Respect `.ignore` paths (`.env*`, `.ssh/`, `secrets/`)
+
+---
+
+## Filing Issues
+
+When one of my Claude Code plugins or systems (a skill, command, agent, or hook) misbehaves — triggers when it should not, does the wrong thing, or fails — proactively offer to capture it as a GitHub issue in my backlog repo (`$CLAUDE_ISSUES_REPO`) via `/issue` (the `issue` skill), regardless of which project you are working in. Draft it and get an explicit yes before filing — never file silently.
