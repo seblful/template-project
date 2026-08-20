@@ -1,55 +1,53 @@
 # Project Context
 
+<!-- A map, not documentation. Whole file stays under 100 lines.
+     Exclusion test: if a reader could learn it by opening the code or
+     running `ls`, it does not belong here.
+     When a section hits its cap, replace its weakest entry — never extend. -->
+
 ## Overview
 
 {{ project_description | default("A Python project.") }}
+
+<!-- Cap: 3 sentences — what it does, who it is for, what it replaces. -->
 
 ---
 
 ## Architecture
 
-High-level description of how the system is structured — major components and how they connect.
+<!-- Cap: one diagram, 10 nodes max. Name components and data flow only.
+     No per-file breakdown, no prose restating the diagram. -->
 
 ```mermaid
 flowchart LR
     Input([Input]) --> A[Component A]
     A --> B[Component B]
-    B --> C[Component C]
-    B --> D[(Storage)]
-    C --> Output([Output])
+    B --> Store[(Storage)]
+    B --> Output([Output])
 ```
 
-### Modules
+---
 
-| Module | Purpose |
-|--------|---------|
-| `src/{{ package_name }}/cli.py` | Entry point — parses commands and delegates to domain logic |
-| `src/{{ package_name }}/settings.py` | Typed configuration loaded from environment |
-| `src/{{ package_name }}/logging.py` | Logging setup and logger factory |
-| `src/{{ package_name }}/utils/` | Shared helpers with no external dependencies |
+## Vocabulary
+
+<!-- Cap: 7 terms. Only terms whose meaning here differs from the plain-English
+     or library one. If the identifier already says it, leave it out. -->
+
+- **Term** — one line
 
 ---
 
-## Key Design Decisions
+## Decisions
 
-- **Decision** — rationale
+<!-- Cap: 5 entries. Format: X over Y because Z.
+     Only decisions a contributor would otherwise reverse by accident. -->
+
+- **X over Y** — because Z
 
 ---
 
-## Non-Goals / Out of Scope
+## Non-Goals
+
+<!-- Cap: 5 entries. Only things a reasonable contributor might add anyway. -->
 
 - Item
-
----
-
-## Project Structure
-
-```
-├── src/{{ package_name }}/   # Application source
-├── tests/
-│   ├── unit/                 # Pure logic, no I/O
-│   ├── integration/          # Real filesystem and config
-│   └── e2e/                  # Full CLI command execution
-├── docs/                     # Documentation
-└── scripts/                  # Utility scripts
-```

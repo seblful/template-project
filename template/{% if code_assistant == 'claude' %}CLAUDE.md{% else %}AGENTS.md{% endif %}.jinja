@@ -2,33 +2,7 @@
 
 ## Core Principles
 
-### 1. Think Before Coding
-
-**Don't assume. Surface tradeoffs. Ask when uncertain.**
-
-- State assumptions explicitly
-- Present multiple interpretations when they exist
-- Push back if a simpler approach exists
-- Name what's confusing before proceeding
-
-### 2. Simplicity First
-
-**Minimum code that solves the problem. Nothing speculative.**
-
-- No features, abstractions, or configurability beyond what was asked
-- No error handling for impossible scenarios
-- If it could be 50 lines but is 200, rewrite it
-
-### 3. Surgical Changes
-
-**Touch only what you must. Clean up only your own mess.**
-
-- Don't "improve" adjacent code, comments, or formatting
-- Match existing style even if you'd do it differently
-- Remove only the orphans your changes create
-- Mention unrelated dead code; don't delete it
-
-### 4. Honest Pushback
+### Honest Pushback
 
 **Flag bad ideas. Don't silently comply.**
 
@@ -39,25 +13,25 @@ Before executing, raise a concern if the request:
 
 State the concern in one sentence, name the specific tension, then proceed or ask — don't lecture. If the user confirms anyway, comply and move on.
 
-### 5. Goal-Driven Execution
+### Goal-Driven Execution
 
-**Define success criteria. Loop until verified.**
+**Every task needs a check that can fail.**
 
-Transform tasks into verifiable goals:
-- "Add validation" → Write tests for invalid inputs, then make them pass
-- "Fix the bug" → Write a test that reproduces it, then make it pass
-
-For multi-step tasks, state a brief plan:
-```
-1. [Step] → verify: [check]
-2. [Step] → verify: [check]
-```
+Restate the request as a condition something can verify — a test, a command, an observable output — then work until it holds. If a task admits no such check, say so before starting instead of calling it done by inspection.
 
 ---
 
 ## Project Context
 
-`CONTEXT.md` is the authoritative reference for this project — what it does, its architecture, module map, key design decisions, and non-goals. If it does not exist, create it before starting work. Read it at the start of any non-trivial task. Keep it high-level and project-relevant, not detailed — capture decisions and structure that aren't obvious from the code, not things the code already states. Update it when modules, design decisions, non-goals, or data flow change.
+`CONTEXT.md` is the authoritative reference. Create it if missing; read it before any non-trivial task. Five sections:
+
+- **Overview** — what it does, who for, what it replaces
+- **Architecture** — one diagram: components and data flow
+- **Vocabulary** — terms whose meaning here differs from the plain-English or library one
+- **Decisions** — X over Y because Z
+- **Non-Goals** — what it deliberately will not do
+
+It is a map, not documentation: anything a reader could get from the code or `ls` stays out. Respect the caps in its HTML comments — at a cap, replace the weakest entry rather than growing the list. Update it when a non-goal, decision, domain term, or component boundary changes, not when code changes.
 
 ---
 
@@ -96,9 +70,3 @@ For multi-step tasks, state a brief plan:
 - Use `pydantic-settings` for secret management
 - Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
 - Respect `.ignore` paths (`.env*`, `.ssh/`, `secrets/`)
-
----
-
-## Filing Issues
-
-When one of my Claude Code plugins or systems (a skill, command, agent, or hook) misbehaves — triggers when it should not, does the wrong thing, or fails — proactively offer to capture it as a GitHub issue in my backlog repo (`$CLAUDE_ISSUES_REPO`) via `/issue` (the `issue` skill), regardless of which project you are working in. Draft it and get an explicit yes before filing — never file silently.
