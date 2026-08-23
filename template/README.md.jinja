@@ -2,13 +2,52 @@
 
 {{ project_description | default("A Python project.") }}
 
+## Requirements
+
+- Python {{ python_version }}+
+- [uv](https://docs.astral.sh/uv/)
+
+## Installation
+
+```bash
+uv sync
+```
+
 ## Usage
+
+Run the CLI:
+
+```bash
+uv run {{ project_slug }} info
+```
+
+Or use it as a library:
 
 ```python
 import {{ package_name }}
 ```
 
+## Configuration
+
+Copy `.env.example` to `.env` and adjust the values:
+
+```bash
+cp .env.example .env
+```
+
+Set `APP__ENVIRONMENT` to select which `.env.<environment>` file is loaded alongside it (missing files are ignored).
+
+## Development
+
+```bash
+uv run pytest                       # run tests
+uv run ruff check .                 # lint
+uv run ruff format .                # format
+uv run ty check src/ tests/         # type check
+uv run pre-commit run --all-files   # run all hooks
+```
 {% if license and license != "None" %}
+
 ## License
 
 {{ license }} License - see [LICENSE](LICENSE) for details.
