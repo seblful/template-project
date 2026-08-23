@@ -24,5 +24,4 @@ def test_settings(
     for key in list(os.environ):
         if key.startswith(("APP__", "LOGGING__")):
             monkeypatch.delenv(key, raising=False)
-    # _env_file is a pydantic-settings runtime kwarg, not in its typed signature.
-    return Settings(_env_file=tmp_env_file)  # ty: ignore[unknown-argument]
+    return Settings(_env_file=tmp_env_file)
