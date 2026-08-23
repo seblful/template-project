@@ -88,3 +88,7 @@ _tasks:
   - ["uv", "run", "ruff", "check", "--fix", "."]
   - ["uv", "run", "mdformat", "."]
   - ["uv", "run", "pre-commit", "install"]
+  - command: ["git", "add", "-A"]
+    when: "{{ _copier_operation == 'copy' }}"
+  - command: ["git", "commit", "-m", "chore: initial commit from template", "--no-verify"]
+    when: "{{ _copier_operation == 'copy' }}"
