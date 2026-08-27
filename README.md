@@ -88,3 +88,9 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 | `python_version` | Target Python version |
 | `code_assistant` | Claude, Opencode, or Cursor |
 | `environments` | Environment-specific .env files to generate |
+
+## Versioning
+
+The template is released as git tags (`v0.7.7`, `v0.7.6`, …), which `copier copy` and `copier update` resolve to.
+
+Releases bump the **patch** number only — `0.4.1` → `0.4.2` → `0.4.3`. Never bump the minor number (`0.4.1` → `0.5.0`) unless explicitly asked to.

@@ -29,7 +29,7 @@ Restate the request as a condition something can verify — a test, a command, a
 - **Tests**: Every feature and bug fix requires tests
 - **Type checking**: Run `uv run ty check` after adding or modifying any Python code; fix all errors before proceeding
 - **Test suite**: Run `uv run pytest` after writing or changing code covered by tests; all tests must pass
-- **Commits**: Commit only when explicitly asked one message before, for commits use [Conventional Commits](https://www.conventionalcommits.org/).
+- **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), subject ≤ 50 chars, imperative mood; no body unless the change needs a "why" (then max 5 bullets); no "Co-Authored-By" footers
 - **Logging**: Use `structlog` — log at `DEBUG` for internal state, `INFO` for significant lifecycle events, `WARNING` for recoverable anomalies, `ERROR` for failures that need attention; never log secrets or PII; prefer structured key-value pairs over interpolated strings
 
 
