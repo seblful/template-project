@@ -75,7 +75,6 @@ environments:
 _exclude:
   - notebooks/.gitkeep
   - scripts/.gitkeep
-  - docs/.gitkeep
   - "{% if code_assistant != 'claude' %}.claude/**{% endif %}"
   - "{% if 'development' not in environments %}.env.development{% endif %}"
   - "{% if 'staging' not in environments %}.env.staging{% endif %}"

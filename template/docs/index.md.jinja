@@ -1,0 +1,25 @@
+# {{ project_slug }}
+
+{{ project_description | default("A Python project.") }}
+
+## Installation
+
+```bash
+uv sync
+```
+
+## Usage
+
+Run the CLI:
+
+```bash
+uv run {{ project_slug }} info
+```
+
+Or use it as a library:
+
+```python
+import {{ package_name }}
+```
+
+See the [reference](reference.md) for the full API.
