@@ -35,7 +35,16 @@ Copy `.env.example` to `.env` and adjust the values:
 cp .env.example .env
 ```
 
-Set `APP__ENVIRONMENT` to select which `.env.<environment>` file is loaded alongside it (missing files are ignored).
+Settings are resolved with the following precedence, highest first:
+
+1. Real environment variables (`APP__APP_NAME=...`)
+1. `.env.local` — personal overrides, never committed
+1. `.env` — your local base, never committed
+1. Defaults declared in `src/{{ package_name }}/settings.py`
+
+`.env.example` is the committed contract listing every supported key; every other `.env` file is gitignored and missing ones are ignored at load time. Deployed environments set real environment variables rather than shipping `.env` files, and secrets mounted as files under `/run/secrets` (Docker, Kubernetes) are picked up automatically.
+
+Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled `APP__`/`LOGGING__` key fails at startup.
 
 ## Development
 

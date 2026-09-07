@@ -22,11 +22,10 @@ env.bak/
 venv.bak/
 
 # Environments
+# .env.example is the committed config contract; every other .env file stays local.
 .env
-.env.local
-.env.development
-.env.staging
-.env.production
+.env.*
+!.env.example
 
 # Testing / coverage
 .tox/

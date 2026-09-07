@@ -1,27 +1,38 @@
 """Shared pytest fixtures for {{ project_slug }}."""
 
 import os
+from collections.abc import Iterator
 from pathlib import Path
+from typing import Any, cast
 
 import pytest
 
-from {{ package_name }}.settings import Settings
+from {{ package_name }}.settings import Settings, get_settings
+
+
+@pytest.fixture(autouse=True)
+def _isolated_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+    """Keep the host environment and the developer's own .env out of every test."""
+    for key in list(os.environ):
+        if key.startswith(("APP__", "LOGGING__")):
+            monkeypatch.delenv(key, raising=False)
+    # model_config is a TypedDict, so a plain dict at runtime. Pointing it away from
+    # the project's .env keeps every Settings() in the suite deterministic.
+    monkeypatch.setitem(cast("dict[str, Any]", Settings.model_config), "env_file", None)
+    get_settings.cache_clear()
+    yield
+    get_settings.cache_clear()
 
 
 @pytest.fixture
 def tmp_env_file(tmp_path: Path) -> Path:
     """Create a temporary .env file."""
     env_file = tmp_path / ".env"
-    env_file.write_text("APP__ENVIRONMENT=test\n")
+    env_file.write_text("APP__ENVIRONMENT=staging\n")
     return env_file
 
 
 @pytest.fixture
-def test_settings(
-    tmp_env_file: Path, monkeypatch: pytest.MonkeyPatch
-) -> Settings:
-    """Settings isolated from the host environment."""
-    for key in list(os.environ):
-        if key.startswith(("APP__", "LOGGING__")):
-            monkeypatch.delenv(key, raising=False)
+def test_settings(tmp_env_file: Path) -> Settings:
+    """Settings loaded from a temporary env file instead of the project's."""
     return Settings(_env_file=tmp_env_file)

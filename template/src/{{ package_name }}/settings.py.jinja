@@ -1,25 +1,34 @@
 """Application settings configuration using Pydantic."""
 
-import os
 from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field, SecretStr
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+Environment = Literal["development", "staging", "production"]
 
-# Environment is chosen by an OS variable (set in the shell, Dockerfile, or CI).
-# Missing env files are silently ignored, so .env.<environment> is optional.
-_ENVIRONMENT = os.getenv("APP__ENVIRONMENT", "development")
+# Env files are resolved against the project root so the CLI reads the same
+# configuration from any working directory. Installed as a wheel this points outside
+# the package and finds nothing, which is correct: deployed environments configure
+# through real environment variables.
+PROJECT_ROOT = Path(__file__).resolve().parents[2]
+
+# Docker and Kubernetes mount secrets as files here, one file per field name. Wired up
+# only when present, because pydantic-settings warns on every load otherwise.
+_SECRETS_DIR = Path("/run/secrets")
 
 
 class AppSettings(BaseModel):
     """Application settings group."""
 
+    # extra="forbid" is what catches typos: APP__ENVIRONMEN would otherwise be dropped.
+    model_config = ConfigDict(extra="forbid")
+
     app_name: str = Field(default="{{ project_slug }}", description="Application name")
-    environment: str = Field(default="development", description="Environment name")
+    environment: Environment = Field(default="development", description="Environment name")
     # Example secret (set via APP__SECRET_KEY). SecretStr keeps it out of logs/repr;
     # read the value with secret_key.get_secret_value().
     secret_key: SecretStr | None = Field(default=None, description="Example secret value")
@@ -28,22 +37,31 @@ class AppSettings(BaseModel):
 class LoggingSettings(BaseModel):
     """Logging settings group."""
 
+    model_config = ConfigDict(extra="forbid")
+
     file_level: LogLevel = Field(default="INFO", description="File log level")
     console_level: LogLevel = Field(default="INFO", description="Console log level")
     log_file: Path = Field(default=Path("logs/app.log"), description="Log file path")
 
 
 class Settings(BaseSettings):
-    """Application settings with __-delimited nested groups."""
+    """Application settings with __-delimited nested groups.
+
+    Precedence, highest first: real environment variables, ``.env.local``, ``.env``,
+    then the defaults declared above. Missing env files are ignored.
+    """
 
     app: AppSettings = Field(default_factory=AppSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
-        env_file=(".env", f".env.{_ENVIRONMENT}"),
+        env_file=(PROJECT_ROOT / ".env", PROJECT_ROOT / ".env.local"),
         env_file_encoding="utf-8",
+        secrets_dir=str(_SECRETS_DIR) if _SECRETS_DIR.is_dir() else None,
         case_sensitive=False,
-        extra="forbid",
+        # Unknown keys in .env belong to other tools (docker compose, alembic) and are
+        # ignored here; typos inside APP__/LOGGING__ still fail via the groups above.
+        extra="ignore",
         env_nested_delimiter="__",
     )
 

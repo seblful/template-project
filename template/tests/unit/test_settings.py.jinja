@@ -1,11 +1,50 @@
 """Unit tests for application settings."""
 
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+
 from {{ package_name }}.settings import Settings
 
 
 def test_settings_load_from_env_file(test_settings: Settings) -> None:
     """Nested settings are populated from the env file and defaults."""
-    assert test_settings.app.environment == "test"
+    assert test_settings.app.environment == "staging"
     assert test_settings.app.app_name == "{{ project_slug }}"
     assert test_settings.app.secret_key is None
     assert test_settings.logging.console_level == "INFO"
+
+
+def test_env_vars_override_env_file(
+    tmp_env_file: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Real environment variables win over values in an env file."""
+    monkeypatch.setenv("APP__ENVIRONMENT", "production")
+    assert Settings(_env_file=tmp_env_file).app.environment == "production"
+
+
+def test_unrelated_env_file_keys_are_ignored(tmp_path: Path) -> None:
+    """Keys belonging to other tools do not break loading."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("APP__APP_NAME=demo\nDATABASE_URL=postgres://localhost/db\n")
+
+    assert Settings(_env_file=env_file).app.app_name == "demo"
+
+
+def test_typo_in_known_group_is_rejected(tmp_path: Path) -> None:
+    """A misspelled key inside a settings group fails loudly instead of silently."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("APP__ENVIRONMEN=staging\n")
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=env_file)
+
+
+def test_invalid_environment_is_rejected(tmp_path: Path) -> None:
+    """Only the known environment names are accepted."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("APP__ENVIRONMENT=prod\n")
+
+    with pytest.raises(ValidationError):
+        Settings(_env_file=env_file)
