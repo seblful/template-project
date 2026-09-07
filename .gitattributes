@@ -1,0 +1,9 @@
+# The template is authored on Windows but generates projects that are linted on
+# Linux CI. Committing LF everywhere keeps `ruff format --check` and the
+# end-of-file-fixer hook from disagreeing across platforms.
+* text=auto eol=lf
+
+# Rendered verbatim into generated projects; must not be line-ending-normalized.
+*.png binary
+*.jpg binary
+*.ico binary

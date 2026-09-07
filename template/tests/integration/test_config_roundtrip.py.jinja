@@ -1,0 +1,49 @@
+"""Integration tests for configuration loading, using real files on disk."""
+
+from pathlib import Path
+
+import pytest
+
+from {{ package_name }} import settings as settings_module
+from {{ package_name }}.settings import get_settings
+
+_GROUPS = {"APP": "app", "LOGGING": "logging"}
+
+
+def test_committed_env_example_matches_the_settings_model() -> None:
+    """Every APP__/LOGGING__ key in .env.example still exists on the model.
+
+    .env.example is the config contract, and drift turns it into a lie. This is what
+    stops a renamed or deleted field from shipping without the example following it.
+    """
+    example = settings_module.PROJECT_ROOT / ".env.example"
+    if not example.is_file():  # pragma: no cover - a wheel install, not a checkout
+        pytest.skip("running outside a source checkout")
+
+    settings = get_settings()
+    for raw in example.read_text(encoding="utf-8").splitlines():
+        line = raw.strip().lstrip("#").strip()
+        if "__" not in line or "=" not in line:
+            continue
+        key = line.split("=", 1)[0].strip()
+        prefix, _, field = key.partition("__")
+        if prefix not in _GROUPS:
+            continue
+        group = type(getattr(settings, _GROUPS[prefix]))
+        assert field.lower() in group.model_fields, (
+            f"{key} in .env.example has no matching field on {group.__name__}"
+        )
+
+
+def test_env_file_on_disk_is_actually_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """The precedence chain works end to end against a real file."""
+    env_file = tmp_path / ".env"
+    env_file.write_text("APP__APP_NAME=from-disk\nLOGGING__FILE_LEVEL=ERROR\n")
+    monkeypatch.setattr(settings_module, "ENV_FILES", (env_file,))
+    get_settings.cache_clear()
+
+    settings = get_settings()
+    assert settings.app.app_name == "from-disk"
+    assert settings.logging.file_level == "ERROR"

@@ -1,0 +1,13 @@
+# Commit LF everywhere. Without this, a checkout on Windows produces CRLF that the
+# end-of-file-fixer hook and `ruff format --check` on Linux CI disagree about.
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.jpeg binary
+*.gif binary
+*.ico binary
+*.pdf binary
+
+# Generated; keep it out of pull request diffs by default.
+uv.lock linguist-generated=true

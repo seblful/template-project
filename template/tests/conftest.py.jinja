@@ -3,25 +3,55 @@
 import os
 from collections.abc import Iterator
 from pathlib import Path
-from typing import Any, cast
 
 import pytest
 
+from {{ package_name }} import settings as settings_module
+from {{ package_name }}.logging import reset_logging
 from {{ package_name }}.settings import Settings, get_settings
+
+# Directory name under tests/ mapped to the marker applied to everything inside it.
+# This keeps the markers declared in pyproject.toml honest without hand-tagging every
+# test, which is the thing nobody remembers to do.
+_DIR_MARKERS = {"unit": "unit", "integration": "integration", "e2e": "integration"}
+
+
+def pytest_collection_modifyitems(
+    config: pytest.Config, items: list[pytest.Item]
+) -> None:
+    """Mark every collected test according to the directory it lives in."""
+    root = Path(config.rootpath) / "tests"
+    for item in items:
+        try:
+            relative = Path(item.path).relative_to(root)
+        except ValueError:
+            continue
+        marker = _DIR_MARKERS.get(relative.parts[0] if relative.parts else "")
+        if marker:
+            item.add_marker(marker)
 
 
 @pytest.fixture(autouse=True)
-def _isolated_settings(monkeypatch: pytest.MonkeyPatch) -> Iterator[None]:
+def _isolated_settings(
+    monkeypatch: pytest.MonkeyPatch, tmp_path: Path
+) -> Iterator[None]:
     """Keep the host environment and the developer's own .env out of every test."""
     for key in list(os.environ):
         if key.startswith(("APP__", "LOGGING__")):
             monkeypatch.delenv(key, raising=False)
-    # model_config is a TypedDict, so a plain dict at runtime. Pointing it away from
-    # the project's .env keeps every Settings() in the suite deterministic.
-    monkeypatch.setitem(cast("dict[str, Any]", Settings.model_config), "env_file", None)
+    # get_settings() reads this module attribute at call time, so pointing it at a
+    # path that cannot exist is enough. No poking at pydantic's class-level config.
+    monkeypatch.setattr(settings_module, "ENV_FILES", (tmp_path / "absent.env",))
     get_settings.cache_clear()
     yield
     get_settings.cache_clear()
+
+
+@pytest.fixture(autouse=True)
+def _isolated_logging() -> Iterator[None]:
+    """Detach any handlers a test installed and close the log file it opened."""
+    yield
+    reset_logging()
 
 
 @pytest.fixture
@@ -34,5 +64,5 @@ def tmp_env_file(tmp_path: Path) -> Path:
 
 @pytest.fixture
 def test_settings(tmp_env_file: Path) -> Settings:
-    """Settings loaded from a temporary env file instead of the project's."""
+    """Load settings from a temporary env file instead of the project's."""
     return Settings(_env_file=tmp_env_file)

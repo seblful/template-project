@@ -28,9 +28,13 @@ classifiers = [
     "Programming Language :: Python :: {{ python_version }}",
     "Typing :: Typed",
 ]
+# Runtime dependencies are deliberately uncapped. An upper bound here propagates to
+# everything that installs this package and causes resolution conflicts downstream;
+# uv.lock is what pins the versions this project actually runs. Tooling below is
+# capped instead, because it only ever affects this repo.
 dependencies = [
     "typer>=0.12.0",
-    "structlog>=24.0.0",
+    "structlog>=24.1.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.2.0",
 ]
@@ -40,21 +44,29 @@ dependencies = [
 
 [dependency-groups]
 dev = [
-    "pytest>=9.0.0",
-    "pytest-cov>=7.0.0",
-    # ruff and mdformat must stay in lockstep with .pre-commit-config.yaml. If the
-    # versions drift, `uv run ruff format .` and the hooks reformat each other's work.
+    "pytest>=9.0.0,<10",
+    "pytest-cov>=7.0.0,<8",
+    # Randomizes test order every run. With module-level state (the logging root,
+    # structlog's defaults, lru_cache) order-dependence is the failure mode worth
+    # hunting; a fixed seed is printed on failure so a bad order can be replayed.
+    "pytest-randomly>=4.0.0,<5",
+    # ruff and mdformat are pinned only here. .pre-commit-config.yaml runs them through
+    # `uv run`, so the lockfile is the single source of truth and the hook revisions
+    # cannot drift out of lockstep with the versions used locally.
     "ruff>=0.15.10,<0.16",
     "mdformat>=1.0.0,<2",
     "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
-    "pre-commit>=4.0.0",
+    "pre-commit>=4.0.0,<5",
 ]
 # A dependency group, not a project extra: docs tooling is not a feature of the
 # installed package. Install with `uv sync --group docs`.
 docs = [
-    "mkdocs>=1.6.0",
-    "mkdocs-material>=9.5.0",
-    "mkdocstrings[python]>=0.25.0",
+    # <2 is load-bearing, not cosmetic. MkDocs 2.0 removes the plugin system outright
+    # and offers no migration path, which would break material and mkdocstrings on the
+    # first unpinned resolve. Revisit only when both have released 2.0-compatible lines.
+    "mkdocs>=1.6.0,<2",
+    "mkdocs-material>=9.5.0,<10",
+    "mkdocstrings[python]>=0.25.0,<2",
 ]
 
 [build-system]
@@ -72,6 +84,12 @@ testpaths = ["tests"]
 # partial run (a single file, or -k) reports low coverage and exits non-zero.
 # Measure it explicitly instead: `uv run pytest --cov` (see [tool.coverage]).
 addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
+# Warnings are errors: a DeprecationWarning from a dependency is a scheduled outage,
+# and this is the cheapest place to find out. When one is genuinely not actionable,
+# add a narrow `ignore:<message>:<category>:<module>` line here rather than deleting
+# the "error" entry — and leave a note saying what unblocks its removal.
+filterwarnings = ["error"]
 markers = [
     "unit: fast, isolated unit tests",
     "integration: tests that hit real I/O (DB, filesystem, network)",

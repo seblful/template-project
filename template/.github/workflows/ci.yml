@@ -4,6 +4,15 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  schedule:
+    # Weekly, so a CVE published against a pinned dependency surfaces without
+    # waiting for somebody to open a pull request.
+    - cron: "0 6 * * 1"
+
+# Least privilege. GITHUB_TOKEN defaults are repository-configurable and are often
+# read-write; nothing in this workflow writes to the repo.
+permissions:
+  contents: read
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -11,7 +20,15 @@ concurrency:
 
 jobs:
   check:
-    runs-on: ubuntu-latest
+    name: check (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        # Windows is not decoration: console encoding, path handling and file-handle
+        # locking around the rotating log file all behave differently there.
+        os: [ubuntu-latest, windows-latest]
     steps:
       - uses: actions/checkout@v7
 
@@ -29,7 +46,7 @@ jobs:
         uses: actions/cache@v6
         with:
           path: ~/.cache/pre-commit
-          key: pre-commit-${{ hashFiles('.pre-commit-config.yaml') }}
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
       # The hook suite is the single source of truth for lint, format and type-check,
       # so CI cannot drift from what runs locally. Note: the gitleaks hook scans
@@ -39,4 +56,51 @@ jobs:
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
       - name: Tests
-        run: uv run pytest --cov
+        run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: coverage-${{ matrix.os }}
+          path: coverage.xml
+          if-no-files-found: ignore
+
+  docs:
+    name: docs
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      # --strict turns broken references and unresolved mkdocstrings targets into
+      # failures. Without it the site builds happily with holes in it.
+      - name: Build docs
+        run: |
+          uv sync --locked --group docs
+          uv run mkdocs build --strict
+
+  audit:
+    name: dependency audit
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      # Its own job: a CVE published against a transitive dependency should be
+      # visible without also reporting the lint and test suites as broken.
+      - name: Audit locked dependencies
+        run: |
+          uv export --format requirements-txt --no-emit-project --all-groups \
+            > requirements-audit.txt
+          uvx pip-audit --disable-pip --requirement requirements-audit.txt

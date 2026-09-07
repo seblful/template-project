@@ -1,0 +1,10 @@
+# This repo holds only the Copier template; nothing is built or installed here.
+# Anything below is a tool artifact from running the template's own checks locally.
+
+.ruff_cache/
+__pycache__/
+*.py[cod]
+
+# Scratch space for manually generating a project to eyeball it.
+/generated/
+/site/

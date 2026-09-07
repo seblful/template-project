@@ -2,32 +2,23 @@
 
 ## Core Principles
 
-### Honest Pushback
+**Flag bad ideas. Don't silently comply.** If a request conflicts with a project convention, is an antipattern for this stack, or risks security, correctness or maintainability, name the tension in one sentence — then proceed or ask, don't lecture. If the user confirms anyway, comply and move on.
 
-**Flag bad ideas. Don't silently comply.**
+**Every task needs a check that can fail.** Restate the request as something verifiable — a test, a command, an observable output — then work until it holds. If a task admits no such check, say so before starting instead of calling it done by inspection.
 
-Before executing, raise a concern if the request:
-- Conflicts with an established project standard or convention
-- Is an antipattern for this stack, context, or scale
-- Would introduce security, correctness, or maintainability risk
-
-State the concern in one sentence, name the specific tension, then proceed or ask — don't lecture. If the user confirms anyway, comply and move on.
-
-### Goal-Driven Execution
-
-**Every task needs a check that can fail.**
-
-Restate the request as a condition something can verify — a test, a command, an observable output — then work until it holds. If a task admits no such check, say so before starting instead of calling it done by inspection.
-
----
+______________________________________________________________________
 
 ## Project Standards
 
-- **Code**: Follow patterns in `python-patterns` — see `python-testing` for tests
 - **Tests**: Every feature and bug fix requires tests
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), subject ≤ 50 chars, imperative mood; no body unless the change needs a "why" (then max 5 bullets); no "Co-Authored-By" footers
-- **Logging**: Use `structlog` — log at `DEBUG` for internal state, `INFO` for significant lifecycle events, `WARNING` for recoverable anomalies, `ERROR` for failures that need attention; never log secrets or PII; prefer structured key-value pairs over interpolated strings
+- **Docstrings and comments**: Google style, one imperative summary line ending in a period (`Return the cached settings.`), `Args:` on public functions only. Comments explain *why* and name the alternative rejected — one that restates the code gets deleted, not reworded.
+- **Logging**: `from {{ package_name }}.logging import get_logger` — structured key-value pairs (`log.info("user saved", user_id=uid)`), never f-strings, never secrets or PII
+- **Config**: New settings go on a group in `src/{{ package_name }}/settings.py` *and* in `.env.example`; a test asserts the two stay in sync
+{% if code_assistant == 'claude' %}- **Code**: Follow patterns in the `python-patterns` skill — see `python-testing` for tests
+{% endif %}
 
+### Stack
 
 | Tool | Purpose |
 |:-----|:--------|
@@ -40,15 +31,18 @@ Restate the request as a condition something can verify — a test, a command, a
 | [structlog](https://www.structlog.org/) | Structured logging |
 | [pydantic](https://docs.pydantic.dev/) | Data validation and settings |
 | [typer](https://typer.tiangolo.com/) | CLI entry points |
-| [httpx2](https://pydantic.dev/docs/httpx2/) | HTTP client (sync + async) |
-| [mkdocs](https://www.mkdocs.org/) | Documentation |
+| [mkdocs](https://www.mkdocs.org/) | Documentation (`uv sync --group docs`) |
 
----
+**Preferred additions**, not yet installed — add with `uv add` when the need is real, don't reach for an alternative:
+
+| Need | Use |
+|:-----|:----|
+| HTTP client (sync + async) | [httpx2](https://github.com/pydantic/httpx2) |
+
+______________________________________________________________________
 
 ## Security
 
-- **Never** hardcode secrets (API keys, passwords, tokens)
-- Store secrets in environment variables or `.env` — never commit `.env`
-- Use `pydantic-settings` for secret management
+- **Never** hardcode secrets — they live in `.env` or the environment, wrapped in `SecretStr`, and `.env` is never committed
 - Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
-- Respect `.ignore` paths (`.env*`, `.ssh/`, `secrets/`)
+- Respect {% if code_assistant == 'cursor' %}`.cursorignore`{% else %}`.ignore`{% endif %} paths (`.env*`, `.ssh/`, `secrets/`)

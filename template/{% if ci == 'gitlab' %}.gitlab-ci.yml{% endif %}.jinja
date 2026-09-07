@@ -1,0 +1,102 @@
+# Mirrors what runs locally: the pre-commit suite is the single source of truth for
+# lint, format and type checks, so CI cannot drift from a developer's machine.
+#
+# GitLab has no cron syntax in this file. To get the weekly dependency audit, add a
+# pipeline schedule under Build > Pipeline schedules with SCHEDULED_AUDIT set to "1".
+
+stages:
+  - check
+  - docs
+  - audit
+
+default:
+  # uv's image built on the official python:{{ python_version }} base, so uv, the target
+  # interpreter and git are all present. pre-commit shells out to git, so a slim
+  # image without it would fail the check job.
+  image: ghcr.io/astral-sh/uv:python{{ python_version }}-bookworm
+  interruptible: true
+  cache:
+    key:
+      files:
+        - uv.lock
+    paths:
+      - .cache/uv
+      - .cache/pre-commit
+
+variables:
+  # GitLab only caches paths inside the project directory, so both tools are pointed
+  # there rather than at their defaults under $HOME.
+  UV_CACHE_DIR: $CI_PROJECT_DIR/.cache/uv
+  PRE_COMMIT_HOME: $CI_PROJECT_DIR/.cache/pre-commit
+  # The cache and the venv land on different filesystems in CI, where hardlinks fail.
+  UV_LINK_MODE: copy
+
+workflow:
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "merge_request_event"
+    # One pipeline per change. Without this rule, pushing to a branch that already has
+    # an open merge request runs the branch pipeline and the MR pipeline both.
+    - if: $CI_COMMIT_BRANCH && $CI_OPEN_MERGE_REQUESTS
+      when: never
+    - if: $CI_COMMIT_BRANCH
+    - if: $CI_COMMIT_TAG
+
+check:
+  stage: check
+  script:
+    # --locked fails when uv.lock is stale instead of quietly regenerating it, so a
+    # forgotten `uv lock` is caught here rather than drifting per machine.
+    - uv sync --locked
+    # The gitleaks hook scans *staged* changes, so it is a no-op here: it guards
+    # commits, not CI. Add a full-history scan as a separate job if you need one.
+    - uv run pre-commit run --all-files --show-diff-on-failure
+    - uv run pytest --cov --cov-report=xml --cov-report=term --junitxml=report.xml
+  coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'
+  artifacts:
+    when: always
+    reports:
+      junit: report.xml
+      coverage_report:
+        coverage_format: cobertura
+        path: coverage.xml
+
+docs:
+  stage: docs
+  script:
+    - uv sync --locked --group docs
+    # --strict turns broken references and unresolved mkdocstrings targets into
+    # failures. Without it the site builds happily with holes in it.
+    - uv run mkdocs build --strict
+  artifacts:
+    paths:
+      - site
+    expire_in: 1 week
+
+pages:
+  stage: docs
+  needs:
+    - docs
+  script:
+    - mv site public
+  artifacts:
+    paths:
+      - public
+  rules:
+    # Manual on purpose: a project that starts life as "Private :: Do Not Upload"
+    # should not begin publishing its docs just because CI ran.
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      when: manual
+      allow_failure: true
+
+audit:
+  stage: audit
+  script:
+    - uv export --format requirements-txt --no-emit-project --all-groups
+      > requirements-audit.txt
+    - uvx pip-audit --disable-pip --requirement requirements-audit.txt
+  rules:
+    # Its own job, and never blocking a merge request: a CVE published against a
+    # transitive dependency should be visible without also failing unrelated work.
+    - if: $SCHEDULED_AUDIT
+    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+      allow_failure: true

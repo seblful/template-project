@@ -1,15 +1,35 @@
+# ruff, mdformat and ty run through `uv run` instead of pre-commit-managed
+# environments. That makes uv.lock the single source of truth for their versions: a
+# hook revision can no longer drift out of lockstep with what runs locally, and
+# `pre-commit autoupdate` cannot silently change how this project is formatted.
 repos:
-  - repo: https://github.com/astral-sh/ruff-pre-commit
-    # Keep this rev in lockstep with the ruff pin in pyproject.toml.
-    rev: v0.15.10
+  - repo: local
     hooks:
       - id: ruff-check
-        args: [--fix, --exit-non-zero-on-fix]
+        name: ruff check
+        entry: uv run ruff check --fix --exit-non-zero-on-fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: ruff-format
-  - repo: https://github.com/executablebooks/mdformat
-    rev: 1.0.0
-    hooks:
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
       - id: mdformat
+        name: mdformat
+        entry: uv run mdformat
+        language: system
+        types: [markdown]
+      - id: ty
+        name: ty type check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        # ty resolves imports across the whole project; checking only the staged
+        # files would miss breakage in their callers.
+        pass_filenames: false
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
@@ -17,8 +37,10 @@ repos:
       - id: end-of-file-fixer
       - id: check-yaml
       - id: check-toml
+      - id: check-json
       - id: check-added-large-files
       - id: check-merge-conflict
+      - id: detect-private-key
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.9.7
     hooks:
@@ -27,11 +49,3 @@ repos:
     rev: v8.28.0
     hooks:
       - id: gitleaks
-  - repo: local
-    hooks:
-      - id: ty
-        name: ty type check
-        entry: uv run ty check
-        language: system
-        types: [python]
-        pass_filenames: false

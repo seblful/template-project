@@ -1,0 +1,68 @@
+# Scoped to what this project's toolchain actually produces — uv, hatch, ruff, ty,
+# pytest, mkdocs. Deliberately not the stock GitHub Python list: entries like `lib/`
+# and `var/` are setuptools-era and will silently swallow a real source directory.
+
+# Project specific
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Packaging (hatchling)
+build/
+dist/
+*.egg-info/
+
+# Virtual environments (uv)
+.venv/
+
+# Environments
+# .env.example is the committed config contract; every other .env file stays local.
+.env
+.env.*
+!.env.example
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+.hypothesis/
+
+# Type checking
+.ty_cache/
+.mypy_cache/
+
+# Ruff
+.ruff_cache/
+
+# Logs
+logs/
+*.log
+
+# Docs
+site/
+
+# Jupyter
+.ipynb_checkpoints/
+
+# Database
+*.db
+*.sqlite
+*.sqlite3
+
+# Secrets
+*.key
+*.pem
+secrets/
+credentials/
+
+# Claude Code local settings (may contain machine-specific paths or credentials)
+.claude/settings.local.json
+
+# OS
+.DS_Store
+Thumbs.db

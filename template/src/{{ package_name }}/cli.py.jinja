@@ -1,17 +1,40 @@
 """Command line interface for {{ project_slug }}."""
 
+from typing import Annotated
+
 import typer
 
 from {{ package_name }} import __version__
-from {{ package_name }}.logging import setup_logging
+from {{ package_name }}.logging import get_logger, setup_logging
 from {{ package_name }}.settings import get_settings
 
 app = typer.Typer(help="{{ project_slug }} CLI", no_args_is_help=True)
+log = get_logger(__name__)
+
+
+def _version_callback(value: bool) -> None:
+    """Print the version and exit, before any subcommand is resolved."""
+    if value:
+        typer.echo(f"{{ project_slug }} {__version__}")
+        raise typer.Exit
 
 
 @app.callback()
-def main(ctx: typer.Context) -> None:
-    """{{ project_slug }} CLI."""
+def main(
+    ctx: typer.Context,
+    _version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            # Eager, so that `--version` works without a subcommand. Otherwise
+            # no_args_is_help and Click's "Missing command" check get there first.
+            is_eager=True,
+            help="Show the version and exit.",
+        ),
+    ] = False,
+) -> None:
+    """Run the {{ project_slug }} CLI."""
     if ctx.invoked_subcommand is not None:
         setup_logging()
 
@@ -20,6 +43,7 @@ def main(ctx: typer.Context) -> None:
 def info() -> None:
     """Display project information."""
     settings = get_settings()
+    log.debug("reporting project info", environment=settings.app.environment)
     typer.echo(f"{settings.app.app_name} v{__version__}")
     typer.echo(f"Environment: {settings.app.environment}")
 

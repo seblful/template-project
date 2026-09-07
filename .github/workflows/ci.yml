@@ -1,0 +1,191 @@
+name: CI
+
+on:
+  push:
+    branches: [main, master]
+    tags: ["v*"]
+  pull_request:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Copier's _tasks run `git commit`, which needs an identity. The commit task
+  # supplies its own via `git -c`, but `git init` still warns without these.
+  GIT_AUTHOR_NAME: template-ci
+  GIT_AUTHOR_EMAIL: ci@example.com
+  GIT_COMMITTER_NAME: template-ci
+  GIT_COMMITTER_EMAIL: ci@example.com
+
+jobs:
+  # The template itself cannot be linted: `from {{ package_name }} import ...` is not
+  # valid Python, so ruff and ty cannot parse the .jinja sources. The only meaningful
+  # check is to generate a project and run the gates the template claims to ship.
+  generate:
+    name: ${{ matrix.os }} / py${{ matrix.python_version }} / ${{ matrix.license }} / ${{ matrix.code_assistant }} / ci=${{ matrix.ci }}
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # Five combinations chosen to cover every license branch, every code
+        # assistant, every CI answer, both ends of the supported Python range, and
+        # both OSes — rather than a 72-cell product that tests the same code paths
+        # over and over.
+        include:
+          - {os: ubuntu-latest, python_version: "3.13", license: None, code_assistant: claude, ci: github}
+          - {os: ubuntu-latest, python_version: "3.13", license: MIT, code_assistant: opencode, ci: gitlab}
+          - {os: ubuntu-latest, python_version: "3.12", license: Apache, code_assistant: cursor, ci: none}
+          - {os: ubuntu-latest, python_version: "3.10", license: EULA, code_assistant: claude, ci: gitlab}
+          - {os: windows-latest, python_version: "3.13", license: MIT, code_assistant: claude, ci: github}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      # An absolute source path, because copier records it as `_src_path` in
+      # .copier-answers.yml and later resolves it from the *project* directory.
+      - name: Generate a project
+        shell: bash
+        run: |
+          uvx --with jinja2-time copier copy --trust --defaults --vcs-ref=HEAD \
+            -d project_slug=demo-proj \
+            -d package_name=demo_proj \
+            -d project_description="A generated demo project." \
+            -d python_version='${{ matrix.python_version }}' \
+            -d license='${{ matrix.license }}' \
+            -d code_assistant='${{ matrix.code_assistant }}' \
+            -d ci='${{ matrix.ci }}' \
+            "$GITHUB_WORKSPACE" ../demo-proj
+
+      # `ruff format --check` is the load-bearing assertion here. Generation runs
+      # `ruff format` as a task, so a badly formatted template would still produce a
+      # clean tree — but only for people who pass --trust. This step fails instead if
+      # the .jinja sources drift from the style the template itself enforces.
+      - name: Lint, format, types
+        shell: bash
+        working-directory: ../demo-proj
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run ty check
+
+      - name: Tests
+        shell: bash
+        working-directory: ../demo-proj
+        run: uv run pytest --cov
+
+      - name: Docs
+        shell: bash
+        working-directory: ../demo-proj
+        run: |
+          uv sync --group docs
+          uv run mkdocs build --strict
+
+      # The hook suite is what generated projects gate commits on, so it has to pass
+      # on a freshly generated tree. `git init` already ran as a copier task.
+      - name: Pre-commit hooks
+        shell: bash
+        working-directory: ../demo-proj
+        run: uv run pre-commit run --all-files --show-diff-on-failure
+
+      # `[^$]` before `{{` so GitHub Actions' own `${{ ... }}` expressions in the
+      # generated workflow are not mistaken for template leftovers.
+      - name: Assert no unrendered Jinja survived
+        shell: bash
+        working-directory: ../demo-proj
+        run: |
+          if git grep -nE '(^|[^$])\{\{|\{%' -- . ':!uv.lock'; then
+            echo "::error::unrendered Jinja found in the generated project"
+            exit 1
+          fi
+
+      # The `ci` answer must produce exactly one pipeline definition and no orphan of
+      # the other kind, and whatever it produced has to be valid.
+      - name: Validate the generated CI config
+        shell: bash
+        working-directory: ../demo-proj
+        run: |
+          gh_present=$([ -f .github/workflows/ci.yml ] && echo yes || echo no)
+          gl_present=$([ -f .gitlab-ci.yml ] && echo yes || echo no)
+          case "${{ matrix.ci }}" in
+            github) expected="yes no" ;;
+            gitlab) expected="no yes" ;;
+            none)   expected="no no" ;;
+          esac
+          if [ "$gh_present $gl_present" != "$expected" ]; then
+            echo "::error::ci=${{ matrix.ci }} produced github=$gh_present gitlab=$gl_present"
+            exit 1
+          fi
+          if [ "$gh_present" = yes ]; then
+            uvx --from actionlint-py actionlint .github/workflows/ci.yml
+          fi
+          if [ "$gl_present" = yes ]; then
+            # A parse only. Validating GitLab semantics needs the CI Lint API, which
+            # needs a GitLab token this repository has no business holding.
+            uvx --with pyyaml python -c \
+              "import pathlib, yaml; yaml.safe_load(pathlib.Path('.gitlab-ci.yml').read_text())"
+          fi
+
+  # `copier update` is the path most likely to break silently: it is exercised by
+  # every existing project and by nobody during development.
+  update:
+    name: copier update from latest tag
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0 # tags are the released versions copier resolves
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10
+        with:
+          enable-cache: true
+
+      - name: Resolve the previous release
+        id: prev
+        run: echo "tag=$(git tag --sort=-v:refname | head -n1)" >> "$GITHUB_OUTPUT"
+
+      - name: Generate at the previous release
+        if: steps.prev.outputs.tag != ''
+        run: |
+          uvx --with jinja2-time copier copy --trust --defaults \
+            --vcs-ref='${{ steps.prev.outputs.tag }}' \
+            -d project_slug=demo-proj -d package_name=demo_proj -d license=MIT \
+            "$GITHUB_WORKSPACE" ../demo-proj
+
+      - name: Update to HEAD
+        if: steps.prev.outputs.tag != ''
+        working-directory: ../demo-proj
+        run: |
+          uvx --with jinja2-time copier update --trust --defaults --vcs-ref=HEAD \
+            --conflict=rej
+
+      # A clean template-to-template update over an unmodified project should produce
+      # no conflicts at all. Any .rej means the update would land badly on real users.
+      - name: Assert the update applied cleanly
+        if: steps.prev.outputs.tag != ''
+        working-directory: ../demo-proj
+        run: |
+          if find . -name '*.rej' -not -path './.git/*' | grep -q .; then
+            echo "::error::copier update produced conflicts:"
+            find . -name '*.rej' -not -path './.git/*'
+            exit 1
+          fi
+
+      - name: Gates still pass after update
+        if: steps.prev.outputs.tag != ''
+        working-directory: ../demo-proj
+        run: |
+          uv run ruff check .
+          uv run ruff format --check .
+          uv run ty check
+          uv run pytest --cov

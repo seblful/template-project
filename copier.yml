@@ -1,5 +1,9 @@
 _subdirectory: template
 
+# `_copier_operation` (used by the tasks below) landed in Copier 9.2. Declaring the
+# floor turns "template did nothing on update" into an explicit error.
+_min_copier_version: "9.2.0"
+
 _jinja_extensions:
   - jinja2_time.TimeExtension
 
@@ -30,14 +34,16 @@ author_name:
   type: str
   help: What is the author name?
   default: Aliaksei Chymba
+  validator: "{% if not author_name.strip() %}author_name must not be empty{% endif %}"
 
 author_email:
   type: str
   help: What is the author email?
-  choices:
-    - alesha.chimba@gmail.com
-    - achimba@twelvedevs.com
   default: alesha.chimba@gmail.com
+  validator: >-
+    {% if not (author_email | regex_search('^[^@\s]+@[^@\s]+\.[^@\s]+$')) %}
+    author_email must be a valid email address
+    {% endif %}
 
 license:
   type: str
@@ -53,10 +59,13 @@ python_version:
   type: str
   help: What Python version should the project target? (major.minor)
   default: "3.13"
+  # 3.10 is a hard floor, not a preference: the generated sources use PEP 604 unions
+  # (`str | None`) in runtime-evaluated annotations, and pytest, typer, structlog and
+  # pydantic-settings all require >=3.10 anyway.
   validator: >-
-    {% if not (python_version | regex_search('^3\.(9|1[0-9])$')) %}
-    python_version must be major.minor only, e.g. 3.13 (a patch version produces an
-    invalid "Programming Language :: Python :: X" classifier)
+    {% if not (python_version | regex_search('^3\.1[0-9]$')) %}
+    python_version must be 3.10 or newer, major.minor only, e.g. 3.13 (a patch version
+    produces an invalid "Programming Language :: Python :: X" classifier)
     {% endif %}
 
 code_assistant:
@@ -68,19 +77,77 @@ code_assistant:
     - cursor
   default: claude
 
+ci:
+  type: str
+  help: Which CI should run the project's checks?
+  choices:
+    - github
+    - gitlab
+    - none
+  default: github
+
+# Copier replaces its defaults when this key is set, so the standard entries are
+# repeated here rather than lost.
 _exclude:
-  - notebooks/.gitkeep
-  - scripts/.gitkeep
-  - "{% if code_assistant != 'claude' %}.claude/**{% endif %}"
+  - "copier.yml"
+  - "copier.yaml"
+  - "~*"
+  - "*.py[co]"
+  - "__pycache__"
+  - ".git"
+  - ".DS_Store"
+  - ".svn"
+  # The directories themselves, not just their .gitkeep: excluding only the keep file
+  # still leaves an empty, untracked directory behind in the generated project.
+  - notebooks
+  - scripts
+  - "{% if code_assistant != 'claude' %}.claude{% endif %}"
+  # .gitlab-ci.yml uses a conditional filename instead, because an exclude pattern
+  # would have to guess whether copier matches the source or the rendered name.
+  - "{% if ci != 'github' %}.github{% endif %}"
+
+# .env holds the developer's real local values. Generate it once for convenience,
+# then never touch it again — a `copier update` must not overwrite live config.
+_skip_if_exists:
+  - ".env"
 
 _tasks:
   - ["git", "init"]
   - ["uv", "sync"]
-  - ["uv", "run", "ruff", "format", "."]
+  # --fix first, then format: autofixes can leave code the formatter still wants to
+  # reflow, and the reverse order leaves the tree unformatted.
   - ["uv", "run", "ruff", "check", "--fix", "."]
+  - ["uv", "run", "ruff", "format", "."]
   - ["uv", "run", "mdformat", "."]
   - ["uv", "run", "pre-commit", "install"]
   - command: ["git", "add", "-A"]
     when: "{{ _copier_operation == 'copy' }}"
-  - command: ["git", "commit", "-m", "chore: initial commit from template", "--no-verify"]
+  # -c rather than global config: this works on a machine with no git identity set
+  # (fresh container, CI runner) and attributes the commit to the declared author.
+  - command:
+      - "git"
+      - "-c"
+      - "user.name={{ author_name }}"
+      - "-c"
+      - "user.email={{ author_email }}"
+      - "commit"
+      - "-m"
+      - "chore: initial commit from template"
+      - "--no-verify"
     when: "{{ _copier_operation == 'copy' }}"
+
+_message_after_copy: |
+  {{ project_slug }} is ready.
+
+      cd {{ _copier_conf.dst_path.name }}
+      uv run {{ project_slug }} info
+
+  A .env was generated for local development and is gitignored; .env.example is the
+  committed contract listing every supported key. Docs tooling installs separately
+  with `uv sync --group docs`.
+
+_message_after_update: |
+  Template updated. Re-run the gates before committing:
+
+      uv run pre-commit run --all-files
+      uv run pytest --cov

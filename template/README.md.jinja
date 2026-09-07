@@ -15,25 +15,25 @@ uv sync
 
 ## Usage
 
-Run the CLI:
-
 ```bash
-uv run {{ project_slug }} info
+uv run {{ project_slug }} info       # run the CLI
+uv run {{ project_slug }} --version  # print the version
+python -m {{ package_name }}         # equivalent module entry point
 ```
 
 Or use it as a library:
 
 ```python
-import {{ package_name }}
+from {{ package_name }} import get_logger, get_settings, setup_logging
+
+setup_logging()
+log = get_logger(__name__)
+log.info("started", environment=get_settings().app.environment)
 ```
 
 ## Configuration
 
-Copy `.env.example` to `.env` and adjust the values:
-
-```bash
-cp .env.example .env
-```
+A `.env` was generated for local development and is gitignored — edit it in place. `.env.example` is the committed contract listing every supported key; a test fails if the two drift apart.
 
 Settings are resolved with the following precedence, highest first:
 
@@ -42,27 +42,54 @@ Settings are resolved with the following precedence, highest first:
 1. `.env` — your local base, never committed
 1. Defaults declared in `src/{{ package_name }}/settings.py`
 
-`.env.example` is the committed contract listing every supported key; every other `.env` file is gitignored and missing ones are ignored at load time. Deployed environments set real environment variables rather than shipping `.env` files, and secrets mounted as files under `/run/secrets` (Docker, Kubernetes) are picked up automatically.
+Deployed environments set real environment variables rather than shipping `.env` files, and secrets mounted as files under `/run/secrets` (Docker, Kubernetes) are picked up automatically.
 
 Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled `APP__`/`LOGGING__` key fails at startup.
+
+## Logging
+
+`setup_logging()` sends JSON to `logs/app.log` and human-readable output to the console (JSON when `APP__ENVIRONMENT=production`). Library logs are rendered through the same pipeline, so everything in the file has the same shape.
+
+```python
+from {{ package_name }}.logging import get_logger
+
+log = get_logger(__name__)
+log.info("order placed", order_id=42, total="19.99")
+```
 
 ## Development
 
 ```bash
 uv run pytest                       # run tests
 uv run pytest --cov                 # run tests with the coverage gate
+uv run pytest -m "not slow"         # skip the slow ones
 uv run ruff check .                 # lint
 uv run ruff format .                # format
-uv run ty check src/ tests/         # type check
-uv run pre-commit run --all-files   # run all hooks
+uv run ty check                     # type check
+uv run pre-commit run --all-files   # the full gate{% if ci != "none" %}, which is what CI runs{% endif %}
 ```
+
+Test order is randomized on every run (`pytest-randomly`). A failure prints the seed; replay it with `uv run pytest -p randomly --randomly-seed=<seed>`.
+{% if ci == "github" %}
+
+### CI
+
+[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the pre-commit suite and the test suite on Ubuntu and Windows, builds the docs with `--strict`, and audits dependencies weekly. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
+{% elif ci == "gitlab" %}
+
+### CI
+
+[`.gitlab-ci.yml`](.gitlab-ci.yml) runs the pre-commit suite and the test suite, builds the docs with `--strict`, and audits dependencies. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
+
+Two things need setting up in the GitLab UI: a pipeline schedule with `SCHEDULED_AUDIT` set to `1`, for the weekly dependency audit, and — if the docs should be published — a run of the manual `pages` job.
+{% endif %}
 
 ### Docs
 
 ```bash
 uv sync --group docs                # install docs dependencies
 uv run mkdocs serve                 # serve docs locally at http://127.0.0.1:8000
-uv run mkdocs build                 # build static site into site/
+uv run mkdocs build --strict        # build static site into site/ (as CI does)
 ```
 {% if license and license != "None" %}
 

@@ -1,10 +1,16 @@
-"""{{ project_slug }} - A modern Python project following best practices."""
+"""Top-level package for {{ project_slug }}."""
 
-from importlib.metadata import version
+from importlib.metadata import PackageNotFoundError, version
 
+from {{ package_name }}.logging import get_logger, setup_logging
 from {{ package_name }}.settings import get_settings
 
-__version__ = version("{{ project_slug }}")
+try:
+    __version__ = version("{{ project_slug }}")
+except PackageNotFoundError:  # pragma: no cover - a source tree with no install
+    # Running straight from a checkout, where no distribution metadata exists yet.
+    __version__ = "0.0.0+unknown"
+
 __author__ = "{{ author_name }}"
 __email__ = "{{ author_email }}"
 
@@ -12,5 +18,7 @@ __all__ = [
     "__author__",
     "__email__",
     "__version__",
+    "get_logger",
     "get_settings",
+    "setup_logging",
 ]

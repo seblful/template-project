@@ -19,7 +19,16 @@ uv run {{ project_slug }} info
 Or use it as a library:
 
 ```python
-import {{ package_name }}
+from {{ package_name }} import get_logger, get_settings
+
+log = get_logger(__name__)
+log.info("started", environment=get_settings().app.environment)
 ```
+
+## Configuration
+
+Settings are resolved highest-priority first: real environment variables, then
+`.env.local`, then `.env`, then the defaults in `src/{{ package_name }}/settings.py`.
+`.env.example` lists every supported key.
 
 See the [reference](reference.md) for the full API.

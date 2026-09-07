@@ -1,48 +1,115 @@
 """Unit tests for logging setup."""
 
+import json
 import logging
-from collections.abc import Iterator
+from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
-import pytest
-import structlog
-
-from {{ package_name }}.logging import setup_logging
+from {{ package_name }}.logging import get_logger, reset_logging, setup_logging
 
 
-def _clear_root() -> None:
-    """Drop root handlers so setup_logging runs past its idempotency guard.
+def _read_records(log_file: Path) -> list[dict[str, object]]:
+    """Parse the JSON lines written to the log file."""
+    content = log_file.read_text(encoding="utf-8").strip()
+    return [json.loads(line) for line in content.splitlines()] if content else []
 
-    pytest installs its own capture handler around each test, which would
-    otherwise make setup_logging return early.
+
+def _raise_boom() -> None:
+    """Raise from a named frame, so the serialized traceback has something to show."""
+    raise ValueError("boom")
+
+
+def _our_file_handlers(log_file: Path) -> list[RotatingFileHandler]:
+    """Return the root file handlers pointing at this log file.
+
+    pytest attaches a FileHandler of its own, on os.devnull, around every test. So
+    "is there a FileHandler" proves nothing and the path has to be checked.
     """
-    for handler in list(logging.root.handlers):
-        logging.root.removeHandler(handler)
-    structlog.reset_defaults()
-
-
-@pytest.fixture(autouse=True)
-def _reset_logging() -> Iterator[None]:
-    """Restore a clean logging state after each test."""
-    yield
-    _clear_root()
+    return [
+        handler
+        for handler in logging.root.handlers
+        if isinstance(handler, RotatingFileHandler)
+        and Path(handler.baseFilename) == log_file.resolve()
+    ]
 
 
 def test_setup_logging_attaches_handlers(tmp_path: Path) -> None:
-    """File and console handlers are attached and the log file dir is created."""
-    _clear_root()
-    log_file = tmp_path / "app.log"
+    """File and console handlers are attached and the log directory is created."""
+    log_file = tmp_path / "nested" / "app.log"
     setup_logging(log_file=log_file)
 
-    assert any(isinstance(h, logging.FileHandler) for h in logging.root.handlers)
-    assert log_file.parent.exists()
+    assert _our_file_handlers(log_file)
+    assert log_file.parent.is_dir()
 
 
 def test_setup_logging_is_idempotent(tmp_path: Path) -> None:
-    """A second call is a no-op while handlers are already configured."""
-    _clear_root()
+    """A second call adds nothing, even though pytest owns handlers of its own."""
     setup_logging(log_file=tmp_path / "app.log")
     count = len(logging.root.handlers)
 
     setup_logging(log_file=tmp_path / "app.log")
     assert len(logging.root.handlers) == count
+
+
+def test_no_file_is_created_until_something_is_logged(tmp_path: Path) -> None:
+    """A command that never logs leaves no empty file behind."""
+    log_file = tmp_path / "app.log"
+    setup_logging(log_file=log_file)
+
+    assert not log_file.exists()
+
+
+def test_file_records_are_json_with_a_timestamp(tmp_path: Path) -> None:
+    """The file sink is machine-readable and every record is timestamped."""
+    log_file = tmp_path / "app.log"
+    setup_logging(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+
+    get_logger("test").info("hello", answer=42)
+
+    record = _read_records(log_file)[0]
+    assert record["event"] == "hello"
+    assert record["answer"] == 42
+    assert record["level"] == "info"
+    assert record["timestamp"]
+
+
+def test_library_logs_are_rendered_like_application_logs(tmp_path: Path) -> None:
+    """A third-party logger using plain stdlib logging still lands as JSON."""
+    log_file = tmp_path / "app.log"
+    setup_logging(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+
+    logging.getLogger("some.library").warning("from a library")
+
+    record = _read_records(log_file)[0]
+    assert record["event"] == "from a library"
+    assert record["level"] == "warning"
+    assert record["logger"] == "some.library"
+    assert record["timestamp"]
+
+
+def test_exceptions_are_serialized_not_dropped(tmp_path: Path) -> None:
+    """`log.exception` writes a real traceback rather than `exc_info: true`."""
+    log_file = tmp_path / "app.log"
+    setup_logging(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+
+    try:
+        _raise_boom()
+    except ValueError:
+        get_logger("test").exception("it broke")
+
+    record = _read_records(log_file)[0]
+    assert record["exception"]
+    assert "ValueError" in json.dumps(record["exception"])
+
+
+def test_reset_logging_detaches_and_allows_reconfiguration(tmp_path: Path) -> None:
+    """reset_logging undoes setup exactly, so a later call takes effect again."""
+    before = list(logging.root.handlers)
+    setup_logging(log_file=tmp_path / "first.log")
+    assert _our_file_handlers(tmp_path / "first.log")
+
+    reset_logging()
+    assert logging.root.handlers == before  # Nothing of ours left, nothing else lost.
+
+    setup_logging(log_file=tmp_path / "second.log")
+    assert _our_file_handlers(tmp_path / "second.log")

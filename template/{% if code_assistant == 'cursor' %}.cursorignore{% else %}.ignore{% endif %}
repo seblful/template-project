@@ -1,55 +1,43 @@
-# Project specific
+# Paths that assistants and fast search tools (ripgrep, fd) should not read or index.
+# Mirrors .gitignore, plus the env files that .gitignore keeps local but that must
+# also stay out of an assistant's context.
 
 # Python
 __pycache__/
 *.py[cod]
-*$py.class
 *.so
-.pytype/
+
+# Packaging
+build/
+dist/
+*.egg-info/
 
 # Virtual environments
 .venv/
-venv/
-ENV/
-env.bak/
-venv.bak/
 
-# Distribution / packaging
-dist/
-build/
-*.egg-info/
-*.egg/
+# Environments — real values live here
+.env
+.env.*
+!.env.example
 
 # Testing / coverage
-.tox/
-.nox/
+.pytest_cache/
 .coverage
 .coverage.*
-.pytest_cache/
+coverage.xml
 htmlcov/
-cover/
 .hypothesis/
+
+# Caches
+.ruff_cache/
+.ty_cache/
+.mypy_cache/
 
 # Logs
 logs/
 *.log
 
-# Environments
-.env
-.env.local
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Secrets
-*.key
-*.pem
-secrets/
-credentials/
-
-# Docs
-docs/_build/
+# Docs output
 site/
 
 # Jupyter
@@ -59,3 +47,17 @@ site/
 *.db
 *.sqlite
 *.sqlite3
+
+# Secrets
+*.key
+*.pem
+secrets/
+credentials/
+.ssh/
+
+# Lockfile: large, generated, and never worth reading in full
+uv.lock
+
+# OS
+.DS_Store
+Thumbs.db
