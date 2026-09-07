@@ -51,6 +51,11 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
+          # This repo has no pyproject.toml or uv.lock of its own — it is a Copier
+          # template, not a Python project — so there is no dependency file to key the
+          # cache on. Empty means "never invalidate", which is right here: the cache
+          # only holds wheels downloaded while generating throwaway projects.
+          cache-dependency-glob: ""
 
       # An absolute source path, because copier records it as `_src_path` in
       # .copier-answers.yml and later resolves it from the *project* directory.
@@ -151,6 +156,11 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
+          # This repo has no pyproject.toml or uv.lock of its own — it is a Copier
+          # template, not a Python project — so there is no dependency file to key the
+          # cache on. Empty means "never invalidate", which is right here: the cache
+          # only holds wheels downloaded while generating throwaway projects.
+          cache-dependency-glob: ""
 
       - name: Resolve the previous release
         id: prev
