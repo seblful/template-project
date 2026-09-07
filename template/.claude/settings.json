@@ -14,8 +14,6 @@
       "Bash(pytest *)",
       "Bash(mdformat *)",
       "Bash(mkdocs *)",
-      "Bash(python *)",
-      "Bash(python3 *)",
       "Read(.env.example)"
     ],
     "deny": [
