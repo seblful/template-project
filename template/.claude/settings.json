@@ -15,7 +15,8 @@
       "Bash(mdformat *)",
       "Bash(mkdocs *)",
       "Bash(python *)",
-      "Bash(python3 *)"
+      "Bash(python3 *)",
+      "Read(.env.example)"
     ],
     "deny": [
       "Bash(rm -rf *)",
@@ -23,7 +24,10 @@
       "Bash(git reset --hard *)",
       "Bash(uv publish *)",
       "Read(.env)",
-      "Read(.env.*)"
+      "Read(.env.local)",
+      "Read(.env.development)",
+      "Read(.env.staging)",
+      "Read(.env.production)"
     ]
   },
   "extraKnownMarketplaces": {
