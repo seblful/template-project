@@ -16,10 +16,15 @@ license-files = ["LICENSE"]
 authors = [
     { name = "{{ author_name }}", email = "{{ author_email }}" }
 ]
-keywords = ["python"]
 classifiers = [
-    "Development Status :: 4 - Beta",
+{%- if license in ("None", "EULA") %}
+    # Not a registered trove classifier, which is exactly why it works: PyPI rejects
+    # any upload carrying it. Drop this line if this project is ever published.
+    "Private :: Do Not Upload",
+{%- endif %}
+    "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
     "Programming Language :: Python :: {{ python_version }}",
     "Typing :: Typed",
 ]
@@ -30,28 +35,32 @@ dependencies = [
     "pydantic-settings>=2.2.0",
 ]
 
+[project.scripts]
+{{ project_slug }} = "{{ package_name }}.cli:app"
+
 [dependency-groups]
 dev = [
     "pytest>=9.0.0",
     "pytest-cov>=7.0.0",
-    "ruff>=0.4.0",
-    "ty>=0.0.28",
-    "mdformat>=1.0.0",
+    # ruff and mdformat must stay in lockstep with .pre-commit-config.yaml. If the
+    # versions drift, `uv run ruff format .` and the hooks reformat each other's work.
+    "ruff>=0.15.10,<0.16",
+    "mdformat>=1.0.0,<2",
+    "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
     "pre-commit>=4.0.0",
 ]
-
-[project.optional-dependencies]
+# A dependency group, not a project extra: docs tooling is not a feature of the
+# installed package. Install with `uv sync --group docs`.
 docs = [
     "mkdocs>=1.6.0",
     "mkdocs-material>=9.5.0",
     "mkdocstrings[python]>=0.25.0",
 ]
 
-[project.scripts]
-{{ project_slug }} = "{{ package_name }}.cli:app"
-
 [build-system]
-requires = ["hatchling"]
+# >=1.27 is the floor for PEP 639 metadata (the `license` expression and
+# top-level `license-files` above).
+requires = ["hatchling>=1.27"]
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -59,7 +68,10 @@ packages = ["src/{{ package_name }}"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "--cov=src/{{ package_name }} --cov-report=term-missing --cov-fail-under=80"
+# Coverage is deliberately not enabled here. With --cov-fail-under in addopts, every
+# partial run (a single file, or -k) reports low coverage and exits non-zero.
+# Measure it explicitly instead: `uv run pytest --cov` (see [tool.coverage]).
+addopts = "-ra --strict-markers --strict-config"
 markers = [
     "unit: fast, isolated unit tests",
     "integration: tests that hit real I/O (DB, filesystem, network)",
@@ -67,35 +79,71 @@ markers = [
 ]
 
 [tool.ruff]
-target-version = "py{{ python_version | replace('.', '') }}"
+# target-version is intentionally omitted: ruff infers it from requires-python,
+# so there is one source of truth for the target Python.
 line-length = 88
 src = ["src"]
 
 [tool.ruff.lint]
+# Curated, not "ALL" minus exceptions: every prefix here is a deliberate opt-in.
+# COM/ISC001/Q are deliberately absent — the formatter owns commas, quotes and string
+# concatenation, and ruff's own COM812 docs recommend against pairing it with it.
+# FBT is absent too: typer models CLI flags as boolean parameters by design.
 select = [
-    "E", "W", "F", "I", "B", "C4", "UP", "ARG", "PT", "TCH", "RUF",
-    "PL",    # Pylint rules
-    "SIM",   # flake8-simplify
-    "RET",   # flake8-return
-    "PTH",   # flake8-use-pathlib
+    "A",     # flake8-builtins — shadowed builtins
+    "ANN",   # flake8-annotations — py.typed is a promise; this makes annotations exist
+    "ARG",   # flake8-unused-arguments
+    "ASYNC", # flake8-async
+    "B",     # flake8-bugbear
+    "BLE",   # flake8-blind-except
+    "C4",    # flake8-comprehensions
+    "C90",   # mccabe — complexity ceiling (max-complexity defaults to 10)
     "D",     # pydocstyle — enforce Google-style docstrings
+    "DTZ",   # flake8-datetimez — naive datetimes are a production bug class
+    "E",     # pycodestyle errors
+    "F",     # Pyflakes
+    "FLY",   # flynt — static string joins
+    "FURB",  # refurb — modernization (40 stable rules; the rest need preview)
+    "G",     # flake8-logging-format — no f-strings in log calls
+    "I",     # isort
+    "INP",   # flake8-no-pep420 — missing __init__.py
+    "LOG",   # flake8-logging — stdlib logging misuse
+    "N",     # pep8-naming
+    "PERF",  # perflint
+    "PGH",   # pygrep-hooks — blanket `type: ignore`, bare `noqa`
+    "PIE",   # flake8-pie
+    "PL",    # Pylint rules
+    "PT",    # flake8-pytest-style
+    "PTH",   # flake8-use-pathlib
+    "RET",   # flake8-return
+    "RSE",   # flake8-raise
+    "RUF",   # Ruff-specific (incl. RUF100, which flags stale noqa)
+    "S",     # flake8-bandit — security checks
+    "SIM",   # flake8-simplify
+    "SLF",   # flake8-self — private member access
+    "TC",    # flake8-type-checking
+    "TID",   # flake8-tidy-imports
+    "TRY",   # tryceratops — exception antipatterns
+    "UP",    # pyupgrade
+    "W",     # pycodestyle warnings
 ]
-ignore = [
-    "D100", "D104",  # Missing docstring in public module/package
-    "D203",          # Conflicts with D211
-    "D213",          # Conflicts with D212
-    "PLR0913",       # Too many arguments (context-dependent)
-]
+# No `ignore` list on purpose. The google convention already disables the rules that
+# conflict with it (D203, D204, D213, D215, D400, D401, D404, D406-D409, D413), and a
+# fresh project passes every remaining rule. Prefer `# noqa: X` at the site (RUF100
+# flags it once it goes stale) or per-file-ignores below over adding entries here.
 
-[tool.ruff.lint.pylint]
-max-args = 8
-max-returns = 10
+# No [tool.ruff.lint.pylint] section: ruff's defaults (max-args 5, max-returns 6) are
+# stricter than anything worth hand-writing here. Raise a limit when a real function
+# argues for it, not pre-emptively.
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
 
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
+[tool.ruff.lint.flake8-tidy-imports]
+ban-relative-imports = "all"
 
 [tool.ruff.lint.isort]
 known-first-party = ["{{ package_name }}"]
@@ -104,8 +152,14 @@ known-first-party = ["{{ package_name }}"]
 # Tests don't need docstrings, may use asserts, magic values, and unused fixture args.
 "tests/**" = ["D", "S101", "PLR2004", "ARG"]
 
+[tool.ruff.format]
+# Format code inside docstring examples, since the google convention invites them.
+docstring-code-format = true
+
 [tool.ty.src]
-exclude = ["scripts"]
+# Not created by the template; excluded so the pre-commit ty hook, which checks from
+# the project root, ignores ad-hoc code dropped in these directories later.
+exclude = ["notebooks", "scripts"]
 
 [tool.coverage.run]
 source = ["src/{{ package_name }}"]
@@ -113,6 +167,7 @@ source = ["src/{{ package_name }}"]
 
 [tool.coverage.report]
 show_missing = true
+fail_under = 80
 exclude_also = [
     "if __name__ == .__main__.:",
     "if TYPE_CHECKING:",

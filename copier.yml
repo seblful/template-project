@@ -51,8 +51,13 @@ license:
 
 python_version:
   type: str
-  help: What Python version should the project target?
+  help: What Python version should the project target? (major.minor)
   default: "3.13"
+  validator: >-
+    {% if not (python_version | regex_search('^3\.(9|1[0-9])$')) %}
+    python_version must be major.minor only, e.g. 3.13 (a patch version produces an
+    invalid "Programming Language :: Python :: X" classifier)
+    {% endif %}
 
 code_assistant:
   type: str

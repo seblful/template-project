@@ -50,6 +50,7 @@ Unknown keys in an env file are ignored, so `.env` can be shared with other tool
 
 ```bash
 uv run pytest                       # run tests
+uv run pytest --cov                 # run tests with the coverage gate
 uv run ruff check .                 # lint
 uv run ruff format .                # format
 uv run ty check src/ tests/         # type check
@@ -59,7 +60,7 @@ uv run pre-commit run --all-files   # run all hooks
 ### Docs
 
 ```bash
-uv sync --extra docs                # install docs dependencies
+uv sync --group docs                # install docs dependencies
 uv run mkdocs serve                 # serve docs locally at http://127.0.0.1:8000
 uv run mkdocs build                 # build static site into site/
 ```
