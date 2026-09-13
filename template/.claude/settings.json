@@ -13,6 +13,7 @@
       "Bash(mkdocs *)",
       "Read(.env.example)"
     ],
+    "$comment": "Enumerated rather than .env.*, because deny beats allow: that glob would also block .env.example, which is committed and has to stay readable. Add any new .env.<name> here — an unlisted one is readable.",
     "deny": [
       "Bash(rm -rf *)",
       "Bash(git push --force *)",
@@ -24,8 +25,12 @@
       "Read(.env)",
       "Read(.env.local)",
       "Read(.env.development)",
+      "Read(.env.dev)",
       "Read(.env.staging)",
       "Read(.env.production)",
+      "Read(.env.prod)",
+      "Read(.env.test)",
+      "Read(.env.ci)",
       "Read(secrets/**)",
       "Read(credentials/**)",
       "Read(**/*.pem)",
