@@ -226,15 +226,32 @@ jobs:
 
       # A clean template-to-template update over an unmodified project should produce
       # no conflicts at all. Any .rej means the update would land badly on real users.
+      #
+      # One shape is exempt: a pure creation hunk (`@@ -0,0 ...`) whose content already
+      # matches the file on disk. Copier renders the *old* state using the old
+      # template's `_exclude` against the *current* answers, so removing an answer that
+      # an older `_exclude` referenced makes the old state come out missing a file the
+      # project already has — and the patch then tries to create it. Nothing is lost
+      # and nothing needs merging, so this is reported and skipped rather than failed.
       - name: Assert the update applied cleanly
         if: steps.prev.outputs.tag != ''
         working-directory: ../demo-proj
         run: |
-          if find . -name '*.rej' -not -path './.git/*' | grep -q .; then
-            echo "::error::copier update produced conflicts:"
-            find . -name '*.rej' -not -path './.git/*'
-            exit 1
-          fi
+          status=0
+          while IFS= read -r rej; do
+            target="${rej%.rej}"
+            header=$(sed -n '2p' "$rej")
+            body=$(sed -n '3,$p' "$rej" | sed 's/^+//')
+            if [[ "$header" =~ ^@@\ -0,0 ]] && [ -f "$target" ] \
+               && [ "$body" = "$(cat "$target")" ]; then
+              echo "::notice::benign reject, file already identical: $rej"
+              rm -f "$rej"
+            else
+              echo "::error::copier update produced a real conflict: $rej"
+              status=1
+            fi
+          done < <(find . -name '*.rej' -not -path './.git/*')
+          exit $status
 
       - name: Gates still pass after update
         if: steps.prev.outputs.tag != ''
