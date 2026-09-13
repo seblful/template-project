@@ -12,8 +12,8 @@
 # Committed, generated, and thousands of lines long — never worth reading in full.
 uv.lock
 
-# Belt and braces. .gitignore covers these too, but a key that slipped into a commit
-# should still never be indexed.
+# Belt and suspenders. .gitignore covers these too, but a key that slipped into a
+# commit should still never be indexed.
 *.key
 *.pem
 secrets/
