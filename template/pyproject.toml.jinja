@@ -174,9 +174,6 @@ known-first-party = ["{{ package_name }}"]
 [tool.ruff.format]
 # Format code inside docstring examples, since the google convention invites them.
 docstring-code-format = true
-# Pin LF rather than the default "auto", which infers the ending from each file
-# and so stays silent on CRLF written by a Windows tool. .gitattributes already
-# keeps the committed form LF; this catches a stray in the working tree.
 line-ending = "lf"
 
 [tool.ty.src]
