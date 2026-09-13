@@ -10,14 +10,12 @@ license-files = ["LICENSE"]
 {% elif license == "Apache" %}
 license = "Apache-2.0"
 license-files = ["LICENSE"]
-{% elif license == "EULA" %}
-license-files = ["LICENSE"]
 {% endif %}
 authors = [
     { name = "{{ author_name }}", email = "{{ author_email }}" }
 ]
 classifiers = [
-{%- if license in ("None", "EULA") %}
+{%- if license == "None" %}
     # Not a registered trove classifier, which is exactly why it works: PyPI rejects
     # any upload carrying it. Drop this line if this project is ever published.
     "Private :: Do Not Upload",
@@ -33,15 +31,17 @@ classifiers = [
 # uv.lock is what pins the versions this project actually runs. Tooling below is
 # capped instead, because it only ever affects this repo.
 dependencies = [
+{%- if project_type == "cli" %}
     "typer>=0.12.0",
+{%- endif %}
     "structlog>=24.1.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.2.0",
 ]
-
+{% if project_type == "cli" %}
 [project.scripts]
 {{ project_slug }} = "{{ package_name }}.cli:app"
-
+{% endif %}
 [dependency-groups]
 dev = [
     "pytest>=9.0.0,<10",
@@ -90,8 +90,10 @@ xfail_strict = true
 # add a narrow `ignore:<message>:<category>:<module>` line here rather than deleting
 # the "error" entry — and leave a note saying what unblocks its removal.
 filterwarnings = ["error"]
+# Applied by hand, on the tests that earn them. There is deliberately no `unit`
+# marker: it would mean "everything not otherwise marked", which is what no marker
+# already means.
 markers = [
-    "unit: fast, isolated unit tests",
     "integration: tests that hit real I/O (DB, filesystem, network)",
     "slow: tests that take more than a second",
 ]
@@ -106,7 +108,8 @@ src = ["src"]
 # Curated, not "ALL" minus exceptions: every prefix here is a deliberate opt-in.
 # COM/ISC001/Q are deliberately absent — the formatter owns commas, quotes and string
 # concatenation, and ruff's own COM812 docs recommend against pairing it with it.
-# FBT is absent too: typer models CLI flags as boolean parameters by design.
+# FBT is absent too: a boolean parameter is the idiomatic way to model a CLI flag,
+# and flagging every one of them trains people to ignore the linter.
 select = [
     "A",     # flake8-builtins — shadowed builtins
     "ANN",   # flake8-annotations — py.typed is a promise; this makes annotations exist
@@ -157,10 +160,10 @@ select = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-
+{% if project_type == "cli" %}
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["typer.Argument", "typer.Option"]
-
+{% endif %}
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
 

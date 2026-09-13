@@ -14,7 +14,7 @@ uv sync
 ```
 
 ## Usage
-
+{% if project_type == "cli" %}
 ```bash
 uv run {{ project_slug }} info       # run the CLI
 uv run {{ project_slug }} --version  # print the version
@@ -22,9 +22,10 @@ python -m {{ package_name }}         # equivalent module entry point
 ```
 
 Or use it as a library:
-
+{% endif %}
 ```python
-from {{ package_name }} import get_logger, get_settings, setup_logging
+from {{ package_name }}.logging import get_logger, setup_logging
+from {{ package_name }}.settings import get_settings
 
 setup_logging()
 log = get_logger(__name__)
@@ -33,7 +34,13 @@ log.info("started", environment=get_settings().app.environment)
 
 ## Configuration
 
-A `.env` was generated for local development and is gitignored — edit it in place. `.env.example` is the committed contract listing every supported key; a test fails if the two drift apart.
+`.env.example` is the committed contract listing every supported key, and a test fails if it drifts from the settings model. Copy it to start:
+
+```bash
+cp .env.example .env
+```
+
+`.env` is gitignored, so it is safe for real values.
 
 Settings are resolved with the following precedence, highest first:
 
@@ -75,13 +82,6 @@ Test order is randomized on every run (`pytest-randomly`). A failure prints the 
 ### CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the pre-commit suite and the test suite on Ubuntu and Windows, builds the docs with `--strict`, and audits dependencies weekly. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
-{% elif ci == "gitlab" %}
-
-### CI
-
-[`.gitlab-ci.yml`](.gitlab-ci.yml) runs the pre-commit suite and the test suite, builds the docs with `--strict`, and audits dependencies. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
-
-Two things need setting up in the GitLab UI: a pipeline schedule with `SCHEDULED_AUDIT` set to `1`, for the weekly dependency audit, and — if the docs should be published — a run of the manual `pages` job.
 {% endif %}
 
 ### Docs

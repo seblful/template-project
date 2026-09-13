@@ -7,6 +7,9 @@ import pytest
 from {{ package_name }} import settings as settings_module
 from {{ package_name }}.settings import get_settings
 
+# Both tests below read real files from disk rather than a patched model.
+pytestmark = pytest.mark.integration
+
 _GROUPS = {"APP": "app", "LOGGING": "logging"}
 
 

@@ -15,8 +15,7 @@ ______________________________________________________________________
 - **Docstrings and comments**: Google style, one imperative summary line ending in a period (`Return the cached settings.`), `Args:` on public functions only. Comments explain *why* and name the alternative rejected — one that restates the code gets deleted, not reworded.
 - **Logging**: `from {{ package_name }}.logging import get_logger` — structured key-value pairs (`log.info("user saved", user_id=uid)`), never f-strings, never secrets or PII
 - **Config**: New settings go on a group in `src/{{ package_name }}/settings.py` *and* in `.env.example`; a test asserts the two stay in sync
-{% if code_assistant == 'claude' %}- **Code**: Follow patterns in the `python-patterns` skill — see `python-testing` for tests
-{% endif %}
+- **Imports**: `{{ package_name }}/__init__.py` exports only metadata, on purpose — import from the module that owns the name, not the package root
 
 ### Stack
 
@@ -30,8 +29,8 @@ ______________________________________________________________________
 | [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
 | [structlog](https://www.structlog.org/) | Structured logging |
 | [pydantic](https://docs.pydantic.dev/) | Data validation and settings |
-| [typer](https://typer.tiangolo.com/) | CLI entry points |
-| [mkdocs](https://www.mkdocs.org/) | Documentation (`uv sync --group docs`) |
+{% if project_type == 'cli' %}| [typer](https://typer.tiangolo.com/) | CLI entry points |
+{% endif %}| [mkdocs](https://www.mkdocs.org/) | Documentation (`uv sync --group docs`) |
 
 **Preferred additions**, not yet installed — add with `uv add` when the need is real, don't reach for an alternative:
 
@@ -45,4 +44,4 @@ ______________________________________________________________________
 
 - **Never** hardcode secrets — they live in `.env` or the environment, wrapped in `SecretStr`, and `.env` is never committed
 - Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
-- Respect {% if code_assistant == 'cursor' %}`.cursorignore`{% else %}`.ignore`{% endif %} paths (`.env*`, `.ssh/`, `secrets/`)
+- Respect `.ignore` paths (`.env*`, `secrets/`, `.ssh/`)

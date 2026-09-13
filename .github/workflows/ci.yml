@@ -48,22 +48,22 @@ jobs:
   # valid Python, so ruff and ty cannot parse the .jinja sources. The only meaningful
   # check is to generate a project and run the gates the template claims to ship.
   generate:
-    name: ${{ matrix.os }} / py${{ matrix.python_version }} / ${{ matrix.license }} / ${{ matrix.code_assistant }} / ci=${{ matrix.ci }}
+    name: ${{ matrix.os }} / py${{ matrix.python_version }} / ${{ matrix.license }} / ${{ matrix.project_type }} / ci=${{ matrix.ci }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        # Five combinations chosen to cover every license branch, every code
-        # assistant, every CI answer, both ends of the supported Python range, and
-        # both OSes — rather than a 72-cell product that tests the same code paths
-        # over and over.
+        # Five combinations chosen to cover every license branch, both project types,
+        # both CI answers, both claude_settings values, both ends of the supported
+        # Python range and both OSes — rather than a 48-cell product that tests the
+        # same code paths over and over.
         include:
-          - {os: ubuntu-latest, python_version: "3.13", license: None, code_assistant: claude, ci: github}
-          - {os: ubuntu-latest, python_version: "3.13", license: MIT, code_assistant: opencode, ci: gitlab}
-          - {os: ubuntu-latest, python_version: "3.12", license: Apache, code_assistant: cursor, ci: none}
-          - {os: ubuntu-latest, python_version: "3.10", license: EULA, code_assistant: claude, ci: gitlab}
-          - {os: windows-latest, python_version: "3.13", license: MIT, code_assistant: claude, ci: github}
+          - {os: ubuntu-latest, python_version: "3.13", license: None, project_type: cli, ci: github, claude_settings: "true"}
+          - {os: ubuntu-latest, python_version: "3.13", license: MIT, project_type: library, ci: none, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.12", license: Apache, project_type: cli, ci: none, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.10", license: MIT, project_type: library, ci: github, claude_settings: "true"}
+          - {os: windows-latest, python_version: "3.13", license: Apache, project_type: cli, ci: github, claude_settings: "true"}
     steps:
       - uses: actions/checkout@v7
 
@@ -84,14 +84,17 @@ jobs:
       - name: Generate a project
         shell: bash
         run: |
-          uvx --with jinja2-time copier copy --trust --defaults --vcs-ref=HEAD \
+          uvx copier copy --trust --defaults --vcs-ref=HEAD \
             -d project_slug=demo-proj \
             -d package_name=demo_proj \
             -d project_description="A generated demo project." \
+            -d author_name="Demo Author" \
+            -d author_email=demo@example.com \
             -d python_version='${{ matrix.python_version }}' \
             -d license='${{ matrix.license }}' \
-            -d code_assistant='${{ matrix.code_assistant }}' \
+            -d project_type='${{ matrix.project_type }}' \
             -d ci='${{ matrix.ci }}' \
+            -d claude_settings='${{ matrix.claude_settings }}' \
             "$GITHUB_WORKSPACE" ../demo-proj
 
       # `ruff format --check` is the load-bearing assertion here. Generation runs
@@ -141,31 +144,42 @@ jobs:
             exit 1
           fi
 
-      # The `ci` answer must produce exactly one pipeline definition and no orphan of
-      # the other kind, and whatever it produced has to be valid.
-      - name: Validate the generated CI config
+      # Every conditional path in the template is asserted here. A conditional filename
+      # that renders to the empty string is silently skipped by copier, so a typo in
+      # one produces a project that is merely missing a file — no error anywhere.
+      - name: Assert the answers produced the right files
         shell: bash
         working-directory: ../demo-proj
         run: |
-          gh_present=$([ -f .github/workflows/ci.yml ] && echo yes || echo no)
-          gl_present=$([ -f .gitlab-ci.yml ] && echo yes || echo no)
-          case "${{ matrix.ci }}" in
-            github) expected="yes no" ;;
-            gitlab) expected="no yes" ;;
-            none)   expected="no no" ;;
-          esac
-          if [ "$gh_present $gl_present" != "$expected" ]; then
-            echo "::error::ci=${{ matrix.ci }} produced github=$gh_present gitlab=$gl_present"
-            exit 1
-          fi
-          if [ "$gh_present" = yes ]; then
+          fail() { echo "::error::$1"; exit 1; }
+          cli_files="src/demo_proj/cli.py src/demo_proj/__main__.py tests/test_cli.py"
+
+          if [ '${{ matrix.ci }}' = github ]; then
+            [ -f .github/workflows/ci.yml ] || fail "ci=github produced no workflow"
             uvx --from actionlint-py actionlint .github/workflows/ci.yml
+          else
+            [ ! -e .github ] || fail "ci=${{ matrix.ci }} still produced .github"
           fi
-          if [ "$gl_present" = yes ]; then
-            # A parse only. Validating GitLab semantics needs the CI Lint API, which
-            # needs a GitLab token this repository has no business holding.
-            uvx --with pyyaml python -c \
-              "import pathlib, yaml; yaml.safe_load(pathlib.Path('.gitlab-ci.yml').read_text())"
+
+          if [ '${{ matrix.project_type }}' = cli ]; then
+            for f in $cli_files; do
+              [ -f "$f" ] || fail "project_type=cli is missing $f"
+            done
+            grep -q '^\[project.scripts\]' pyproject.toml \
+              || fail "project_type=cli declares no console script"
+          else
+            for f in $cli_files; do
+              [ ! -e "$f" ] || fail "project_type=library still produced $f"
+            done
+            if grep -q '"typer' pyproject.toml; then
+              fail "project_type=library still depends on typer"
+            fi
+          fi
+
+          if [ '${{ matrix.claude_settings }}' = true ]; then
+            [ -f .claude/settings.json ] || fail "claude_settings=true produced no .claude"
+          else
+            [ ! -e .claude ] || fail "claude_settings=false still produced .claude"
           fi
 
   # `copier update` is the path most likely to break silently: it is exercised by
@@ -193,20 +207,22 @@ jobs:
         id: prev
         run: echo "tag=$(git tag --sort=-v:refname | head -n1)" >> "$GITHUB_OUTPUT"
 
+      # Still --with jinja2-time: the released tag being generated from predates the
+      # removal of that extension, so its LICENSE template still needs it. HEAD does
+      # not, which is why the update step below runs a plain copier.
       - name: Generate at the previous release
         if: steps.prev.outputs.tag != ''
         run: |
           uvx --with jinja2-time copier copy --trust --defaults \
             --vcs-ref='${{ steps.prev.outputs.tag }}' \
             -d project_slug=demo-proj -d package_name=demo_proj -d license=MIT \
+            -d author_name="Demo Author" -d author_email=demo@example.com \
             "$GITHUB_WORKSPACE" ../demo-proj
 
       - name: Update to HEAD
         if: steps.prev.outputs.tag != ''
         working-directory: ../demo-proj
-        run: |
-          uvx --with jinja2-time copier update --trust --defaults --vcs-ref=HEAD \
-            --conflict=rej
+        run: uvx copier update --trust --defaults --vcs-ref=HEAD --conflict=rej
 
       # A clean template-to-template update over an unmodified project should produce
       # no conflicts at all. Any .rej means the update would land badly on real users.

@@ -6,11 +6,12 @@ This is a [Copier](https://copier.readthedocs.io/) template, not a Python projec
 
 **You cannot lint the template. You can only lint what it generates.**
 
-`template/src/{{ package_name }}/cli.py.jinja` is not valid Python (`from {{ package_name }} import ...`), so ruff, ty and pytest cannot see it. The only real check is to generate a project and run its gates:
+`template/src/{{ package_name }}/settings.py.jinja` is not valid Python (`from {{ package_name }} import ...`), so ruff, ty and pytest cannot see it. The only real check is to generate a project and run its gates:
 
 ```bash
-uvx --with jinja2-time copier copy --trust --defaults --vcs-ref=HEAD \
+uvx copier copy --trust --defaults --vcs-ref=HEAD \
   -d project_slug=demo-proj -d package_name=demo_proj \
+  -d author_name="Demo Author" -d author_email=demo@example.com \
   . ../demo-proj
 cd ../demo-proj
 uv run ruff check . && uv run ruff format --check .
@@ -28,7 +29,9 @@ CI (`.github/workflows/ci.yml`) runs exactly this across a matrix of answers. Tr
 - **Comments**: complete sentences that explain *why* and name the alternative rejected — a comment restating the code gets deleted, not reworded. American spelling throughout.
 - **Line length is 88.** Jinja placeholders expand: `{{ package_name }}` (18 chars) usually becomes something shorter, `{{ project_slug }}` likewise. Write template source so it fits at 88 *after* rendering a mid-length name — CI checks the rendered form.
 - **Comments in generated files explain *why*, not *what*.** The existing `pyproject.toml.jinja` is the reference for tone. A reader of a generated project has no access to this repo, so a decision that looks odd must justify itself in place.
-- **Every answer in `copier.yml` needs a validator** unless it is a `choices` list.
+- **Every answer in `copier.yml` needs a validator** unless it is a `choices` list or a `bool` — both are already constrained by copier itself.
+- **A file that only some answers produce gets a conditional filename**, not an `_exclude` entry: `_exclude` has to guess whether copier matches the source name or the rendered one. `_exclude` is for whole directories. A conditional name that renders empty is skipped silently, so assert the result in CI.
+- **`author_name` and `author_email` have no defaults on purpose.** Don't add any — a default there attributes strangers' projects to whoever maintains the template. Automation passes `-d`.
 - **Don't add a dependency to `pyproject.toml.jinja` without capping the major version** when upstream has a known breaking release coming. `mkdocs<2` is there for a reason.
 
 ## Versioning

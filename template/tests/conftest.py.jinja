@@ -10,26 +10,6 @@ from {{ package_name }} import settings as settings_module
 from {{ package_name }}.logging import reset_logging
 from {{ package_name }}.settings import Settings, get_settings
 
-# Directory name under tests/ mapped to the marker applied to everything inside it.
-# This keeps the markers declared in pyproject.toml honest without hand-tagging every
-# test, which is the thing nobody remembers to do.
-_DIR_MARKERS = {"unit": "unit", "integration": "integration", "e2e": "integration"}
-
-
-def pytest_collection_modifyitems(
-    config: pytest.Config, items: list[pytest.Item]
-) -> None:
-    """Mark every collected test according to the directory it lives in."""
-    root = Path(config.rootpath) / "tests"
-    for item in items:
-        try:
-            relative = Path(item.path).relative_to(root)
-        except ValueError:
-            continue
-        marker = _DIR_MARKERS.get(relative.parts[0] if relative.parts else "")
-        if marker:
-            item.add_marker(marker)
-
 
 @pytest.fixture(autouse=True)
 def _isolated_settings(

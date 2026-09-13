@@ -9,7 +9,7 @@ uv sync
 ```
 
 ## Usage
-
+{% if project_type == "cli" %}
 Run the CLI:
 
 ```bash
@@ -17,9 +17,10 @@ uv run {{ project_slug }} info
 ```
 
 Or use it as a library:
-
+{% endif %}
 ```python
-from {{ package_name }} import get_logger, get_settings
+from {{ package_name }}.logging import get_logger
+from {{ package_name }}.settings import get_settings
 
 log = get_logger(__name__)
 log.info("started", environment=get_settings().app.environment)
