@@ -1,5 +1,6 @@
-# Mirrors what runs locally: the pre-commit suite is the single source of truth for
-# lint, format and type checks, so CI cannot drift from a developer's machine.
+# Mirrors what runs locally: the commit-stage hook suite is the single source of truth
+# for lint, format and type checks, so CI cannot drift from a developer's machine. The
+# project's pre-push hooks run the tests and the docs build, which are the jobs below.
 #
 # GitLab has no cron syntax in this file. To get the weekly dependency audit, add a
 # pipeline schedule under Build > Pipeline schedules with SCHEDULED_AUDIT set to "1".
@@ -47,8 +48,10 @@ check:
     # --locked fails when uv.lock is stale instead of quietly regenerating it, so a
     # forgotten `uv lock` is caught here rather than drifting per machine.
     - uv sync --locked
-    # The gitleaks hook scans *staged* changes, so it is a no-op here: it guards
-    # commits, not CI. Add a full-history scan as a separate job if you need one.
+    # --all-files runs the commit stage only; the pre-push hooks are covered by the
+    # pytest call below and the docs job. The gitleaks hook scans *staged* changes, so
+    # it is a no-op here: it guards commits, not CI. Add a full-history scan as a
+    # separate job if you need one.
     - uv run pre-commit run --all-files --show-diff-on-failure
     - uv run pytest --cov --cov-report=xml --cov-report=term --junitxml=report.xml
   coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'

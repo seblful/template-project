@@ -96,12 +96,17 @@ jobs:
           uv sync --group docs
           uv run mkdocs build --strict
 
-      # The hook suite is what generated projects gate commits on, so it has to pass
-      # on a freshly generated tree. `git init` already ran as a copier task.
+      # The hook suite is what generated projects gate commits and pushes on, so it
+      # has to pass on a freshly generated tree. `git init` and `pre-commit install`
+      # already ran as copier tasks.
       - name: Pre-commit hooks
         shell: bash
         working-directory: ../demo-proj
-        run: uv run pre-commit run --all-files --show-diff-on-failure
+        run: |
+          test -f .git/hooks/pre-commit
+          test -f .git/hooks/pre-push
+          uv run pre-commit run --all-files --show-diff-on-failure
+          uv run pre-commit run --all-files --hook-stage pre-push
 
       # `[^$]` before `{{` so GitHub Actions' own `${{ ... }}` expressions in the
       # generated workflow are not mistaken for template leftovers.

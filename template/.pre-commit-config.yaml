@@ -2,6 +2,9 @@
 # environments. That makes uv.lock the single source of truth for their versions: a
 # hook revision can no longer drift out of lockstep with what runs locally, and
 # `pre-commit autoupdate` cannot silently change how this project is formatted.
+default_install_hook_types: [pre-commit, pre-push]
+default_stages: [pre-commit]
+
 repos:
   - repo: local
     hooks:
@@ -30,6 +33,20 @@ repos:
         # ty resolves imports across the whole project; checking only the staged
         # files would miss breakage in their callers.
         pass_filenames: false
+      - id: pytest
+        name: pytest
+        entry: uv run pytest
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push]
+      - id: mkdocs
+        name: mkdocs build
+        entry: uv run --group docs mkdocs build --strict
+        language: system
+        files: ^(docs/|mkdocs\.yml$)
+        pass_filenames: false
+        stages: [pre-push]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

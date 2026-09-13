@@ -146,8 +146,14 @@ _message_after_copy: |
   committed contract listing every supported key. Docs tooling installs separately
   with `uv sync --group docs`.
 
-_message_after_update: |
-  Template updated. Re-run the gates before committing:
+  Git hooks are installed: lint, formatting and types run on commit, the test suite
+  runs on push.
 
+_message_after_update: |
+  Template updated. Re-run the gates before committing. `pre-commit install` is in
+  the list because a new hook type (this template installs pre-push hooks as well as
+  pre-commit ones) reaches an existing checkout only when install runs again:
+
+      uv run pre-commit install
       uv run pre-commit run --all-files
       uv run pytest --cov

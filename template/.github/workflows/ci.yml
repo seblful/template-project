@@ -50,10 +50,11 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      # The hook suite is the single source of truth for lint, format and type-check,
-      # so CI cannot drift from what runs locally. Note: the gitleaks hook scans
-      # *staged* changes, so it is a no-op here — it guards commits, not CI. Add
-      # a full-history scan as a separate job if you need one.
+      # The commit-stage hook suite is the single source of truth for lint, format
+      # and type-check, so CI cannot drift from what runs locally. `--all-files`
+      # covers that stage only; the pre-push hooks are the steps and job below. The
+      # gitleaks hook scans *staged* changes, so it is a no-op here — it guards
+      # commits, not CI. Add a full-history scan as a separate job if you need one.
       - name: Lint, format, types
         run: uv run pre-commit run --all-files --show-diff-on-failure
 
