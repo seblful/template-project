@@ -22,6 +22,28 @@ env:
   GIT_COMMITTER_EMAIL: ci@example.com
 
 jobs:
+  hooks:
+    name: repo hooks
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v10.0.1
+        with:
+          enable-cache: true
+          cache-dependency-glob: ""
+
+      - name: Cache pre-commit environments
+        uses: actions/cache@v6
+        with:
+          path: ~/.cache/pre-commit
+          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+
+      - name: Run hooks
+        run: uvx pre-commit run --all-files --show-diff-on-failure
+
   # The template itself cannot be linted: `from {{ package_name }} import ...` is not
   # valid Python, so ruff and ty cannot parse the .jinja sources. The only meaningful
   # check is to generate a project and run the gates the template claims to ship.

@@ -1,0 +1,29 @@
+repos:
+  - repo: local
+    hooks:
+      - id: mdformat
+        name: mdformat
+        entry: uvx mdformat<2
+        language: system
+        types: [markdown]
+      - id: actionlint
+        name: actionlint
+        entry: uvx --from actionlint-py<2 actionlint
+        language: system
+        files: ^(\.github|template/\.github)/workflows/.*\.ya?ml$
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-json
+      - id: check-added-large-files
+      - id: check-merge-conflict
+      - id: detect-private-key
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.28.0
+    hooks:
+      - id: gitleaks
