@@ -109,7 +109,7 @@ def test_reset_logging_detaches_and_allows_reconfiguration(tmp_path: Path) -> No
     assert _our_file_handlers(tmp_path / "first.log")
 
     reset_logging()
-    assert logging.root.handlers == before  # Nothing of ours left, nothing else lost.
+    assert logging.root.handlers == before
 
     setup_logging(log_file=tmp_path / "second.log")
     assert _our_file_handlers(tmp_path / "second.log")

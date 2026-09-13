@@ -16,9 +16,7 @@ authors = [
 ]
 classifiers = [
 {%- if license == "None" %}
-    # Not a registered trove classifier, which is exactly why it works: PyPI rejects
-    # any upload carrying it. Drop this line if this project is ever published.
-    "Private :: Do Not Upload",
+    "Private :: Do Not Upload",  # unregistered on purpose: PyPI rejects any such upload
 {%- endif %}
     "Development Status :: 3 - Alpha",
     "Intended Audience :: Developers",
@@ -26,10 +24,7 @@ classifiers = [
     "Programming Language :: Python :: {{ python_version }}",
     "Typing :: Typed",
 ]
-# Runtime dependencies are deliberately uncapped. An upper bound here propagates to
-# everything that installs this package and causes resolution conflicts downstream;
-# uv.lock is what pins the versions this project actually runs. Tooling below is
-# capped instead, because it only ever affects this repo.
+# Uncapped: an upper bound here propagates to everyone installing this package.
 dependencies = [
 {%- if project_type == "cli" %}
     "typer>=0.12.0",
@@ -46,33 +41,21 @@ dependencies = [
 dev = [
     "pytest>=9.0.0,<10",
     "pytest-cov>=7.0.0,<8",
-    # Randomizes test order every run. With module-level state (the logging root,
-    # structlog's defaults, lru_cache) order-dependence is the failure mode worth
-    # hunting; a fixed seed is printed on failure so a bad order can be replayed.
-    "pytest-randomly>=4.0.0,<5",
-    # ruff and mdformat are pinned only here. .pre-commit-config.yaml runs them through
-    # `uv run`, so the lockfile is the single source of truth and the hook revisions
-    # cannot drift out of lockstep with the versions used locally.
+    "pytest-randomly>=4.0.0,<5",  # catches order-dependence from shared module state
     "ruff>=0.15.10,<0.16",
     "mdformat>=1.0.0,<2",
     "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
     "pre-commit>=4.0.0,<5",
 ]
-# A dependency group, not a project extra: docs tooling is not a feature of the
-# installed package. Install with `uv sync --group docs`.
-docs = [
-    # <2 is load-bearing, not cosmetic. MkDocs 2.0 removes the plugin system outright
-    # and offers no migration path, which would break material and mkdocstrings on the
-    # first unpinned resolve. Revisit only when both have released 2.0-compatible lines.
+docs = [  # a group, not an extra: docs tooling isn't a feature of the installed package
+    # <2 is load-bearing: MkDocs 2.0 drops the plugin system material/mkdocstrings need
     "mkdocs>=1.6.0,<2",
     "mkdocs-material>=9.5.0,<10",
     "mkdocstrings[python]>=0.25.0,<2",
 ]
 
 [build-system]
-# >=1.27 is the floor for PEP 639 metadata (the `license` expression and
-# top-level `license-files` above).
-requires = ["hatchling>=1.27"]
+requires = ["hatchling>=1.27"]  # floor for PEP 639's `license` and `license-files`
 build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
@@ -80,36 +63,27 @@ packages = ["src/{{ package_name }}"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-# Coverage is deliberately not enabled here. With --cov-fail-under in addopts, every
-# partial run (a single file, or -k) reports low coverage and exits non-zero.
-# Measure it explicitly instead: `uv run pytest --cov` (see [tool.coverage]).
+# No --cov-fail-under here: a partial run (a single file, or -k) would then report
+# false-low coverage. Measure explicitly: `uv run pytest --cov` (see [tool.coverage]).
 addopts = "-ra --strict-markers --strict-config"
 xfail_strict = true
-# Warnings are errors: a DeprecationWarning from a dependency is a scheduled outage,
-# and this is the cheapest place to find out. When one is genuinely not actionable,
-# add a narrow `ignore:<message>:<category>:<module>` line here rather than deleting
-# the "error" entry — and leave a note saying what unblocks its removal.
+# A DeprecationWarning from a dependency is a scheduled outage; catch it here. If one
+# is genuinely not actionable, narrow it with `ignore:<msg>:<category>:<module>` rather
+# than dropping "error" entirely.
 filterwarnings = ["error"]
-# Applied by hand, on the tests that earn them. There is deliberately no `unit`
-# marker: it would mean "everything not otherwise marked", which is what no marker
-# already means.
 markers = [
     "integration: tests that hit real I/O (DB, filesystem, network)",
     "slow: tests that take more than a second",
 ]
 
 [tool.ruff]
-# target-version is intentionally omitted: ruff infers it from requires-python,
-# so there is one source of truth for the target Python.
+# No target-version: ruff infers it from requires-python.
 line-length = 88
 src = ["src"]
 
 [tool.ruff.lint]
-# Curated, not "ALL" minus exceptions: every prefix here is a deliberate opt-in.
-# COM/ISC001/Q are deliberately absent — the formatter owns commas, quotes and string
-# concatenation, and ruff's own COM812 docs recommend against pairing it with it.
-# FBT is absent too: a boolean parameter is the idiomatic way to model a CLI flag,
-# and flagging every one of them trains people to ignore the linter.
+# COM/ISC001/Q are absent: the formatter already owns commas, quotes and string joins,
+# and ruff's own COM812 docs advise against pairing it with the formatter.
 select = [
     "A",     # flake8-builtins — shadowed builtins
     "ANN",   # flake8-annotations — py.typed is a promise; this makes annotations exist
@@ -149,14 +123,7 @@ select = [
     "UP",    # pyupgrade
     "W",     # pycodestyle warnings
 ]
-# No `ignore` list on purpose. The google convention already disables the rules that
-# conflict with it (D203, D204, D213, D215, D400, D401, D404, D406-D409, D413), and a
-# fresh project passes every remaining rule. Prefer `# noqa: X` at the site (RUF100
-# flags it once it goes stale) or per-file-ignores below over adding entries here.
-
-# No [tool.ruff.lint.pylint] section: ruff's defaults (max-args 5, max-returns 6) are
-# stricter than anything worth hand-writing here. Raise a limit when a real function
-# argues for it, not pre-emptively.
+# No `ignore` list: prefer `# noqa: X` at the site, or per-file-ignores below.
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
@@ -180,9 +147,7 @@ docstring-code-format = true
 line-ending = "lf"
 
 [tool.ty.src]
-# Not created by the template; excluded so the pre-commit ty hook, which checks from
-# the project root, ignores ad-hoc code dropped in these directories later.
-exclude = ["notebooks", "scripts"]
+exclude = ["notebooks", "scripts"]  # not created by the template; ad-hoc code goes here
 
 [tool.coverage.run]
 source = ["src/{{ package_name }}"]

@@ -3,9 +3,7 @@ site_description: "{{ project_description }}"
 {% if author_name -%}
 site_author: {{ author_name }}
 {% endif -%}
-# Set site_url once the docs have a home: it is what makes sitemap.xml and canonical
-# links correct. repo_url turns on the "edit this page" and repository links in the
-# header — Material ignores repo_name unless repo_url is set alongside it.
+# Uncomment once the docs have a home; repo_name needs repo_url set alongside it.
 # site_url: https://example.github.io/{{ project_slug }}/
 # repo_url: https://github.com/example/{{ project_slug }}
 # repo_name: example/{{ project_slug }}

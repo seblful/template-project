@@ -1,5 +1,4 @@
-# Commit LF everywhere. Without this, a checkout on Windows produces CRLF that the
-# end-of-file-fixer hook and `ruff format --check` on Linux CI disagree about.
+# Force LF: a Windows CRLF checkout would fail ruff format --check on Linux CI.
 * text=auto eol=lf
 
 *.png binary

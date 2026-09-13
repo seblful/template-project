@@ -1,19 +1,14 @@
-# Paths that assistants and fast search tools (ripgrep, fd) should not read or index.
-# Those tools already honor .gitignore, so this file holds only the delta: paths that
-# are committed, or that .gitignore deliberately un-ignores, but that still have no
-# business in an assistant's context.
+# The delta over .gitignore: committed paths, or ones .gitignore un-ignores, that
+# still have no business in an assistant's context.
 
-# Env files. .gitignore un-ignores .env.example because it is the committed config
-# contract, and that one is worth reading; every other .env holds real values.
+# .env.example is the committed config contract; every other .env holds real values.
 .env
 .env.*
 !.env.example
 
-# Committed, generated, and thousands of lines long — never worth reading in full.
-uv.lock
+uv.lock  # committed, generated, thousands of lines long
 
-# Belt and suspenders. .gitignore covers these too, but a key that slipped into a
-# commit should still never be indexed.
+# Belt and suspenders: .gitignore covers these too, but a leaked key stays unindexed.
 *.key
 *.pem
 secrets/

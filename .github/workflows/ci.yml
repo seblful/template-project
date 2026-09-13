@@ -14,8 +14,7 @@ concurrency:
   cancel-in-progress: true
 
 env:
-  # Copier's _tasks run `git commit`, which needs an identity. The commit task
-  # supplies its own via `git -c`, but `git init` still warns without these.
+  # git init warns without an identity even though the commit task sets its own.
   GIT_AUTHOR_NAME: template-ci
   GIT_AUTHOR_EMAIL: ci@example.com
   GIT_COMMITTER_NAME: template-ci
@@ -44,9 +43,6 @@ jobs:
       - name: Run hooks
         run: uvx pre-commit run --all-files --show-diff-on-failure
 
-  # The template itself cannot be linted: `from {{ package_name }} import ...` is not
-  # valid Python, so ruff and ty cannot parse the .jinja sources. The only meaningful
-  # check is to generate a project and run the gates the template claims to ship.
   generate:
     name: ${{ matrix.os }} / py${{ matrix.python_version }} / ${{ matrix.license }} / ${{ matrix.project_type }} / ci=${{ matrix.ci }}
     runs-on: ${{ matrix.os }}
@@ -54,10 +50,6 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Five combinations chosen to cover every license branch, both project types,
-        # every CI answer, both claude_settings values, both ends of the supported
-        # Python range and both OSes — rather than a 72-cell product that tests the
-        # same code paths over and over.
         include:
           - {os: ubuntu-latest, python_version: "3.13", license: None, project_type: cli, ci: github, claude_settings: "true"}
           - {os: ubuntu-latest, python_version: "3.13", license: MIT, project_type: library, ci: gitlab, claude_settings: "false"}
@@ -68,19 +60,12 @@ jobs:
       - uses: actions/checkout@v7
 
       - name: Install uv
-        # A full version, not `@v10`: astral-sh/setup-uv stopped publishing moving
-        # major tags after v7, so a bare major does not resolve.
+        # Full version pin, not `@v10`: astral-sh/setup-uv dropped moving major tags.
         uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
-          # This repo has no pyproject.toml or uv.lock of its own — it is a Copier
-          # template, not a Python project — so there is no dependency file to key the
-          # cache on. Empty means "never invalidate", which is right here: the cache
-          # only holds wheels downloaded while generating throwaway projects.
-          cache-dependency-glob: ""
+          cache-dependency-glob: ""  # no lockfile here to key the cache on
 
-      # An absolute source path, because copier records it as `_src_path` in
-      # .copier-answers.yml and later resolves it from the *project* directory.
       - name: Generate a project
         shell: bash
         run: |
@@ -97,10 +82,8 @@ jobs:
             -d claude_settings='${{ matrix.claude_settings }}' \
             "$GITHUB_WORKSPACE" ../demo-proj
 
-      # `ruff format --check` is the load-bearing assertion here. Generation runs
-      # `ruff format` as a task, so a badly formatted template would still produce a
-      # clean tree — but only for people who pass --trust. This step fails instead if
-      # the .jinja sources drift from the style the template itself enforces.
+      # ruff format --check is load-bearing: the generate task above runs plain
+      # `ruff format`, which would silently mask a badly formatted template.
       - name: Lint, format, types
         shell: bash
         working-directory: ../demo-proj
@@ -121,9 +104,6 @@ jobs:
           uv sync --group docs
           uv run mkdocs build --strict
 
-      # The hook suite is what generated projects gate commits and pushes on, so it
-      # has to pass on a freshly generated tree. `git init` and `pre-commit install`
-      # already ran as copier tasks.
       - name: Pre-commit hooks
         shell: bash
         working-directory: ../demo-proj
@@ -133,8 +113,7 @@ jobs:
           uv run pre-commit run --all-files --show-diff-on-failure
           uv run pre-commit run --all-files --hook-stage pre-push
 
-      # `[^$]` before `{{` so GitHub Actions' own `${{ ... }}` expressions in the
-      # generated workflow are not mistaken for template leftovers.
+      # `[^$]` before `{{` excludes GitHub Actions' own `${{ ... }}` expressions.
       - name: Assert no unrendered Jinja survived
         shell: bash
         working-directory: ../demo-proj
@@ -144,9 +123,8 @@ jobs:
             exit 1
           fi
 
-      # Every conditional path in the template is asserted here. A conditional filename
-      # that renders to the empty string is silently skipped by copier, so a typo in
-      # one produces a project that is merely missing a file — no error anywhere.
+      # A conditional filename that renders empty is silently skipped by copier, so a
+      # typo here would otherwise produce a missing file with no error.
       - name: Assert the answers produced the right files
         shell: bash
         working-directory: ../demo-proj
@@ -154,8 +132,6 @@ jobs:
           fail() { echo "::error::$1"; exit 1; }
           cli_files="src/demo_proj/cli.py src/demo_proj/__main__.py tests/test_cli.py"
 
-          # Exactly one pipeline definition, no orphan of the other kind, and whatever
-          # it produced has to parse.
           case '${{ matrix.ci }}' in
             github)
               [ -f .github/workflows/ci.yml ] || fail "ci=github produced no workflow"
@@ -165,8 +141,7 @@ jobs:
             gitlab)
               [ -f .gitlab-ci.yml ] || fail "ci=gitlab produced no pipeline"
               [ ! -e .github ] || fail "ci=gitlab also produced .github"
-              # A parse only. Validating GitLab semantics needs the CI Lint API, which
-              # needs a GitLab token this repository has no business holding.
+              # Parse only: real validation needs a GitLab token, which this repo lacks
               uvx --with pyyaml python -c \
                 "import pathlib, yaml; yaml.safe_load(pathlib.Path('.gitlab-ci.yml').read_text())"
               ;;
@@ -197,8 +172,6 @@ jobs:
             [ ! -e .claude ] || fail "claude_settings=false still produced .claude"
           fi
 
-  # `copier update` is the path most likely to break silently: it is exercised by
-  # every existing project and by nobody during development.
   update:
     name: copier update from latest tag
     runs-on: ubuntu-latest
@@ -212,19 +185,14 @@ jobs:
         uses: astral-sh/setup-uv@v10.0.1
         with:
           enable-cache: true
-          # This repo has no pyproject.toml or uv.lock of its own — it is a Copier
-          # template, not a Python project — so there is no dependency file to key the
-          # cache on. Empty means "never invalidate", which is right here: the cache
-          # only holds wheels downloaded while generating throwaway projects.
-          cache-dependency-glob: ""
+          cache-dependency-glob: ""  # no lockfile here to key the cache on
 
       - name: Resolve the previous release
         id: prev
         run: echo "tag=$(git tag --sort=-v:refname | head -n1)" >> "$GITHUB_OUTPUT"
 
-      # Still --with jinja2-time: the released tag being generated from predates the
-      # removal of that extension, so its LICENSE template still needs it. HEAD does
-      # not, which is why the update step below runs a plain copier.
+      # --with jinja2-time: the previous release's LICENSE template still needs it,
+      # unlike HEAD, which is why the update step below omits it.
       - name: Generate at the previous release
         if: steps.prev.outputs.tag != ''
         run: |
@@ -239,15 +207,10 @@ jobs:
         working-directory: ../demo-proj
         run: uvx copier update --trust --defaults --vcs-ref=HEAD --conflict=rej
 
-      # A clean template-to-template update over an unmodified project should produce
-      # no conflicts at all. Any .rej means the update would land badly on real users.
-      #
-      # One shape is exempt: a pure creation hunk (`@@ -0,0 ...`) whose content already
-      # matches the file on disk. Copier renders the *old* state using the old
-      # template's `_exclude` against the *current* answers, so removing an answer that
-      # an older `_exclude` referenced makes the old state come out missing a file the
-      # project already has — and the patch then tries to create it. Nothing is lost
-      # and nothing needs merging, so this is reported and skipped rather than failed.
+      # A clean update should produce no .rej files. The one exempt shape is a pure
+      # creation hunk that already matches the file on disk — copier's old-state
+      # render can go missing a file the project already has when an `_exclude`
+      # entry it depended on is gone, and then tries to recreate it for nothing.
       - name: Assert the update applied cleanly
         if: steps.prev.outputs.tag != ''
         working-directory: ../demo-proj

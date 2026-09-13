@@ -5,14 +5,11 @@ from importlib.metadata import PackageNotFoundError, version
 try:
     __version__ = version("{{ project_slug }}")
 except PackageNotFoundError:  # pragma: no cover - a source tree with no install
-    # Running straight from a checkout, where no distribution metadata exists yet.
     __version__ = "0.0.0+unknown"
 
 __author__ = "{{ author_name }}"
 __email__ = "{{ author_email }}"
 
-# get_logger and get_settings are deliberately not re-exported here. Re-exporting them
-# would make `import {{ package_name }}` pull in pydantic and structlog before the
-# caller has asked for either, which every importer of this package then pays for.
-# Import from the module instead: `from {{ package_name }}.logging import get_logger`.
+# get_logger/get_settings stay unexported: re-exporting would pull in pydantic and
+# structlog for every importer, whether or not they're used.
 __all__ = ["__author__", "__email__", "__version__"]

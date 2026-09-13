@@ -19,8 +19,7 @@ def _isolated_settings(
     for key in list(os.environ):
         if key.startswith(("APP__", "LOGGING__")):
             monkeypatch.delenv(key, raising=False)
-    # get_settings() reads this module attribute at call time, so pointing it at a
-    # path that cannot exist is enough. No poking at pydantic's class-level config.
+    # A path that cannot exist is enough; get_settings() reads this attribute live.
     monkeypatch.setattr(settings_module, "ENV_FILES", (tmp_path / "absent.env",))
     get_settings.cache_clear()
     yield

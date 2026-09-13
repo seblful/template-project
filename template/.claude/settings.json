@@ -1,5 +1,5 @@
 {
-  "$comment": "Committed and shared with everyone who clones this repo, so it holds only project-scoped rules. Personal preferences (marketplaces, plugins, default permission mode, proxies) belong in ~/.claude/settings.json; machine-local overrides go in .claude/settings.local.json, which is gitignored.",
+  "$comment": "Committed: project-scoped rules only. Machine-local overrides go in .claude/settings.local.json, which is gitignored.",
   "permissions": {
     "allow": [
       "Bash(uv *)",
@@ -13,7 +13,7 @@
       "Bash(mkdocs *)",
       "Read(.env.example)"
     ],
-    "$comment": "Enumerated rather than .env.*, because deny beats allow: that glob would also block .env.example, which is committed and has to stay readable. Add any new .env.<name> here — an unlisted one is readable.",
+    "$comment": "Enumerated, not .env.*: that glob would also block the committed .env.example. Add any new .env.<name> here, or it stays readable.",
     "deny": [
       "Bash(rm -rf *)",
       "Bash(git push --force *)",

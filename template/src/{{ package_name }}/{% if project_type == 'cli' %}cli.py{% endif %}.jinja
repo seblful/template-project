@@ -27,9 +27,7 @@ def main(
         typer.Option(
             "--version",
             callback=_version_callback,
-            # Eager, so that `--version` works without a subcommand. Otherwise
-            # no_args_is_help and Click's "Missing command" check get there first.
-            is_eager=True,
+            is_eager=True,  # else no_args_is_help resolves first, before --version runs
             help="Show the version and exit.",
         ),
     ] = False,

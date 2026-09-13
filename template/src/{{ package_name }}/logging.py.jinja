@@ -28,14 +28,12 @@ _LEVELS: Final = {
 _MAX_LOG_BYTES: Final = 10 * 1024 * 1024
 _LOG_BACKUP_COUNT: Final = 3
 
-# The handlers this module installed on the root logger, which doubles as the
-# "already configured" flag. Checking `logging.root.handlers` instead would make
-# setup a no-op under pytest, which installs a capture handler around every test.
+# Doubles as the "already configured" flag; logging.root.handlers isn't safe since
+# pytest installs a capture handler around every test.
 _installed: Final[list[logging.Handler]] = []
 
-# Processors applied to every event, whichever side it came from. Sharing one list
-# between structlog's own chain and `foreign_pre_chain` is what makes library logs
-# and application logs render identically.
+# Shared between structlog's chain and foreign_pre_chain, so library and
+# application logs render identically.
 _SHARED_PROCESSORS: Final = [
     structlog.contextvars.merge_contextvars,
     structlog.stdlib.add_logger_name,
@@ -72,13 +70,9 @@ def _force_utf8_stderr() -> None:
 def _build_formatter(*, as_json: bool) -> logging.Formatter:
     """Build a formatter that renders structlog and stdlib records the same way."""
     render = (
-        # ConsoleRenderer formats exceptions itself, but JSONRenderer needs the
-        # traceback turned into serializable data first, or `exc_info` is emitted as
-        # a bare `true`.
+        # JSONRenderer needs tracebacks pre-serialized, or exc_info comes out as `true`.
         [structlog.processors.dict_tracebacks, structlog.processors.JSONRenderer()]
         if as_json
-        # Color only when a human is watching. ANSI escapes in a redirected stream
-        # are noise that later has to be stripped back out.
         else [structlog.dev.ConsoleRenderer(colors=sys.stderr.isatty())]
     )
     return structlog.stdlib.ProcessorFormatter(
@@ -130,8 +124,7 @@ def setup_logging(
         _build_formatter(as_json=settings.app.environment == "production")
     )
 
-    # Handlers are added rather than replaced, so that pytest's capture handler and
-    # anything a host application already installed keep working.
+    # Added, not replaced: pytest's capture handler and any host handlers keep working.
     root = logging.getLogger()
     root.setLevel(min(f_level, c_level))
     root.addHandler(file_handler)

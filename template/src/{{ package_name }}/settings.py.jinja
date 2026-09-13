@@ -10,39 +10,28 @@ from pydantic_settings import BaseSettings, SettingsConfigDict
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 Environment = Literal["development", "staging", "production"]
 
-# Env files are resolved against the project root, so the CLI reads the same
-# configuration from any working directory. Installed as a wheel this points outside
-# the package and finds nothing, which is correct: deployed environments configure
-# through real environment variables.
+# Resolved against the project root, so the CLI reads the same config from any cwd.
 PROJECT_ROOT = Path(__file__).resolve().parents[2]
 
-# Overridable so that tests can point the suite away from the developer's own .env
-# without reaching into pydantic's class-level config. See tests/conftest.py.
+# Overridable so tests can redirect loading; see tests/conftest.py.
 ENV_FILES: tuple[Path, ...] = (PROJECT_ROOT / ".env", PROJECT_ROOT / ".env.local")
 
-# Docker and Kubernetes mount secrets as files here, one file per field name. This is
-# wired up only when the directory exists, because pydantic-settings otherwise warns
-# on every load.
-_SECRETS_DIR = Path("/run/secrets")
+_SECRETS_DIR = Path("/run/secrets")  # Docker/Kubernetes secrets, one file per field
 
-# frozen=True on every group, because get_settings() is cached: a mutation would
-# silently reach every other caller. Configuration is read-only after load.
+# frozen=True: get_settings() is cached, so a mutation would reach every caller.
 _GROUP_CONFIG = ConfigDict(extra="forbid", frozen=True)
 
 
 class AppSettings(BaseModel):
     """Application settings group."""
 
-    # extra="forbid" is what catches typos: APP__ENVIRONMEN would otherwise be
-    # silently dropped instead of rejected.
-    model_config = _GROUP_CONFIG
+    model_config = _GROUP_CONFIG  # extra="forbid" catches typos like APP__ENVIRONMEN
 
     app_name: str = Field(default="{{ project_slug }}", description="Application name")
     environment: Environment = Field(
         default="development", description="Environment name"
     )
-    # An example secret, set via APP__SECRET_KEY. SecretStr keeps it out of logs and
-    # reprs; read the value with secret_key.get_secret_value().
+    # SecretStr keeps this out of logs and reprs; read it via .get_secret_value().
     secret_key: SecretStr | None = Field(
         default=None, description="Example secret value"
     )
@@ -71,12 +60,11 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         env_file=ENV_FILES,
         env_file_encoding="utf-8",
+        # Only set when present, or pydantic-settings warns on every load.
         secrets_dir=str(_SECRETS_DIR) if _SECRETS_DIR.is_dir() else None,
         case_sensitive=False,
         frozen=True,
-        # Unknown keys in .env belong to other tools (docker compose, alembic) and
-        # are ignored here. Typos inside APP__/LOGGING__ still fail, via the groups
-        # above.
+        # Unknown keys belong to other tools; typos inside APP__/LOGGING__ still fail.
         extra="ignore",
         env_nested_delimiter="__",
     )
@@ -85,6 +73,5 @@ class Settings(BaseSettings):
 @lru_cache
 def get_settings() -> Settings:
     """Return the application settings, loaded once and cached."""
-    # ENV_FILES is read here rather than at class-definition time, so that
-    # monkeypatching the module attribute is enough to redirect loading.
+    # Read at call time, not class-definition time, so tests can monkeypatch it.
     return Settings(_env_file=ENV_FILES)
