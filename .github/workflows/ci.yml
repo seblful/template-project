@@ -55,15 +55,15 @@ jobs:
       fail-fast: false
       matrix:
         # Five combinations chosen to cover every license branch, both project types,
-        # both CI answers, both claude_settings values, both ends of the supported
-        # Python range and both OSes — rather than a 48-cell product that tests the
+        # every CI answer, both claude_settings values, both ends of the supported
+        # Python range and both OSes — rather than a 72-cell product that tests the
         # same code paths over and over.
         include:
           - {os: ubuntu-latest, python_version: "3.13", license: None, project_type: cli, ci: github, claude_settings: "true"}
-          - {os: ubuntu-latest, python_version: "3.13", license: MIT, project_type: library, ci: none, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.13", license: MIT, project_type: library, ci: gitlab, claude_settings: "false"}
           - {os: ubuntu-latest, python_version: "3.12", license: Apache, project_type: cli, ci: none, claude_settings: "false"}
           - {os: ubuntu-latest, python_version: "3.10", license: MIT, project_type: library, ci: github, claude_settings: "true"}
-          - {os: windows-latest, python_version: "3.13", license: Apache, project_type: cli, ci: github, claude_settings: "true"}
+          - {os: windows-latest, python_version: "3.13", license: Apache, project_type: cli, ci: gitlab, claude_settings: "true"}
     steps:
       - uses: actions/checkout@v7
 
@@ -154,12 +154,27 @@ jobs:
           fail() { echo "::error::$1"; exit 1; }
           cli_files="src/demo_proj/cli.py src/demo_proj/__main__.py tests/test_cli.py"
 
-          if [ '${{ matrix.ci }}' = github ]; then
-            [ -f .github/workflows/ci.yml ] || fail "ci=github produced no workflow"
-            uvx --from actionlint-py actionlint .github/workflows/ci.yml
-          else
-            [ ! -e .github ] || fail "ci=${{ matrix.ci }} still produced .github"
-          fi
+          # Exactly one pipeline definition, no orphan of the other kind, and whatever
+          # it produced has to parse.
+          case '${{ matrix.ci }}' in
+            github)
+              [ -f .github/workflows/ci.yml ] || fail "ci=github produced no workflow"
+              [ ! -e .gitlab-ci.yml ] || fail "ci=github also produced .gitlab-ci.yml"
+              uvx --from actionlint-py actionlint .github/workflows/ci.yml
+              ;;
+            gitlab)
+              [ -f .gitlab-ci.yml ] || fail "ci=gitlab produced no pipeline"
+              [ ! -e .github ] || fail "ci=gitlab also produced .github"
+              # A parse only. Validating GitLab semantics needs the CI Lint API, which
+              # needs a GitLab token this repository has no business holding.
+              uvx --with pyyaml python -c \
+                "import pathlib, yaml; yaml.safe_load(pathlib.Path('.gitlab-ci.yml').read_text())"
+              ;;
+            none)
+              [ ! -e .github ] || fail "ci=none still produced .github"
+              [ ! -e .gitlab-ci.yml ] || fail "ci=none still produced .gitlab-ci.yml"
+              ;;
+          esac
 
           if [ '${{ matrix.project_type }}' = cli ]; then
             for f in $cli_files; do

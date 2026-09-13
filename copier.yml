@@ -82,6 +82,7 @@ ci:
   help: Which CI should run the project's checks?
   choices:
     - github
+    - gitlab
     - none
   default: github
 

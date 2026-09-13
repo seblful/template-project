@@ -54,7 +54,7 @@ Copier re-applies the template, preserving your answers from `.copier-answers.ym
 
 ```
 new-project/
-├── .github/workflows/ci.yml   # only when ci=github
+├── .github/workflows/ci.yml   # or .gitlab-ci.yml, or neither — see the ci answer
 ├── src/
 │   └── <package_name>/
 │       ├── __init__.py       # metadata only — no re-exports
@@ -75,6 +75,7 @@ new-project/
 ├── .python-version
 ├── AGENTS.md
 ├── pyproject.toml
+├── TODO.md
 └── README.md
 ```
 
@@ -105,7 +106,7 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 | `author_name` / `author_email` | Author information — no default, must be answered |
 | `license` | None, MIT, or Apache |
 | `python_version` | Target Python version (3.10+) |
-| `ci` | github or none |
+| `ci` | github, gitlab, or none |
 | `claude_settings` | Ship `.claude/settings.json` with project-scoped permissions |
 
 ### `project_type`
@@ -118,7 +119,13 @@ Every project gets an `AGENTS.md`, which Claude Code, Cursor, opencode and the r
 
 ## Continuous Integration
 
-`ci=github` generates `.github/workflows/ci.yml`: the pre-commit suite plus `pytest --cov` on an Ubuntu and Windows matrix, a strict `mkdocs build`, and a weekly dependency audit. `ci=none` generates nothing — `uv run pre-commit run --all-files` is still the local gate, and the pre-push hooks still run the tests and the docs build.
+The `ci` answer picks one pipeline definition, or none. Both run the same three things — the pre-commit suite plus `pytest --cov`, a strict `mkdocs build`, and a dependency audit — so the choice does not change what is checked.
+
+| `ci` | Generates | Notes |
+|------|-----------|-------|
+| `github` | `.github/workflows/ci.yml` | Ubuntu and Windows matrix; weekly audit via `schedule:` |
+| `gitlab` | `.gitlab-ci.yml` | Linux only; audit needs a pipeline schedule with `SCHEDULED_AUDIT` set, and a manual `pages` job publishes the docs |
+| `none` | nothing | `uv run pre-commit run --all-files` is still the local gate, and the pre-push hooks still run the tests and the docs build |
 
 ## Developing the Template
 
