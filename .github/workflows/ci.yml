@@ -135,6 +135,7 @@ jobs:
           case '${{ matrix.ci }}' in
             github)
               [ -f .github/workflows/ci.yml ] || fail "ci=github produced no workflow"
+              [ -f .github/dependabot.yml ] || fail "ci=github produced no dependabot.yml"
               [ ! -e .gitlab-ci.yml ] || fail "ci=github also produced .gitlab-ci.yml"
               uvx --from actionlint-py actionlint .github/workflows/ci.yml
               ;;
