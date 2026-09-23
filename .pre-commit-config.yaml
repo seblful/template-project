@@ -11,6 +11,13 @@ repos:
         entry: uvx --from actionlint-py<2 actionlint
         language: system
         files: ^(\.github|template/\.github)/workflows/.*\.ya?ml$
+      # These formats have no inline comments: `uv.lock  # note` silently stops
+      # matching uv.lock, because the `# note` becomes part of the pattern.
+      - id: no-inline-ignore-comments
+        name: no inline comments in ignore files
+        entry: '^[^#\s].*\s#'
+        language: pygrep
+        files: (^|/)(\.gitignore|\.ignore|\.gitattributes)(\.jinja)?$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:
