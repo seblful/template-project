@@ -24,6 +24,14 @@ project_description:
   type: str
   help: What is the project description?
   default: A Python project.
+  # Rendered inside quoted TOML and YAML strings, where these characters break parsing.
+  validator: >-
+    {% if not project_description.strip() %}
+    project_description must not be empty
+    {% elif project_description | regex_search('["\\\\\x00-\x1f]') %}
+    project_description must not contain double quotes, backslashes or control
+    characters such as line breaks
+    {% endif %}
 
 project_type:
   type: str
@@ -37,13 +45,20 @@ author_name:
   type: str
   help: What is the author name?
   # No default: an empty answer must fail, not silently attribute the project to us.
-  validator: "{% if not author_name.strip() %}author_name must not be empty{% endif %}"
+  # The character check matches project_description's: this lands in quoted strings
+  # too, in pyproject.toml, mkdocs.yml and __init__.py.
+  validator: >-
+    {% if not author_name.strip() %}
+    author_name must not be empty
+    {% elif author_name | regex_search('["\\\\\x00-\x1f]') %}
+    author_name must not contain double quotes, backslashes or control characters
+    {% endif %}
 
 author_email:
   type: str
   help: What is the author email?
   validator: >-
-    {% if not (author_email | regex_search('^[^@\s]+@[^@\s]+\.[^@\s]+$')) %}
+    {% if not (author_email | regex_search('^[^@\s"\\\\]+@[^@\s"\\\\]+\.[^@\s"\\\\]+$')) %}
     author_email must be a valid email address
     {% endif %}
 
