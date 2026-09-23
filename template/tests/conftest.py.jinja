@@ -10,6 +10,10 @@ from {{ package_name }} import settings as settings_module
 from {{ package_name }}.logging import reset_logging
 from {{ package_name }}.settings import Settings, get_settings
 
+# Built from the model rather than listed, so a settings group added later is cleared
+# too. Keys are upper-cased first because settings match env vars case-insensitively.
+_ENV_PREFIXES = tuple(f"{group.upper()}__" for group in Settings.model_fields)
+
 
 @pytest.fixture(autouse=True)
 def _isolated_settings(
@@ -17,7 +21,7 @@ def _isolated_settings(
 ) -> Iterator[None]:
     """Keep the host environment and the developer's own .env out of every test."""
     for key in list(os.environ):
-        if key.startswith(("APP__", "LOGGING__")):
+        if key.upper().startswith(_ENV_PREFIXES):
             monkeypatch.delenv(key, raising=False)
     # A path that cannot exist is enough; get_settings() reads this attribute live.
     monkeypatch.setattr(settings_module, "ENV_FILES", (tmp_path / "absent.env",))

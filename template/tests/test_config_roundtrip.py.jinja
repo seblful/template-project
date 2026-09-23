@@ -5,15 +5,13 @@ from pathlib import Path
 import pytest
 
 from {{ package_name }} import settings as settings_module
-from {{ package_name }}.settings import get_settings
+from {{ package_name }}.settings import Settings, get_settings
 
 pytestmark = pytest.mark.integration
 
-_GROUPS = {"APP": "app", "LOGGING": "logging"}
-
 
 def test_committed_env_example_matches_the_settings_model() -> None:
-    """Every APP__/LOGGING__ key in .env.example still exists on the model.
+    """Every key in .env.example that targets a settings group exists on that group.
 
     .env.example is the config contract, and drift turns it into a lie. This is what
     stops a renamed or deleted field from shipping without the example following it.
@@ -29,9 +27,11 @@ def test_committed_env_example_matches_the_settings_model() -> None:
             continue
         key = line.split("=", 1)[0].strip()
         prefix, _, field = key.partition("__")
-        if prefix not in _GROUPS:
+        # Groups come from the model, not a list here, so a new group is checked too.
+        # Other prefixes are skipped: extra="ignore" lets other tools share the file.
+        if prefix.lower() not in Settings.model_fields:
             continue
-        group = type(getattr(settings, _GROUPS[prefix]))
+        group = type(getattr(settings, prefix.lower()))
         assert field.lower() in group.model_fields, (
             f"{key} in .env.example has no matching field on {group.__name__}"
         )
