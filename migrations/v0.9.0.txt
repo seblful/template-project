@@ -1,0 +1,9 @@
+This update crossed v0.9.0, which needs two notes:
+
+- It may leave a .claude/settings.json.rej whose contents already match the file
+  beside it. Copier renders the previous state without that file once the answer
+  its old _exclude referenced is gone; nothing is lost, so delete the .rej.
+- The template no longer generates a .env: .env.example is the single contract,
+  and your own .env is now yours alone. If yours disappeared in this update,
+  restore it with git checkout or recreate it from .env.example; nothing reads it
+  at build time.
