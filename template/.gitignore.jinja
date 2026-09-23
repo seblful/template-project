@@ -57,8 +57,11 @@ site/
 secrets/
 credentials/
 
-# Claude Code local settings (may contain machine-specific paths or credentials)
+# Claude Code personal files (may contain machine-specific paths or credentials).
+# Creating a CLAUDE.local.md stops Claude Code from reading AGENTS.md, unless /config
+# sets Project instructions to claude-md-and-agents-md.
 .claude/settings.local.json
+CLAUDE.local.md
 
 # OS
 .DS_Store
