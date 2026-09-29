@@ -1,6 +1,8 @@
 # This repo holds only the Copier template; nothing is built or installed here.
 # Anything below is a tool artifact from running the template's own checks locally.
 
+.venv/
+.pytest_cache/
 .ruff_cache/
 __pycache__/
 *.py[cod]

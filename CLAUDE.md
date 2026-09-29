@@ -1,27 +1,25 @@
 # Working on this repo
 
-This is a [Copier](https://copier.readthedocs.io/) template, not a Python project. Nothing here is installed or importable — every file under `template/` is rendered into someone else's repo.
+This is a [Copier](https://copier.readthedocs.io/) template, not a Python project. Nothing here is installed or importable — every file under `template/` is rendered into someone else's repo. The only Python that runs here is `tests/`, which drives copier.
 
 ## The one rule that matters
 
 **You cannot lint the template. You can only lint what it generates.**
 
-`template/src/{{ package_name }}/settings.py.jinja` is not valid Python (`from {{ package_name }} import ...`), so ruff, ty and pytest cannot see it. The only real check is to generate a project and run its gates:
+`template/src/{{ package_name }}/cli.py.jinja` is not valid Python (`from {{ package_name }} import ...`), so ruff, ty and pytest cannot see it. The only real check is to generate a project and run its checks, which `tests/test_template.py` does for every answer set:
 
 ```bash
-uvx copier copy --trust --defaults --vcs-ref=HEAD \
-  -d project_slug=demo-proj -d package_name=demo_proj \
-  -d author_name="Demo Author" -d author_email=demo@example.com \
-  . ../demo-proj
-cd ../demo-proj
-uv run ruff check . && uv run ruff format --check .
-uv run ty check && uv run pytest --cov
-uv sync --group docs && uv run mkdocs build --strict
+uv run pytest                        # every answer set, plus copier update from the last tag
+uv run pytest -k cli-config-github   # one answer set
 ```
 
-`ruff format --check` is the load-bearing one. `_tasks` deliberately runs no formatter, so rendered output is exactly what the template sources produce: template sources must already be formatted the way the shipped config formats them, Markdown included (the pre-commit step in CI runs mdformat). Don't add a formatter task back — it would hide exactly these bugs from CI, and on `copier update` it would reformat the user's own code.
+Copier includes uncommitted template changes (with a `DirtyLocalWarning`), so there is no need to commit before testing.
 
-CI (`.github/workflows/ci.yml`) runs exactly this across a matrix of answers. Trust it over local eyeballing.
+The generated project's ruff-format and mdformat hooks are the load-bearing checks. `_tasks` deliberately runs no formatter, so rendered output is exactly what the template sources produce: template sources must already be formatted the way the shipped config formats them, Markdown included. Don't add a formatter task back — it would hide exactly these bugs from the tests, and on `copier update` it would reformat the user's own code.
+
+A generated project defines its checks once, in `.pre-commit-config.yaml`, and `pre-commit run --all-files --hook-stage manual` runs all of them. Its CI, AGENTS.md and README call that command. Add a check there, never to one of the callers.
+
+CI (`.github/workflows/ci.yml`) runs the same tests, one answer set per job. Trust it over local eyeballing.
 
 ## Conventions
 
@@ -30,7 +28,7 @@ CI (`.github/workflows/ci.yml`) runs exactly this across a matrix of answers. Tr
 - **Line length is 88.** Jinja placeholders expand: `{{ package_name }}` (18 chars) usually becomes something shorter, `{{ project_slug }}` likewise. Write template source so it fits at 88 *after* rendering a mid-length name — CI checks the rendered form.
 - **Comments in generated files explain *why*, not *what*.** The existing `pyproject.toml.jinja` is the reference for tone. A reader of a generated project has no access to this repo, so a decision that looks odd must justify itself in place.
 - **Every answer in `copier.yml` needs a validator** unless it is a `choices` list or a `bool` — both are already constrained by copier itself.
-- **A file that only some answers produce gets a conditional filename**, not an `_exclude` entry: `_exclude` has to guess whether copier matches the source name or the rendered one. `_exclude` is for whole directories. A conditional name that renders empty is skipped silently, so assert the result in CI.
+- **A file that only some answers produce gets a conditional filename**, not an `_exclude` entry: `_exclude` has to guess whether copier matches the source name or the rendered one. `_exclude` is for whole directories. A conditional name that renders empty is skipped silently, so add it to `test_answers_produce_the_right_files`.
 - **An answer adds files, not branches inside Python files.** `config_file` is the model: `config_file.py` and `test_config_file.py` exist only when it is set, and `settings.py` does not mention it. Keep `{% if %}` in `.py` sources to the few places a feature has to surface, such as a CLI option.
 - **`author_name` and `author_email` have no defaults on purpose.** Don't add any — a default there attributes strangers' projects to whoever maintains the template. Automation passes `-d`.
 - **Don't add a dependency to `pyproject.toml.jinja` without capping the major version** when upstream has a known breaking release coming. `mkdocs<2` is there for a reason.

@@ -1,0 +1,34 @@
+# Not the template: nothing here is rendered, built or installed. This only pins the
+# tools that tests/ uses to generate projects from template/ and check them.
+[project]
+name = "template-project-tests"
+version = "0"
+requires-python = ">=3.11"
+dependencies = []
+
+[dependency-groups]
+dev = [
+    "copier>=9.2.0,<10",  # the floor copier.yml's _min_copier_version sets
+    "pytest>=9.0.0,<10",
+    "pyyaml>=6.0,<7",
+    "actionlint-py>=1.7.0,<2",
+    "ruff>=0.15.10,<0.16",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
+
+[tool.ruff]
+line-length = 88
+extend-exclude = ["template"]  # linted once rendered, by its own config
+
+[tool.ruff.lint]
+select = ["B", "D", "E", "F", "I", "PT", "PTH", "RUF", "SIM", "UP", "W"]
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"

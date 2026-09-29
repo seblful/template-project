@@ -1,11 +1,27 @@
 repos:
   - repo: local
     hooks:
+      # tests/ only: template/ is linted by the generated project's own config, once
+      # rendered, and its few plain .py files follow those rules, not these.
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --exit-non-zero-on-fix
+        language: system
+        types: [python]
+        files: ^tests/
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format
+        language: system
+        types: [python]
+        files: ^tests/
       - id: mdformat
         name: mdformat
         entry: uvx mdformat<2
         language: system
         types: [markdown]
+        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
+        exclude: ^template/docs/index\.md$
       - id: actionlint
         name: actionlint
         entry: uvx --from actionlint-py<2 actionlint
@@ -20,8 +36,6 @@ repos:
         files: (^|/)(\.gitignore|\.ignore|\.gitattributes)(\.jinja)?$
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
-        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
-        exclude: ^template/docs/index\.md$
     hooks:
       - id: trailing-whitespace
       - id: end-of-file-fixer
