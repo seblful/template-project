@@ -44,18 +44,20 @@ jobs:
         run: uvx pre-commit run --all-files --show-diff-on-failure
 
   generate:
-    name: ${{ matrix.os }} / py${{ matrix.python_version }} / ${{ matrix.license }} / ${{ matrix.project_type }} / ci=${{ matrix.ci }}
+    name: ${{ matrix.os }} / py${{ matrix.python_version }} / ${{ matrix.license }} / ${{ matrix.project_type }} / config=${{ matrix.config_file }} / ci=${{ matrix.ci }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
+        # The 3.10 row is a cli with a config file on purpose: only there does tomli
+        # stand in for the stdlib tomllib.
         include:
-          - {os: ubuntu-latest, python_version: "3.14", license: None, project_type: cli, ci: github, claude_settings: "true"}
-          - {os: ubuntu-latest, python_version: "3.14", license: MIT, project_type: library, ci: gitlab, claude_settings: "false"}
-          - {os: ubuntu-latest, python_version: "3.12", license: Apache, project_type: cli, ci: none, claude_settings: "false"}
-          - {os: ubuntu-latest, python_version: "3.10", license: MIT, project_type: library, ci: github, claude_settings: "true"}
-          - {os: windows-latest, python_version: "3.14", license: Apache, project_type: cli, ci: gitlab, claude_settings: "true"}
+          - {os: ubuntu-latest, python_version: "3.14", license: None, project_type: cli, config_file: "true", ci: github, claude_settings: "true"}
+          - {os: ubuntu-latest, python_version: "3.14", license: MIT, project_type: library, config_file: "false", ci: gitlab, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.10", license: Apache, project_type: cli, config_file: "true", ci: none, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.12", license: MIT, project_type: library, config_file: "false", ci: github, claude_settings: "true"}
+          - {os: windows-latest, python_version: "3.14", license: Apache, project_type: cli, config_file: "false", ci: gitlab, claude_settings: "true"}
     steps:
       - uses: actions/checkout@v7
 
@@ -78,6 +80,7 @@ jobs:
             -d python_version='${{ matrix.python_version }}' \
             -d license='${{ matrix.license }}' \
             -d project_type='${{ matrix.project_type }}' \
+            -d config_file='${{ matrix.config_file }}' \
             -d ci='${{ matrix.ci }}' \
             -d claude_settings='${{ matrix.claude_settings }}' \
             "$GITHUB_WORKSPACE" ../demo-proj
@@ -188,6 +191,16 @@ jobs:
             done
             grep -qx 'dependencies = \[\]' pyproject.toml \
               || fail "project_type=library still has runtime dependencies"
+          fi
+
+          if [ '${{ matrix.project_type }}' = cli ] && [ '${{ matrix.config_file }}' = true ]; then
+            [ -f config.example.toml ] || fail "config_file=true produced no config.example.toml"
+            grep -q -- '"--config"' src/demo_proj/cli.py || fail "config_file=true has no --config"
+          else
+            [ ! -e config.example.toml ] || fail "config_file=false still produced config.example.toml"
+            if grep -q 'TomlConfigSettingsSource' src/demo_proj/*.py; then
+              fail "config_file=false still wires up config files"
+            fi
           fi
 
           if [ '${{ matrix.claude_settings }}' = true ]; then

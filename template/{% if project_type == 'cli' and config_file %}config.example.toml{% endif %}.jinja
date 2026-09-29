@@ -1,0 +1,12 @@
+# Every setting the application reads, as one table per settings group. Committed —
+# never put a real secret in it. Copy it to config.toml and select it explicitly with
+# load_settings(config_file=Path("config.toml")) or the CLI's --config option.
+# Environment variables, a selected .env and secret files all override this file.
+
+[logging]
+# "text" or "json" — choose independently of the deployment environment.
+console_format = "text"
+console_level = "INFO"
+# Unset by default: logs go to stderr only. Set a path to also write JSON lines.
+# log_file = "logs/app.log"
+file_level = "INFO"

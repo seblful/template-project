@@ -1,7 +1,9 @@
 """Application settings, loaded and validated with pydantic-settings."""
-
+{% if config_file %}
+from contextvars import ContextVar
+{%- endif %}
 from pathlib import Path
-from typing import Literal
+from typing import {% if config_file %}Any, {% endif %}Literal
 
 from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import (
@@ -9,9 +11,20 @@ from pydantic_settings import (
     NestedSecretsSettingsSource,
     PydanticBaseSettingsSource,
     SettingsConfigDict,
+{%- if config_file %}
+    SettingsError,
+    TomlConfigSettingsSource,
+{%- endif %}
 )
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
+{%- if config_file %}
+
+# pydantic-settings takes a dotenv path per call (`_env_file`) but a TOML path only
+# from model_config, which is global. load_settings sets this for the duration of one
+# call instead, so concurrent loads with different files cannot see each other's.
+_config_file: ContextVar[Path | None] = ContextVar("config_file", default=None)
+{%- endif %}
 
 
 class LoggingSettings(BaseModel):
@@ -27,13 +40,37 @@ class LoggingSettings(BaseModel):
     # relative default path would litter whatever directory the command runs in.
     log_file: Path | None = Field(default=None, description="Optional JSON log file")
     file_level: LogLevel = Field(default="INFO", description="File log level")
+{%- if config_file %}
+
+
+class _ConfigFileSource(TomlConfigSettingsSource):
+    """Read the selected TOML file, rejecting top-level keys the model lacks.
+
+    The model ignores unknown top-level keys because a dotenv file is often shared
+    with other tools. A config file belongs to this application alone, so there a
+    misspelled table such as `[loging]` is a typo, not someone else's setting.
+    """
+
+    def __call__(self) -> dict[str, Any]:
+        """Return the file's values after checking its top-level keys."""
+        unknown = sorted(self.toml_data.keys() - self.settings_cls.model_fields.keys())
+        if unknown:
+            message = f"Unknown keys in {self.toml_file_path}: {', '.join(unknown)}"
+            raise SettingsError(message)
+        return super().__call__()
+{%- endif %}
 
 
 class Settings(BaseSettings):
     """Application settings, grouped under `__`-delimited prefixes.
 
     Precedence: constructor overrides, environment variables, an explicitly selected
+{%- if config_file %}
+    dotenv file, an explicitly selected secrets directory, an explicitly selected
+    config file, then model defaults.
+{%- else %}
     dotenv file, an explicitly selected secrets directory, then model defaults.
+{%- endif %}
     """
 
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
@@ -49,13 +86,23 @@ class Settings(BaseSettings):
     @classmethod
     def settings_customise_sources(
         cls,
+{%- if config_file %}
+        settings_cls: type[BaseSettings],
+{%- else %}
         settings_cls: type[BaseSettings],  # noqa: ARG003 - Pydantic's hook signature.
+{%- endif %}
         init_settings: PydanticBaseSettingsSource,
         env_settings: PydanticBaseSettingsSource,
         dotenv_settings: PydanticBaseSettingsSource,
         file_secret_settings: PydanticBaseSettingsSource,
     ) -> tuple[PydanticBaseSettingsSource, ...]:
+{%- if config_file %}
+        """Add nested secret files and the selected config file to the sources."""
+        # The config file ranks lowest: it holds the shared baseline, and anything
+        # set for one deployment, from its environment to its secrets, overrides it.
+{%- else %}
         """Support individual secret files for fields inside settings groups."""
+{%- endif %}
         return (
             init_settings,
             env_settings,
@@ -63,11 +110,21 @@ class Settings(BaseSettings):
             NestedSecretsSettingsSource(
                 file_secret_settings, secrets_dir_missing="error"
             ),
+{%- if config_file %}
+            _ConfigFileSource(settings_cls, toml_file=_config_file.get()),
+{%- endif %}
         )
 
 
 def load_settings(
+{%- if config_file %}
+    *,
+    config_file: Path | None = None,
+    env_file: Path | None = None,
+    secrets_dir: Path | None = None,
+{%- else %}
     *, env_file: Path | None = None, secrets_dir: Path | None = None
+{%- endif %}
 ) -> Settings:
     """Load and validate settings at application startup without caching.
 
@@ -76,15 +133,34 @@ def load_settings(
     an error. Pass the returned settings to modules that need them.
 
     Args:
+{%- if config_file %}
+        config_file: Optional TOML file with one table per settings group.
+{%- endif %}
         env_file: Optional dotenv file.
         secrets_dir: Optional directory containing files named after settings fields.
     """
     # Checked here rather than left to pydantic-settings, which raises SettingsError
+{%- if config_file %}
+    # for a missing directory but silently skips a missing dotenv or TOML file.
+    for path, kind in ((config_file, "Config file"), (env_file, "Environment file")):
+        if path is not None and not path.is_file():
+            message = f"{kind} not found: {path}"
+            raise FileNotFoundError(message)
+{%- else %}
     # for a missing directory but silently skips a missing dotenv file.
     if env_file is not None and not env_file.is_file():
         message = f"Environment file not found: {env_file}"
         raise FileNotFoundError(message)
+{%- endif %}
     if secrets_dir is not None and not secrets_dir.is_dir():
         message = f"Secrets directory not found: {secrets_dir}"
         raise FileNotFoundError(message)
+{%- if config_file %}
+    token = _config_file.set(config_file)
+    try:
+        return Settings(_env_file=env_file, _secrets_dir=secrets_dir)
+    finally:
+        _config_file.reset(token)
+{%- else %}
     return Settings(_env_file=env_file, _secrets_dir=secrets_dir)
+{%- endif %}

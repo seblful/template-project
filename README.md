@@ -48,7 +48,7 @@ cd your-project
 uvx copier update --trust
 ```
 
-Copier re-applies the template, preserving your answers from `.copier-answers.yml`.
+Copier re-applies the template, preserving your answers from `.copier-answers.yml`. Upgrade notes for a release print during the update when it crosses that release; they live in [`migrations/`](migrations/).
 
 ## Project Structure
 
@@ -73,6 +73,7 @@ new-project/
 ├── docs/
 ├── .claude/settings.json     # only when claude_settings=true
 ├── .env.example              # cli: the committed config contract; copy to .env
+├── config.example.toml       # cli with config_file=true; copy to config.toml
 ├── .python-version
 ├── AGENTS.md
 ├── pyproject.toml
@@ -104,6 +105,7 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 | `package_name` | Python package name (snake_case) |
 | `project_description` | One-line description |
 | `project_type` | `cli` (Typer entry point) or `library` |
+| `config_file` | `cli` only: also load an explicitly selected TOML config file (default no) |
 | `author_name` / `author_email` | Author information — no default, must be answered |
 | `license` | None, MIT, or Apache |
 | `python_version` | Target Python version (3.10+, default 3.14) |
@@ -116,7 +118,9 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 
 A `cli` project loads settings once per command with `load_settings()` and passes them to logging and other modules. Environment variables and model defaults work without files; a dotenv file or secrets directory is read only when selected with `--env-file` / `--secrets-dir` or the matching `load_settings` arguments. Logs go to stderr; a JSON log file is opt-in through `LOGGING__LOG_FILE`.
 
-Upgrade notes for a release print during `copier update` when the update crosses it; they live in [`migrations/`](migrations/).
+### `config_file`
+
+Adds `--config` and `load_settings(config_file=...)` for a TOML file with one table per settings group, plus a committed `config.example.toml` checked against the model like `.env.example`. The file is the lowest-ranked source above the defaults, so environment variables, a selected `.env` and secret files all override it. Unlike `.env`, it belongs to the application alone, so an unknown key anywhere in it is an error. Off by default: most projects configure through the environment and never need it.
 
 ### Assistant instructions
 

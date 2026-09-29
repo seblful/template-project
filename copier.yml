@@ -41,6 +41,13 @@ project_type:
     - library
   default: cli
 
+config_file:
+  type: bool
+  help: Support an explicitly selected TOML config file (--config config.toml)?
+  default: false
+  # Only applications load settings; a library leaves configuration to its host.
+  when: "{{ project_type == 'cli' }}"
+
 author_name:
   type: str
   help: What is the author name?

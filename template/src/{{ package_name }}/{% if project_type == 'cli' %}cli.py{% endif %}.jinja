@@ -21,13 +21,23 @@ class GlobalOptions:
     before it parses the subcommand, so `info --help` would otherwise read and
     validate configuration just to print help.
     """
-
+{% if config_file %}
+    config_file: Path | None
+{%- endif %}
     env_file: Path | None
     secrets_dir: Path | None
 
     def configure(self) -> Settings:
         """Load settings, set up logging and return the settings."""
+{%- if config_file %}
+        settings = load_settings(
+            config_file=self.config_file,
+            env_file=self.env_file,
+            secrets_dir=self.secrets_dir,
+        )
+{%- else %}
         settings = load_settings(env_file=self.env_file, secrets_dir=self.secrets_dir)
+{%- endif %}
         setup_logging(settings.logging)
         return settings
 
@@ -42,6 +52,18 @@ def _version_callback(value: bool) -> None:
 @app.callback()
 def main(
     ctx: typer.Context,
+{%- if config_file %}
+    config_file: Annotated[
+        Path | None,
+        typer.Option(
+            "--config",
+            exists=True,
+            dir_okay=False,
+            readable=True,
+            help="Load a TOML config file.",
+        ),
+    ] = None,
+{%- endif %}
     env_file: Annotated[
         Path | None,
         typer.Option(
@@ -68,7 +90,13 @@ def main(
     ] = False,
 ) -> None:
     """Run the {{ project_slug }} CLI."""
+{%- if config_file %}
+    ctx.obj = GlobalOptions(
+        config_file=config_file, env_file=env_file, secrets_dir=secrets_dir
+    )
+{%- else %}
     ctx.obj = GlobalOptions(env_file=env_file, secrets_dir=secrets_dir)
+{%- endif %}
 
 
 @app.command()
