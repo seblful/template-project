@@ -24,15 +24,19 @@ classifiers = [
     "Programming Language :: Python :: {{ python_version }}",
     "Typing :: Typed",
 ]
+{%- if project_type == "cli" %}
 # Uncapped: an upper bound here propagates to everyone installing this package.
 dependencies = [
-{%- if project_type == "cli" %}
     "typer>=0.12.0",
-{%- endif %}
     "structlog>=24.1.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.14.2",
 ]
+{%- else %}
+# Every dependency declared here is forced on each consumer, so add them sparingly
+# and without upper bounds, which would propagate to everyone installing this.
+dependencies = []
+{%- endif %}
 {% if project_type == "cli" %}
 [project.scripts]
 {{ project_slug }} = "{{ package_name }}.cli:app"
@@ -130,6 +134,13 @@ convention = "google"
 {% if project_type == "cli" %}
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["typer.Argument", "typer.Option"]
+
+[tool.ruff.lint.flake8-type-checking]
+# Pydantic resolves field annotations at runtime, so their imports must stay real.
+runtime-evaluated-base-classes = [
+    "pydantic.BaseModel",
+    "pydantic_settings.BaseSettings",
+]
 {% endif %}
 [tool.ruff.lint.flake8-tidy-imports]
 ban-relative-imports = "all"
@@ -138,20 +149,22 @@ ban-relative-imports = "all"
 known-first-party = ["{{ package_name }}"]
 
 [tool.ruff.lint.per-file-ignores]
-# Tests don't need docstrings, may use asserts, magic values, and unused fixture args.
-"tests/**" = ["D", "S101", "PLR2004", "ARG"]
+# Tests don't need docstrings, may use asserts, magic values, and unused fixture args,
+# and gain nothing from hiding annotation-only imports behind TYPE_CHECKING.
+"tests/**" = ["D", "S101", "PLR2004", "ARG", "TC"]
+{%- if project_type == "cli" %}
+# Typer reads parameter annotations at runtime to build options, so `Path` stays real.
+"src/{{ package_name }}/cli.py" = ["TC003"]
+{%- endif %}
 
 [tool.ruff.format]
 # Format code inside docstring examples, since the google convention invites them.
 docstring-code-format = true
 line-ending = "lf"
 
-[tool.ty.src]
-exclude = ["notebooks", "scripts"]  # not created by the template; ad-hoc code goes here
-
 [tool.coverage.run]
 source = ["src/{{ package_name }}"]
-# branch = true  # enable once the suite covers both sides of conditionals
+branch = true
 
 [tool.coverage.report]
 show_missing = true

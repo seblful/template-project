@@ -1,0 +1,10 @@
+"""Tests for the package metadata."""
+
+from importlib.metadata import version
+
+from {{ package_name }} import PROJECT_NAME, __version__
+
+
+def test_version_comes_from_the_installed_distribution() -> None:
+    """`__version__` reports the installed metadata, not the source-tree fallback."""
+    assert __version__ == version(PROJECT_NAME)

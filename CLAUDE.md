@@ -19,7 +19,7 @@ uv run ty check && uv run pytest --cov
 uv sync --group docs && uv run mkdocs build --strict
 ```
 
-`ruff format --check` is the load-bearing one. The `_tasks` hook runs `ruff format` after generation, so a badly formatted template still *looks* fine — but anyone generating with `--skip-tasks` gets a project that fails its own first commit. Template sources must already be formatted the way the shipped config formats them.
+`ruff format --check` is the load-bearing one. `_tasks` deliberately runs no formatter, so rendered output is exactly what the template sources produce: template sources must already be formatted the way the shipped config formats them, Markdown included (the pre-commit step in CI runs mdformat). Don't add a formatter task back — it would hide exactly these bugs from CI, and on `copier update` it would reformat the user's own code.
 
 CI (`.github/workflows/ci.yml`) runs exactly this across a matrix of answers. Trust it over local eyeballing.
 

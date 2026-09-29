@@ -16,12 +16,13 @@ runner = CliRunner()
 
 
 def test_info_command_succeeds(tmp_path: Path, monkeypatch: pytest.MonkeyPatch) -> None:
-    """`info` exits cleanly and prints the application name."""
-    monkeypatch.chdir(tmp_path)  # Keep the generated logs/ out of the repo.
+    """`info` exits cleanly, prints the name and leaves the working dir untouched."""
+    monkeypatch.chdir(tmp_path)
     result = runner.invoke(app, ["info"])
 
     assert result.exit_code == 0
     assert "{{ project_slug }}" in result.output
+    assert list(tmp_path.iterdir()) == []
 
 
 def test_version_flag_works_without_a_subcommand() -> None:
@@ -56,10 +57,12 @@ def test_module_is_executable(tmp_path: Path) -> None:
 def test_cli_loads_an_explicit_file_for_each_invocation(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """`--env-file` applies to its own run only; a `.env` in the cwd is never read."""
     monkeypatch.chdir(tmp_path)
     env_file = tmp_path / "selected.env"
     env_file.write_text(
-        "LOGGING__CONSOLE_FORMAT=json\nLOGGING__CONSOLE_LEVEL=DEBUG\n", encoding="utf-8"
+        "LOGGING__CONSOLE_FORMAT=json\nLOGGING__CONSOLE_LEVEL=DEBUG\n",
+        encoding="utf-8",
     )
     (tmp_path / ".env").write_text(
         "LOGGING__CONSOLE_FORMAT=invalid\n", encoding="utf-8"
@@ -82,6 +85,7 @@ def test_cli_loads_an_explicit_file_for_each_invocation(
 def test_cli_loads_explicit_secrets(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """`--secrets-dir` reads one file per nested setting."""
     monkeypatch.chdir(tmp_path)
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
@@ -96,16 +100,19 @@ def test_cli_loads_explicit_secrets(
 
 @pytest.mark.parametrize("option", ["--env-file", "--secrets-dir"])
 def test_cli_rejects_missing_config_paths(tmp_path: Path, option: str) -> None:
+    """A missing path is a usage error, reported before any command runs."""
     result = runner.invoke(app, [option, str(tmp_path / "absent"), "info"])
 
     assert result.exit_code == 2
 
 
-def test_version_does_not_load_invalid_settings(
-    monkeypatch: pytest.MonkeyPatch,
+@pytest.mark.parametrize("args", [["--version"], ["info", "--help"]])
+def test_version_and_help_do_not_load_settings(
+    args: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Invalid configuration cannot break `--version` or a subcommand's `--help`."""
     monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "invalid")
 
-    result = runner.invoke(app, ["--version"])
+    result = runner.invoke(app, args)
 
-    assert result.exit_code == 0
+    assert result.exit_code == 0, result.output

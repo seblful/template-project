@@ -1,5 +1,6 @@
 """Command line interface for {{ project_slug }}."""
 
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Annotated
 
@@ -7,9 +8,28 @@ import typer
 
 from {{ package_name }} import PROJECT_NAME, __version__
 from {{ package_name }}.logging import get_logger, setup_logging
-from {{ package_name }}.settings import load_settings
+from {{ package_name }}.settings import Settings, load_settings
 
 app = typer.Typer(help=f"{PROJECT_NAME} CLI", no_args_is_help=True)
+
+
+@dataclass(frozen=True)
+class GlobalOptions:
+    """Options given before the subcommand, applied when the command body runs.
+
+    Loading lives here rather than in the callback because Click runs the callback
+    before it parses the subcommand, so `info --help` would otherwise read and
+    validate configuration just to print help.
+    """
+
+    env_file: Path | None
+    secrets_dir: Path | None
+
+    def configure(self) -> Settings:
+        """Load settings, set up logging and return the settings."""
+        settings = load_settings(env_file=self.env_file, secrets_dir=self.secrets_dir)
+        setup_logging(settings.logging)
+        return settings
 
 
 def _version_callback(value: bool) -> None:
@@ -48,15 +68,13 @@ def main(
     ] = False,
 ) -> None:
     """Run the {{ project_slug }} CLI."""
-    if ctx.invoked_subcommand is not None:
-        settings = load_settings(env_file=env_file, secrets_dir=secrets_dir)
-        ctx.obj = settings
-        setup_logging(settings.logging)
+    ctx.obj = GlobalOptions(env_file=env_file, secrets_dir=secrets_dir)
 
 
 @app.command()
-def info() -> None:
+def info(ctx: typer.Context) -> None:
     """Display project information."""
+    ctx.obj.configure()
     get_logger(__name__).debug("reporting project info")
     typer.echo(f"{PROJECT_NAME} v{__version__}")
 

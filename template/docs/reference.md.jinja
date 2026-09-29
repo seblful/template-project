@@ -5,6 +5,7 @@ Generated from docstrings by [mkdocstrings](https://mkdocstrings.github.io/). `_
 ## Package
 
 ::: {{ package_name }}
+{%- if project_type == "cli" %}
 
 ## Settings
 
@@ -14,8 +15,7 @@ Generated from docstrings by [mkdocstrings](https://mkdocstrings.github.io/). `_
 
 ::: {{ package_name }}.logging
 
-{% if project_type == "cli" %}
 ## CLI
 
 ::: {{ package_name }}.cli
-{% endif %}
+{%- endif %}

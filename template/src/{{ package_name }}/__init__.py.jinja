@@ -9,10 +9,8 @@ try:
     __version__ = version(PROJECT_NAME)
 except PackageNotFoundError:  # pragma: no cover - a source tree with no install
     __version__ = "0.0.0+unknown"
-
-__author__ = "{{ author_name }}"
-__email__ = "{{ author_email }}"
-
+{% if project_type == "cli" %}
 # get_logger/load_settings stay unexported: re-exporting would pull in pydantic and
 # structlog for every importer, whether or not they're used.
-__all__ = ["PROJECT_NAME", "__author__", "__email__", "__version__"]
+{%- endif %}
+__all__ = ["PROJECT_NAME", "__version__"]

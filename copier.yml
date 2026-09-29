@@ -74,11 +74,11 @@ license:
 python_version:
   type: str
   help: What Python version should the project target? (major.minor)
-  default: "3.13"
+  default: "3.14"
   # Floor is 3.10: generated sources use PEP 604 unions in runtime type annotations.
   validator: >-
     {% if not (python_version | regex_search('^3\.1[0-9]$')) %}
-    python_version must be 3.10 or newer, major.minor only, e.g. 3.13 (a patch version
+    python_version must be 3.10 or newer, major.minor only, e.g. 3.14 (a patch version
     produces an invalid "Programming Language :: Python :: X" classifier)
     {% endif %}
 
@@ -109,12 +109,15 @@ _exclude:
   - "{% if not claude_settings %}.claude{% endif %}"
   - "{% if ci != 'github' %}.github{% endif %}"
 
+# No formatter runs here. Template sources ship already formatted, so a formatter
+# could only hide a template bug from CI's --check, and on `copier update` it would
+# rewrite the user's own code inside the update diff.
 _tasks:
+  # Not gated on copy: `copier update` renders the new version into a scratch dir and
+  # runs these tasks there as well, and pre-commit install fails outside a repo.
   - ["git", "init"]
   - ["uv", "sync"]
-  - ["uv", "run", "ruff", "check", "--fix", "."]  # --fix before format, not after
-  - ["uv", "run", "ruff", "format", "."]
-  - ["uv", "run", "mdformat", "."]
+  # Also on update: a hook type the template adds reaches a checkout only via install.
   - ["uv", "run", "pre-commit", "install"]
   - command: ["git", "add", "-A"]
     when: "{{ _copier_operation == 'copy' }}"
@@ -146,30 +149,37 @@ _migrations:
       - -c
       - "import pathlib, sys; print(pathlib.Path(sys.argv[1]).read_text('utf-8'))"
       - "{{ _copier_conf.src_path }}/migrations/v0.9.0.txt"
+  - version: v0.9.3
+    when: "{{ _stage == 'after' }}"
+    command:
+      - uv
+      - run
+      - --no-project
+      - python
+      - -c
+      - "import pathlib, sys; print(pathlib.Path(sys.argv[1]).read_text('utf-8'))"
+      - "{{ _copier_conf.src_path }}/migrations/v0.9.3.txt"
 
 _message_after_copy: |
   {{ project_slug }} is ready.
 
       cd {{ _copier_conf.dst_path.name }}
-      cp .env.example .env
   {%- if project_type == 'cli' %}
+      cp .env.example .env
       uv run {{ project_slug }} --env-file .env info
-  {%- endif %}
 
   .env.example is the committed contract listing every supported key; your own .env is
-  gitignored and yours to edit. Select it explicitly with load_settings(env_file=Path(".env"))
-  or the CLI's --env-file option; files are never discovered automatically.
-  Docs tooling installs separately with
-  `uv sync --group docs`.
+  gitignored and yours to edit. Select it explicitly with --env-file or
+  load_settings(env_file=Path(".env")); files are never discovered automatically.
+  {%- endif %}
+
+  Docs tooling installs separately with `uv sync --group docs`.
 
   Git hooks are installed: lint, formatting and types run on commit, the test suite
   runs on push.
 
 _message_after_update: |
-  Template updated. Re-run the gates before committing. `pre-commit install` is in
-  the list because a hook type the template adds reaches an existing checkout only
-  when install runs again:
+  Template updated. Re-run the gates before committing:
 
-      uv run pre-commit install
       uv run pre-commit run --all-files
       uv run pytest --cov

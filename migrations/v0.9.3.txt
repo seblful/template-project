@@ -1,0 +1,24 @@
+This update crossed v0.9.3, which changes how configuration and logging load:
+
+- Settings are loaded explicitly. Replace get_settings() with one load_settings()
+  call at startup and pass the result on; replace setup_logging() with
+  setup_logging(settings.logging). No .env or secrets directory is discovered any
+  more: select it with load_settings(env_file=..., secrets_dir=...) or the CLI's
+  --env-file / --secrets-dir options.
+- The default settings cover logging only. Replace APP__ENVIRONMENT=production with
+  LOGGING__CONSOLE_FORMAT=json, drop the as_json argument, and use PROJECT_NAME from
+  the package instead of settings.app.app_name. APP__SECRET_KEY is gone; keep secret
+  fields only where your code uses them.
+- File logging is off by default. Set LOGGING__LOG_FILE=logs/app.log to keep the
+  previous behavior; without it, logs go to stderr only.
+- A missing --secrets-dir / secrets_dir now raises FileNotFoundError, like a missing
+  env file, instead of pydantic_settings.SettingsError.
+- The CLI loads settings inside each command, not in the app callback, so a new
+  command needs `ctx: typer.Context` and a first line of `ctx.obj.configure()`.
+- __author__ and __email__ are removed from the package; read them from
+  importlib.metadata if you need them.
+- project_type=library no longer ships settings.py, logging.py, .env.example or
+  their tests, and depends on nothing. An unmodified copy of those files is deleted
+  by this update; one you changed shows up as a conflict for you to keep or drop.
+- Template tasks no longer run ruff or mdformat, so this and later updates leave
+  your own code untouched.

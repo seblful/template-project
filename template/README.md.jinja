@@ -22,7 +22,7 @@ python -m {{ package_name }}         # equivalent module entry point
 ```
 
 Or use it as a library:
-{% endif %}
+
 ```python
 from {{ package_name }}.logging import get_logger, setup_logging
 from {{ package_name }}.settings import load_settings
@@ -35,21 +35,17 @@ log.info("started")
 
 ## Configuration
 
-Startup reads environment variables and model defaults. No dotenv files or secrets directories are discovered automatically. Load settings once in your entry point and pass the relevant groups to the modules that need them; library callers control loading and logging themselves.
+Startup reads environment variables and model defaults. No dotenv files or secrets directories are discovered automatically. Load settings once in your entry point and pass the relevant groups to the modules that need them.
 
-For local overrides, copy the committed `.env.example` (checked against the settings model) to a gitignored `.env`:
+`__` separates a settings group from its field: `LOGGING__CONSOLE_FORMAT=json`.
+
+For local overrides, copy the committed `.env.example` (checked against the settings model) to a gitignored `.env`, then select it before the subcommand:
 
 ```bash
 cp .env.example .env
-```
-
-{% if project_type == "cli" %}
-Select it before the subcommand:
-
-```bash
 uv run {{ project_slug }} --env-file .env info
 ```
-{% endif %}
+
 In Python:
 
 ```python
@@ -63,23 +59,21 @@ settings = load_settings(env_file=Path(".env"))
 Settings are resolved with the following precedence, highest first:
 
 1. Explicit field overrides passed to the `Settings` constructor
-1. Real environment variables (`LOGGING__CONSOLE_FORMAT=json`)
+1. Real environment variables
 1. The explicitly selected dotenv file
 1. Files in the explicitly selected secrets directory
 1. Defaults declared in `src/{{ package_name }}/settings.py`
 
-Deployment can supply environment variables or mounted files. To load settings from `/run/secrets`, call `load_settings(secrets_dir=Path("/run/secrets"))`{% if project_type == "cli" %} or run `uv run {{ project_slug }} --secrets-dir /run/secrets info`{% endif %}. Secret filenames use the same nested names as environment variables. Both explicit sources can be selected together.
+Deployment can supply environment variables or mounted files. To load settings from `/run/secrets`, call `load_settings(secrets_dir=Path("/run/secrets"))` or run `uv run {{ project_slug }} --secrets-dir /run/secrets info`. Secret filenames use the same nested names as environment variables. Both explicit sources can be selected together.
 
-Relative paths, including dotenv paths, secrets directories, and log paths, are relative to the process working directory. Use absolute paths when launching from another directory. Explicit missing configuration paths fail at startup. `.env.local` has no special meaning; it is read only if selected instead of `.env`.
+Relative paths, including dotenv paths, secrets directories, and log paths, are relative to the process working directory. An explicitly selected path that does not exist fails at startup with `FileNotFoundError`. `.env.local` has no special meaning; it is read only if selected instead of `.env`.
 
-Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled `LOGGING__` key fails at startup.
+Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled key inside a settings group fails at startup.
 
 ### Add application-specific settings
 
 Add fields only when the application uses them. The project name is available as
-`PROJECT_NAME` from the top-level package; it is not a runtime setting. If you need
-a deployment label for telemetry, keep it descriptive and configure behavior
-independently.
+`PROJECT_NAME` from the top-level package; it is not a runtime setting.
 
 For example, when integrating a service that needs credentials, add a group in
 `settings.py`:
@@ -92,18 +86,18 @@ class ServiceSettings(BaseModel):
     model_config = ConfigDict(extra="forbid", frozen=True)
 
     api_key: SecretStr
-
 ```
 
 Declare a required group as `service: ServiceSettings` in `Settings` when credentials
 are mandatory. Supply `SERVICE__API_KEY` through the environment or a file with that
 name in the selected secrets directory. `SecretStr` masks representations; access
 its value with `.get_secret_value()` only when passing it to the service client.
+A plain top-level field such as `debug: bool` works too, as `DEBUG`.
 Update `.env.example` when adding fields; its test checks for missing or obsolete keys.
 
 ## Logging
 
-`setup_logging(settings.logging)` sends JSON to the configured log file. Set `LOGGING__CONSOLE_FORMAT=json` for JSON console output; the default is `text`. Library logs are rendered through the same pipeline, so everything in the file has the same shape.
+`setup_logging(settings.logging)` writes to stderr, as human-readable text by default or as JSON with `LOGGING__CONSOLE_FORMAT=json`. File logging is off until `LOGGING__LOG_FILE` names a path; that file always receives JSON and rotates at 10 MB. Library logs are rendered through the same pipeline, so every record has the same shape.
 
 ```python
 from {{ package_name }}.logging import get_logger
@@ -111,6 +105,25 @@ from {{ package_name }}.logging import get_logger
 log = get_logger(__name__)
 log.info("order placed", order_id=42, total="19.99")
 ```
+{%- else %}
+```python
+import {{ package_name }}
+
+print({{ package_name }}.__version__)
+```
+
+## Logging
+
+Log through the standard library and leave configuration to the application that imports this package:
+
+```python
+import logging
+
+log = logging.getLogger(__name__)
+```
+
+Never attach handlers or set levels on the root logger from library code.
+{%- endif %}
 
 ## Development
 
@@ -126,21 +139,18 @@ uv run pre-commit run --all-files   # the full gate{% if ci != "none" %}, which 
 
 Test order is randomized on every run (`pytest-randomly`). A failure prints the seed; replay it with `uv run pytest -p randomly --randomly-seed=<seed>`.
 {% if ci == "github" %}
-
 ### CI
 
 [`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the pre-commit suite and the test suite on Ubuntu and Windows, builds the docs with `--strict`, and audits dependencies weekly. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
 
 [`.github/dependabot.yml`](.github/dependabot.yml) opens a weekly pull request for the pinned action versions and another for the pre-commit hook revs; Python dependencies stay on `uv lock --upgrade`.
 {% elif ci == "gitlab" %}
-
 ### CI
 
 [`.gitlab-ci.yml`](.gitlab-ci.yml) runs the pre-commit suite and the test suite, builds the docs with `--strict`, and audits dependencies. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
 
 Two things need setting up in the GitLab UI: a pipeline schedule with `SCHEDULED_AUDIT` set to `1`, for the weekly dependency audit, and — if the docs should be published — a run of the manual `pages` job.
 {% endif %}
-
 ### Docs
 
 ```bash
@@ -148,9 +158,9 @@ uv sync --group docs                # install docs dependencies
 uv run mkdocs serve                 # serve docs locally at http://127.0.0.1:8000
 uv run mkdocs build --strict        # build static site into site/ (as CI does)
 ```
-{% if license and license != "None" %}
+{%- if license and license != "None" %}
 
 ## License
 
 {{ license }} License - see [LICENSE](LICENSE) for details.
-{% endif %}
+{%- endif %}

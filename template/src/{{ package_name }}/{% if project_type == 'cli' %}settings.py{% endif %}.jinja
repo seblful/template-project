@@ -22,9 +22,11 @@ class LoggingSettings(BaseModel):
     console_format: Literal["text", "json"] = Field(
         default="text", description="Console log format"
     )
-    file_level: LogLevel = Field(default="INFO", description="File log level")
     console_level: LogLevel = Field(default="INFO", description="Console log level")
-    log_file: Path = Field(default=Path("logs/app.log"), description="Log file path")
+    # Off by default: stderr is what containers and process managers collect, and a
+    # relative default path would litter whatever directory the command runs in.
+    log_file: Path | None = Field(default=None, description="Optional JSON log file")
+    file_level: LogLevel = Field(default="INFO", description="File log level")
 
 
 class Settings(BaseSettings):
@@ -37,14 +39,11 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
-        env_file=None,
         env_file_encoding="utf-8",
-        secrets_dir=None,
-        case_sensitive=False,
-        frozen=True,
-        # Unknown keys belong to other tools; typos inside LOGGING__ still fail.
-        extra="ignore",
         env_nested_delimiter="__",
+        frozen=True,
+        # Unknown keys belong to other tools; typos inside a settings group still fail.
+        extra="ignore",
     )
 
     @classmethod
@@ -72,14 +71,20 @@ def load_settings(
 ) -> Settings:
     """Load and validate settings at application startup without caching.
 
-    Args:
-        env_file: Optional dotenv file; an explicit missing file is an error.
-        secrets_dir: Optional directory containing files named after settings fields.
-
     Relative paths are resolved against the current working directory. No files are
-    discovered automatically. Pass the returned settings to modules that need them.
+    discovered automatically, and an explicitly selected path that does not exist is
+    an error. Pass the returned settings to modules that need them.
+
+    Args:
+        env_file: Optional dotenv file.
+        secrets_dir: Optional directory containing files named after settings fields.
     """
+    # Checked here rather than left to pydantic-settings, which raises SettingsError
+    # for a missing directory but silently skips a missing dotenv file.
     if env_file is not None and not env_file.is_file():
-        message = f"Environment file does not exist or is not a file: {env_file}"
+        message = f"Environment file not found: {env_file}"
+        raise FileNotFoundError(message)
+    if secrets_dir is not None and not secrets_dir.is_dir():
+        message = f"Secrets directory not found: {secrets_dir}"
         raise FileNotFoundError(message)
     return Settings(_env_file=env_file, _secrets_dir=secrets_dir)

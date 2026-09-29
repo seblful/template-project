@@ -29,7 +29,7 @@ uvx copier copy --trust gh:seblful/template-project new-project
 cd new-project
 ```
 
-`--trust` is required: generation runs `git init`, `uv sync`, `ruff`, `mdformat` and `pre-commit install`, then makes the initial commit.
+`--trust` is required: generation runs `git init`, `uv sync` and `pre-commit install`, then makes the initial commit. No formatter runs, on `copy` or `update`: the template ships formatted and CI proves it.
 
 There is deliberately no default author, so `--defaults` alone will not generate a project. Pass the two answers explicitly in automation:
 
@@ -58,20 +58,21 @@ new-project/
 ├── src/
 │   └── <package_name>/
 │       ├── __init__.py       # metadata only — no re-exports
-│       ├── __main__.py       # python -m <package_name>   } project_type=cli
-│       ├── cli.py            #                            }
-│       ├── logging.py
-│       ├── settings.py
+│       ├── __main__.py       # cli: python -m <package_name>
+│       ├── cli.py            # cli
+│       ├── logging.py        # cli
+│       ├── settings.py       # cli
 │       └── py.typed
 ├── tests/
-│   ├── conftest.py
-│   ├── test_cli.py           # project_type=cli
-│   ├── test_config_roundtrip.py
-│   ├── test_logging.py
-│   └── test_settings.py
+│   ├── conftest.py           # cli
+│   ├── test_cli.py           # cli
+│   ├── test_config_roundtrip.py  # cli
+│   ├── test_logging.py       # cli
+│   ├── test_settings.py      # cli
+│   └── test_package.py
 ├── docs/
 ├── .claude/settings.json     # only when claude_settings=true
-├── .env.example              # the committed config contract; copy it to .env
+├── .env.example              # cli: the committed config contract; copy to .env
 ├── .python-version
 ├── AGENTS.md
 ├── pyproject.toml
@@ -79,7 +80,7 @@ new-project/
 └── README.md
 ```
 
-`notebooks/` and `scripts/` are not created, but `pyproject.toml` already tells `ty` to ignore them if you add them later.
+Files marked `cli` are generated only for `project_type=cli`.
 
 ## Commands in a Generated Project
 
@@ -105,19 +106,17 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 | `project_type` | `cli` (Typer entry point) or `library` |
 | `author_name` / `author_email` | Author information — no default, must be answered |
 | `license` | None, MIT, or Apache |
-| `python_version` | Target Python version (3.10+) |
+| `python_version` | Target Python version (3.10+, default 3.14) |
 | `ci` | github, gitlab, or none |
 | `claude_settings` | Ship `.claude/settings.json` with project-scoped permissions |
 
 ### `project_type`
 
-`cli` adds `cli.py`, `__main__.py`, `tests/test_cli.py`, a `[project.scripts]` console script and the `typer` dependency. `library` ships everything else — settings, logging, tests, docs, hooks — without them, so an importable package carries no CLI machinery to delete.
+`cli` is an application: `cli.py`, `__main__.py`, a `[project.scripts]` console script, pydantic-settings configuration, structlog logging, `.env.example` and their tests, with `typer`, `structlog`, `pydantic` and `pydantic-settings` as dependencies. `library` is an importable package with no runtime dependencies and no settings or logging setup of its own, since both belong to the application that imports it; it keeps the tests, docs, hooks and CI.
 
-Generated projects load settings once at application startup with `load_settings()` and pass them to logging and other modules. Environment variables and model defaults work without files. Select local overrides explicitly with `--env-file .env` (CLI) or `load_settings(env_file=Path(".env"))`; mounted secrets also require an explicit `secrets_dir` or `--secrets-dir`. Relative paths use the working directory.
+A `cli` project loads settings once per command with `load_settings()` and passes them to logging and other modules. Environment variables and model defaults work without files; a dotenv file or secrets directory is read only when selected with `--env-file` / `--secrets-dir` or the matching `load_settings` arguments. Logs go to stderr; a JSON log file is opt-in through `LOGGING__LOG_FILE`.
 
-When updating an existing project, replace `get_settings()` calls with startup loading and pass the returned settings to callers. Replace `setup_logging()` with `setup_logging(settings.logging)`, and explicitly select any dotenv file or secrets directory you previously relied on being discovered.
-
-The default settings now cover logging only. Replace `APP__ENVIRONMENT=production` with `LOGGING__CONSOLE_FORMAT=json`, remove the `as_json` argument from logging setup, and use the package constant `PROJECT_NAME` instead of `settings.app.app_name`. The unused `APP__SECRET_KEY` field is removed; retain application-specific secret fields only where your code uses them.
+Upgrade notes for a release print during `copier update` when the update crosses it; they live in [`migrations/`](migrations/).
 
 ### Assistant instructions
 
@@ -139,4 +138,4 @@ The template cannot be linted directly — `from {{ package_name }} import ...` 
 
 ## Versioning
 
-The template is released as git tags (`v0.8.0`, `v0.7.8`, …), which `copier copy` and `copier update` resolve to.
+The template is released as git tags (`v0.9.2`, `v0.9.3`, …), which `copier copy` and `copier update` resolve to.

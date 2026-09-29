@@ -1,31 +1,39 @@
 """Integration tests for configuration loading, using real files on disk."""
 
+import re
 from pathlib import Path
 
 import pytest
-from pydantic_settings import SettingsError
+from pydantic import BaseModel
 
 from {{ package_name }}.settings import LoggingSettings, Settings, load_settings
 
 pytestmark = pytest.mark.integration
 
 
+def _supported_keys() -> set[str]:
+    """Return every variable name the model reads, groups expanded to their fields."""
+    keys = set()
+    for name, field in Settings.model_fields.items():
+        group = field.annotation
+        if isinstance(group, type) and issubclass(group, BaseModel):
+            keys.update(f"{name}__{nested}" for nested in group.model_fields)
+        else:
+            keys.add(name)
+    return {key.upper() for key in keys}
+
+
 def test_committed_env_example_matches_the_settings_model() -> None:
     """The example lists every supported field and contains no obsolete keys."""
     example = Path(__file__).resolve().parents[1] / ".env.example"
-    settings = load_settings()
-    expected = {
-        f"{group}__{field}".upper()
-        for group in Settings.model_fields
-        for field in type(getattr(settings, group)).model_fields
-    }
     actual = set()
     for raw in example.read_text(encoding="utf-8").splitlines():
-        line = raw.strip().lstrip("#").strip()
-        if "__" in line and "=" in line:
-            actual.add(line.split("=", 1)[0].strip())
+        # Commented-out keys count: they document optional fields.
+        key = raw.strip().lstrip("#").strip().split("=", 1)
+        if len(key) == 2 and re.fullmatch(r"[A-Z][A-Z0-9_]*", key[0].strip()):
+            actual.add(key[0].strip())
 
-    assert actual == expected
+    assert actual == _supported_keys()
     load_settings(env_file=example)
 
 
@@ -36,19 +44,18 @@ def test_source_precedence(
     source: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Each source wins over all sources below it in the documented order."""
+    key = "LOGGING__LOG_FILE"
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
     if source != "defaults":
-        (secret_dir / "LOGGING__LOG_FILE").write_text("secrets", encoding="utf-8")
+        (secret_dir / key).write_text("secrets", encoding="utf-8")
     env_file = tmp_path / "selected.env"
     env_file.write_text(
-        "LOGGING__LOG_FILE=dotenv\n"
-        if source in {"constructor", "environment", "dotenv"}
-        else "",
+        f"{key}=dotenv\n" if source in {"constructor", "environment", "dotenv"} else "",
         encoding="utf-8",
     )
     if source in {"constructor", "environment"}:
-        monkeypatch.setenv("LOGGING__LOG_FILE", "environment")
+        monkeypatch.setenv(key, "environment")
 
     if source == "constructor":
         settings = Settings(
@@ -59,13 +66,14 @@ def test_source_precedence(
     else:
         settings = load_settings(env_file=env_file, secrets_dir=secret_dir)
 
-    expected = Path("logs/app.log" if source == "defaults" else source)
+    expected = None if source == "defaults" else Path(source)
     assert settings.logging.log_file == expected
 
 
 def test_nested_secret_files_merge_with_other_sources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A secret file sets one field of a group while the environment sets another."""
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
     (secret_dir / "LOGGING__FILE_LEVEL").write_text("DEBUG", encoding="utf-8")
@@ -80,6 +88,7 @@ def test_nested_secret_files_merge_with_other_sources(
 def test_no_files_are_discovered_automatically(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """A `.env`, `.env.local` or `secrets/` in the working directory is never read."""
     monkeypatch.chdir(tmp_path)
     for name in (".env", ".env.local"):
         (tmp_path / name).write_text(
@@ -98,6 +107,7 @@ def test_no_files_are_discovered_automatically(
 def test_explicit_paths_work_outside_the_checkout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
+    """Absolute and relative dotenv paths both resolve from the working directory."""
     env_file = tmp_path / "selected.env"
     env_file.write_text("LOGGING__LOG_FILE=from-disk\n", encoding="utf-8")
     elsewhere = tmp_path / "elsewhere"
@@ -110,11 +120,8 @@ def test_explicit_paths_work_outside_the_checkout(
     )
 
 
-def test_explicit_missing_env_file_fails(tmp_path: Path) -> None:
-    with pytest.raises(FileNotFoundError, match=r"absent\.env"):
-        load_settings(env_file=tmp_path / "absent.env")
-
-
-def test_explicit_missing_secrets_directory_fails(tmp_path: Path) -> None:
-    with pytest.raises(SettingsError, match="absent-secrets"):
-        load_settings(secrets_dir=tmp_path / "absent-secrets")
+@pytest.mark.parametrize("option", ["env_file", "secrets_dir"])
+def test_explicit_missing_paths_fail(tmp_path: Path, option: str) -> None:
+    """A selected dotenv file or secrets directory that does not exist is an error."""
+    with pytest.raises(FileNotFoundError, match="absent"):
+        load_settings(**{option: tmp_path / "absent"})

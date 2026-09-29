@@ -51,11 +51,11 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - {os: ubuntu-latest, python_version: "3.13", license: None, project_type: cli, ci: github, claude_settings: "true"}
-          - {os: ubuntu-latest, python_version: "3.13", license: MIT, project_type: library, ci: gitlab, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.14", license: None, project_type: cli, ci: github, claude_settings: "true"}
+          - {os: ubuntu-latest, python_version: "3.14", license: MIT, project_type: library, ci: gitlab, claude_settings: "false"}
           - {os: ubuntu-latest, python_version: "3.12", license: Apache, project_type: cli, ci: none, claude_settings: "false"}
           - {os: ubuntu-latest, python_version: "3.10", license: MIT, project_type: library, ci: github, claude_settings: "true"}
-          - {os: windows-latest, python_version: "3.13", license: Apache, project_type: cli, ci: gitlab, claude_settings: "true"}
+          - {os: windows-latest, python_version: "3.14", license: Apache, project_type: cli, ci: gitlab, claude_settings: "true"}
     steps:
       - uses: actions/checkout@v7
 
@@ -82,8 +82,8 @@ jobs:
             -d claude_settings='${{ matrix.claude_settings }}' \
             "$GITHUB_WORKSPACE" ../demo-proj
 
-      # ruff format --check is load-bearing: the generate task above runs plain
-      # `ruff format`, which would silently mask a badly formatted template.
+      # ruff format --check is load-bearing: no generation task formats anything, so
+      # this sees exactly what the template sources render to.
       - name: Lint, format, types
         shell: bash
         working-directory: ../demo-proj
@@ -97,30 +97,25 @@ jobs:
         working-directory: ../demo-proj
         run: uv run pytest --cov
 
-      - name: Installed wheel configuration
+      # Packaging only; settings behavior is the generated test suite's job. Run from
+      # an empty directory, so the import cannot fall back to the source tree.
+      - name: Installed wheel works
         shell: bash
         working-directory: ../demo-proj
         run: |
           uv build --wheel
           mkdir ../wheel-smoke
           cd ../wheel-smoke
-          uv run --no-project --isolated --python '${{ matrix.python_version }}' \
-            --with ../demo-proj/dist/*.whl python - <<'PY'
-          from pathlib import Path
-          from demo_proj import settings
-
-          assert "site-packages" in Path(settings.__file__).parts
-          Path(".env").write_text("LOGGING__CONSOLE_FORMAT=invalid\n", encoding="utf-8")
-          assert settings.load_settings().logging.console_format == "text"
-          Path("selected.env").write_text("LOGGING__CONSOLE_FORMAT=json\n", encoding="utf-8")
-          Path("secrets").mkdir()
-          Path("secrets/LOGGING__FILE_LEVEL").write_text("DEBUG", encoding="utf-8")
-          loaded = settings.load_settings(
-              env_file=Path("selected.env"), secrets_dir=Path("secrets")
-          )
-          assert loaded.logging.console_format == "json"
-          assert loaded.logging.file_level == "DEBUG"
-          PY
+          run() {
+            uv run --no-project --isolated --python '${{ matrix.python_version }}' \
+              --with "$(ls ../demo-proj/dist/*.whl)" "$@"
+          }
+          run python -c "import demo_proj; assert demo_proj.__version__ == '0.1.0'"
+          if [ '${{ matrix.project_type }}' = cli ]; then
+            run demo-proj --version | grep -q 'demo-proj 0.1.0'
+            run demo-proj info
+          fi
+          [ -z "$(ls -A)" ] || { echo "::error::the wheel wrote into the cwd"; exit 1; }
 
       - name: Docs
         shell: bash
@@ -155,7 +150,11 @@ jobs:
         working-directory: ../demo-proj
         run: |
           fail() { echo "::error::$1"; exit 1; }
-          cli_files="src/demo_proj/cli.py src/demo_proj/__main__.py tests/test_cli.py"
+          cli_files="src/demo_proj/cli.py src/demo_proj/__main__.py
+            src/demo_proj/settings.py src/demo_proj/logging.py .env.example
+            tests/conftest.py tests/test_cli.py tests/test_settings.py
+            tests/test_logging.py tests/test_config_roundtrip.py"
+          [ -f tests/test_package.py ] || fail "tests/test_package.py is missing"
 
           case '${{ matrix.ci }}' in
             github)
@@ -187,9 +186,8 @@ jobs:
             for f in $cli_files; do
               [ ! -e "$f" ] || fail "project_type=library still produced $f"
             done
-            if grep -q '"typer' pyproject.toml; then
-              fail "project_type=library still depends on typer"
-            fi
+            grep -qx 'dependencies = \[\]' pyproject.toml \
+              || fail "project_type=library still has runtime dependencies"
           fi
 
           if [ '${{ matrix.claude_settings }}' = true ]; then
