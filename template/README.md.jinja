@@ -25,37 +25,58 @@ Or use it as a library:
 {% endif %}
 ```python
 from {{ package_name }}.logging import get_logger, setup_logging
-from {{ package_name }}.settings import get_settings
+from {{ package_name }}.settings import load_settings
 
-setup_logging()
+settings = load_settings()
+setup_logging(settings.logging, as_json=settings.app.environment == "production")
 log = get_logger(__name__)
-log.info("started", environment=get_settings().app.environment)
+log.info("started", environment=settings.app.environment)
 ```
 
 ## Configuration
 
-`.env.example` is the committed contract listing every supported key, and a test fails if it drifts from the settings model. Copy it to start:
+Startup reads environment variables and model defaults. No dotenv files or secrets directories are discovered automatically. Load settings once in your entry point and pass the relevant groups to the modules that need them; library callers control loading and logging themselves.
+
+For local overrides, copy the committed `.env.example` (checked against the settings model) to a gitignored `.env`:
 
 ```bash
 cp .env.example .env
 ```
 
-`.env` is gitignored, so it is safe for real values.
+{% if project_type == "cli" %}
+Select it before the subcommand:
+
+```bash
+uv run {{ project_slug }} --env-file .env info
+```
+{% endif %}
+In Python:
+
+```python
+from pathlib import Path
+
+from {{ package_name }}.settings import load_settings
+
+settings = load_settings(env_file=Path(".env"))
+```
 
 Settings are resolved with the following precedence, highest first:
 
+1. Explicit field overrides passed to the `Settings` constructor
 1. Real environment variables (`APP__APP_NAME=...`)
-1. `.env.local` — personal overrides, never committed
-1. `.env` — your local base, never committed
+1. The explicitly selected dotenv file
+1. Files in the explicitly selected secrets directory
 1. Defaults declared in `src/{{ package_name }}/settings.py`
 
-Deployed environments set real environment variables rather than shipping `.env` files, and secrets mounted as files under `/run/secrets` (Docker, Kubernetes) are picked up automatically.
+Deployment can supply environment variables or mounted secret files. To read `/run/secrets/APP__SECRET_KEY`, call `load_settings(secrets_dir=Path("/run/secrets"))`{% if project_type == "cli" %} or run `uv run {{ project_slug }} --secrets-dir /run/secrets info`{% endif %}. Secret filenames use the same nested names as environment variables. Both explicit sources can be selected together.
+
+Relative paths, including dotenv paths, secrets directories, and log paths, are relative to the process working directory. Use absolute paths when launching from another directory. Explicit missing configuration paths fail at startup. `.env.local` has no special meaning; it is read only if selected instead of `.env`.
 
 Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled `APP__`/`LOGGING__` key fails at startup.
 
 ## Logging
 
-`setup_logging()` sends JSON to `logs/app.log` and human-readable output to the console (JSON when `APP__ENVIRONMENT=production`). Library logs are rendered through the same pipeline, so everything in the file has the same shape.
+`setup_logging(settings.logging, as_json=...)` sends JSON to the configured log file and uses the requested console format. The CLI selects JSON for production and human-readable output otherwise. Library logs are rendered through the same pipeline, so everything in the file has the same shape.
 
 ```python
 from {{ package_name }}.logging import get_logger

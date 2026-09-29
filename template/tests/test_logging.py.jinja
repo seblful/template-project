@@ -5,7 +5,10 @@ import logging
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 
+import pytest
+
 from {{ package_name }}.logging import get_logger, reset_logging, setup_logging
+from {{ package_name }}.settings import LoggingSettings
 
 
 def _read_records(log_file: Path) -> list[dict[str, object]]:
@@ -36,7 +39,7 @@ def _our_file_handlers(log_file: Path) -> list[RotatingFileHandler]:
 def test_setup_logging_attaches_handlers(tmp_path: Path) -> None:
     """File and console handlers are attached and the log directory is created."""
     log_file = tmp_path / "nested" / "app.log"
-    setup_logging(log_file=log_file)
+    setup_logging(LoggingSettings(log_file=log_file))
 
     assert _our_file_handlers(log_file)
     assert log_file.parent.is_dir()
@@ -44,17 +47,17 @@ def test_setup_logging_attaches_handlers(tmp_path: Path) -> None:
 
 def test_setup_logging_is_idempotent(tmp_path: Path) -> None:
     """A second call adds nothing, even though pytest owns handlers of its own."""
-    setup_logging(log_file=tmp_path / "app.log")
+    setup_logging(LoggingSettings(log_file=tmp_path / "app.log"))
     count = len(logging.root.handlers)
 
-    setup_logging(log_file=tmp_path / "app.log")
+    setup_logging(LoggingSettings(log_file=tmp_path / "app.log"))
     assert len(logging.root.handlers) == count
 
 
 def test_no_file_is_created_until_something_is_logged(tmp_path: Path) -> None:
     """A command that never logs leaves no empty file behind."""
     log_file = tmp_path / "app.log"
-    setup_logging(log_file=log_file)
+    setup_logging(LoggingSettings(log_file=log_file))
 
     assert not log_file.exists()
 
@@ -62,7 +65,9 @@ def test_no_file_is_created_until_something_is_logged(tmp_path: Path) -> None:
 def test_file_records_are_json_with_a_timestamp(tmp_path: Path) -> None:
     """The file sink is machine-readable and every record is timestamped."""
     log_file = tmp_path / "app.log"
-    setup_logging(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+    setup_logging(
+        LoggingSettings(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+    )
 
     get_logger("test").info("hello", answer=42)
 
@@ -76,7 +81,9 @@ def test_file_records_are_json_with_a_timestamp(tmp_path: Path) -> None:
 def test_library_logs_are_rendered_like_application_logs(tmp_path: Path) -> None:
     """A third-party logger using plain stdlib logging still lands as JSON."""
     log_file = tmp_path / "app.log"
-    setup_logging(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+    setup_logging(
+        LoggingSettings(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+    )
 
     logging.getLogger("some.library").warning("from a library")
 
@@ -90,7 +97,9 @@ def test_library_logs_are_rendered_like_application_logs(tmp_path: Path) -> None
 def test_exceptions_are_serialized_not_dropped(tmp_path: Path) -> None:
     """`log.exception` writes a real traceback rather than `exc_info: true`."""
     log_file = tmp_path / "app.log"
-    setup_logging(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+    setup_logging(
+        LoggingSettings(file_level="DEBUG", console_level="CRITICAL", log_file=log_file)
+    )
 
     try:
         _raise_boom()
@@ -105,11 +114,24 @@ def test_exceptions_are_serialized_not_dropped(tmp_path: Path) -> None:
 def test_reset_logging_detaches_and_allows_reconfiguration(tmp_path: Path) -> None:
     """reset_logging undoes setup exactly, so a later call takes effect again."""
     before = list(logging.root.handlers)
-    setup_logging(log_file=tmp_path / "first.log")
+    setup_logging(LoggingSettings(log_file=tmp_path / "first.log"))
     assert _our_file_handlers(tmp_path / "first.log")
 
     reset_logging()
     assert logging.root.handlers == before
 
-    setup_logging(log_file=tmp_path / "second.log")
+    setup_logging(LoggingSettings(log_file=tmp_path / "second.log"))
     assert _our_file_handlers(tmp_path / "second.log")
+
+
+def test_logging_uses_supplied_settings_without_loading_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    monkeypatch.setenv("LOGGING__CONSOLE_LEVEL", "invalid")
+    setup_logging(LoggingSettings(log_file=Path("relative/app.log")), as_json=True)
+
+    get_logger("test").info("configured explicitly")
+
+    assert json.loads(capsys.readouterr().err)["event"] == "configured explicitly"
+    assert (tmp_path / "relative" / "app.log").is_file()

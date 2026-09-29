@@ -153,11 +153,13 @@ _message_after_copy: |
       cd {{ _copier_conf.dst_path.name }}
       cp .env.example .env
   {%- if project_type == 'cli' %}
-      uv run {{ project_slug }} info
+      uv run {{ project_slug }} --env-file .env info
   {%- endif %}
 
   .env.example is the committed contract listing every supported key; your own .env is
-  gitignored and yours to edit. Docs tooling installs separately with
+  gitignored and yours to edit. Select it explicitly with load_settings(env_file=Path(".env"))
+  or the CLI's --env-file option; files are never discovered automatically.
+  Docs tooling installs separately with
   `uv sync --group docs`.
 
   Git hooks are installed: lint, formatting and types run on commit, the test suite

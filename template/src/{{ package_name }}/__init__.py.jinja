@@ -10,6 +10,6 @@ except PackageNotFoundError:  # pragma: no cover - a source tree with no install
 __author__ = "{{ author_name }}"
 __email__ = "{{ author_email }}"
 
-# get_logger/get_settings stay unexported: re-exporting would pull in pydantic and
+# get_logger/load_settings stay unexported: re-exporting would pull in pydantic and
 # structlog for every importer, whether or not they're used.
 __all__ = ["__author__", "__email__", "__version__"]

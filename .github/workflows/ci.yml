@@ -97,6 +97,31 @@ jobs:
         working-directory: ../demo-proj
         run: uv run pytest --cov
 
+      - name: Installed wheel configuration
+        shell: bash
+        working-directory: ../demo-proj
+        run: |
+          uv build --wheel
+          mkdir ../wheel-smoke
+          cd ../wheel-smoke
+          uv run --no-project --isolated --python '${{ matrix.python_version }}' \
+            --with ../demo-proj/dist/*.whl python - <<'PY'
+          from pathlib import Path
+          from demo_proj import settings
+
+          assert "site-packages" in Path(settings.__file__).parts
+          Path(".env").write_text("APP__ENVIRONMENT=invalid\n", encoding="utf-8")
+          assert settings.load_settings().app.environment == "development"
+          Path("selected.env").write_text("APP__APP_NAME=wheel\n", encoding="utf-8")
+          Path("secrets").mkdir()
+          Path("secrets/APP__SECRET_KEY").write_text("example", encoding="utf-8")
+          loaded = settings.load_settings(
+              env_file=Path("selected.env"), secrets_dir=Path("secrets")
+          )
+          assert loaded.app.app_name == "wheel"
+          assert loaded.app.secret_key.get_secret_value() == "example"
+          PY
+
       - name: Docs
         shell: bash
         working-directory: ../demo-proj

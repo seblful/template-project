@@ -1,24 +1,20 @@
 """Application settings, loaded and validated with pydantic-settings."""
 
-from functools import lru_cache
 from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, SecretStr
-from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic_settings import (
+    BaseSettings,
+    NestedSecretsSettingsSource,
+    PydanticBaseSettingsSource,
+    SettingsConfigDict,
+)
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 Environment = Literal["development", "staging", "production"]
 
-# Resolved against the project root, so the CLI reads the same config from any cwd.
-PROJECT_ROOT = Path(__file__).resolve().parents[2]
-
-# Overridable so tests can redirect loading; see tests/conftest.py.
-ENV_FILES: tuple[Path, ...] = (PROJECT_ROOT / ".env", PROJECT_ROOT / ".env.local")
-
-_SECRETS_DIR = Path("/run/secrets")  # Docker/Kubernetes secrets, one file per field
-
-# frozen=True: get_settings() is cached, so a mutation would reach every caller.
+# Keep the startup configuration stable for every module receiving it.
 _GROUP_CONFIG = ConfigDict(extra="forbid", frozen=True)
 
 
@@ -50,18 +46,17 @@ class LoggingSettings(BaseModel):
 class Settings(BaseSettings):
     """Application settings, grouped under `__`-delimited prefixes.
 
-    Precedence, highest first: real environment variables, `.env.local`, `.env`, then
-    the defaults declared above. Missing env files are ignored.
+    Precedence: constructor overrides, environment variables, an explicitly selected
+    dotenv file, an explicitly selected secrets directory, then model defaults.
     """
 
     app: AppSettings = Field(default_factory=AppSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
-        env_file=ENV_FILES,
+        env_file=None,
         env_file_encoding="utf-8",
-        # Only set when present, or pydantic-settings warns on every load.
-        secrets_dir=str(_SECRETS_DIR) if _SECRETS_DIR.is_dir() else None,
+        secrets_dir=None,
         case_sensitive=False,
         frozen=True,
         # Unknown keys belong to other tools; typos inside APP__/LOGGING__ still fail.
@@ -69,9 +64,39 @@ class Settings(BaseSettings):
         env_nested_delimiter="__",
     )
 
+    @classmethod
+    def settings_customise_sources(
+        cls,
+        settings_cls: type[BaseSettings],  # noqa: ARG003 - Pydantic's hook signature.
+        init_settings: PydanticBaseSettingsSource,
+        env_settings: PydanticBaseSettingsSource,
+        dotenv_settings: PydanticBaseSettingsSource,
+        file_secret_settings: PydanticBaseSettingsSource,
+    ) -> tuple[PydanticBaseSettingsSource, ...]:
+        """Support individual secret files for fields inside settings groups."""
+        return (
+            init_settings,
+            env_settings,
+            dotenv_settings,
+            NestedSecretsSettingsSource(
+                file_secret_settings, secrets_dir_missing="error"
+            ),
+        )
 
-@lru_cache
-def get_settings() -> Settings:
-    """Return the application settings, loaded once and cached."""
-    # Read at call time, not class-definition time, so tests can monkeypatch it.
-    return Settings(_env_file=ENV_FILES)
+
+def load_settings(
+    *, env_file: Path | None = None, secrets_dir: Path | None = None
+) -> Settings:
+    """Load and validate settings at application startup without caching.
+
+    Args:
+        env_file: Optional dotenv file; an explicit missing file is an error.
+        secrets_dir: Optional directory containing files such as `APP__SECRET_KEY`.
+
+    Relative paths are resolved against the current working directory. No files are
+    discovered automatically. Pass the returned settings to modules that need them.
+    """
+    if env_file is not None and not env_file.is_file():
+        message = f"Environment file does not exist or is not a file: {env_file}"
+        raise FileNotFoundError(message)
+    return Settings(_env_file=env_file, _secrets_dir=secrets_dir)

@@ -1,12 +1,16 @@
 """Command line interface for {{ project_slug }}."""
 
-from typing import Annotated
+from pathlib import Path
+from typing import TYPE_CHECKING, Annotated, cast
 
 import typer
 
 from {{ package_name }} import __version__
 from {{ package_name }}.logging import get_logger, setup_logging
-from {{ package_name }}.settings import get_settings
+from {{ package_name }}.settings import load_settings
+
+if TYPE_CHECKING:
+    from {{ package_name }}.settings import Settings
 
 app = typer.Typer(help="{{ project_slug }} CLI", no_args_is_help=True)
 log = get_logger(__name__)
@@ -22,6 +26,21 @@ def _version_callback(value: bool) -> None:
 @app.callback()
 def main(
     ctx: typer.Context,
+    env_file: Annotated[
+        Path | None,
+        typer.Option(
+            exists=True, dir_okay=False, readable=True, help="Load a dotenv file."
+        ),
+    ] = None,
+    secrets_dir: Annotated[
+        Path | None,
+        typer.Option(
+            exists=True,
+            file_okay=False,
+            readable=True,
+            help="Load nested secret files.",
+        ),
+    ] = None,
     _version: Annotated[
         bool,
         typer.Option(
@@ -34,13 +53,17 @@ def main(
 ) -> None:
     """Run the {{ project_slug }} CLI."""
     if ctx.invoked_subcommand is not None:
-        setup_logging()
+        settings = load_settings(env_file=env_file, secrets_dir=secrets_dir)
+        ctx.obj = settings
+        setup_logging(
+            settings.logging, as_json=settings.app.environment == "production"
+        )
 
 
 @app.command()
-def info() -> None:
+def info(ctx: typer.Context) -> None:
     """Display project information."""
-    settings = get_settings()
+    settings = cast("Settings", ctx.obj)
     log.debug("reporting project info", environment=settings.app.environment)
     typer.echo(f"{settings.app.app_name} v{__version__}")
     typer.echo(f"Environment: {settings.app.environment}")

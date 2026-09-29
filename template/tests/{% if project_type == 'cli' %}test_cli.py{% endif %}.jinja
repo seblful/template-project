@@ -49,3 +49,51 @@ def test_module_is_executable(tmp_path: Path) -> None:
 
     assert result.returncode == 0, result.stderr
     assert __version__ in result.stdout
+
+
+def test_cli_loads_an_explicit_file_for_each_invocation(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    env_file = tmp_path / "selected.env"
+    env_file.write_text("APP__APP_NAME=selected\n", encoding="utf-8")
+    (tmp_path / ".env").write_text("APP__ENVIRONMENT=invalid\n", encoding="utf-8")
+
+    selected = runner.invoke(app, ["--env-file", str(env_file), "info"])
+    default = runner.invoke(app, ["info"])
+
+    assert selected.exit_code == 0, selected.output
+    assert "selected" in selected.output
+    assert default.exit_code == 0, default.output
+    assert "{{ project_slug }}" in default.output
+
+
+def test_cli_loads_explicit_secrets(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    secret_dir = tmp_path / "secrets"
+    secret_dir.mkdir()
+    (secret_dir / "APP__APP_NAME").write_text("from-secrets", encoding="utf-8")
+
+    result = runner.invoke(app, ["--secrets-dir", str(secret_dir), "info"])
+
+    assert result.exit_code == 0, result.output
+    assert "from-secrets" in result.output
+
+
+@pytest.mark.parametrize("option", ["--env-file", "--secrets-dir"])
+def test_cli_rejects_missing_config_paths(tmp_path: Path, option: str) -> None:
+    result = runner.invoke(app, [option, str(tmp_path / "absent"), "info"])
+
+    assert result.exit_code == 2
+
+
+def test_version_does_not_load_invalid_settings(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    monkeypatch.setenv("APP__ENVIRONMENT", "invalid")
+
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0

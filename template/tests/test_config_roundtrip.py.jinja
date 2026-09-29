@@ -3,49 +3,116 @@
 from pathlib import Path
 
 import pytest
+from pydantic_settings import SettingsError
 
-from {{ package_name }} import settings as settings_module
-from {{ package_name }}.settings import Settings, get_settings
+from {{ package_name }}.settings import AppSettings, Settings, load_settings
 
 pytestmark = pytest.mark.integration
 
 
 def test_committed_env_example_matches_the_settings_model() -> None:
-    """Every key in .env.example that targets a settings group exists on that group.
-
-    .env.example is the config contract, and drift turns it into a lie. This is what
-    stops a renamed or deleted field from shipping without the example following it.
-    """
-    example = settings_module.PROJECT_ROOT / ".env.example"
-    if not example.is_file():  # pragma: no cover - a wheel install, not a checkout
-        pytest.skip("running outside a source checkout")
-
-    settings = get_settings()
+    """The example lists every supported field and contains no obsolete keys."""
+    example = Path(__file__).resolve().parents[1] / ".env.example"
+    settings = load_settings()
+    expected = {
+        f"{group}__{field}".upper()
+        for group in Settings.model_fields
+        for field in type(getattr(settings, group)).model_fields
+    }
+    actual = set()
     for raw in example.read_text(encoding="utf-8").splitlines():
         line = raw.strip().lstrip("#").strip()
-        if "__" not in line or "=" not in line:
-            continue
-        key = line.split("=", 1)[0].strip()
-        prefix, _, field = key.partition("__")
-        # Groups come from the model, not a list here, so a new group is checked too.
-        # Other prefixes are skipped: extra="ignore" lets other tools share the file.
-        if prefix.lower() not in Settings.model_fields:
-            continue
-        group = type(getattr(settings, prefix.lower()))
-        assert field.lower() in group.model_fields, (
-            f"{key} in .env.example has no matching field on {group.__name__}"
+        if "__" in line and "=" in line:
+            actual.add(line.split("=", 1)[0].strip())
+
+    assert actual == expected
+    load_settings(env_file=example)
+
+
+@pytest.mark.parametrize(
+    "source", ["constructor", "environment", "dotenv", "secrets", "defaults"]
+)
+def test_source_precedence(
+    source: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each source wins over all sources below it in the documented order."""
+    secret_dir = tmp_path / "secrets"
+    secret_dir.mkdir()
+    if source != "defaults":
+        (secret_dir / "APP__APP_NAME").write_text("secrets", encoding="utf-8")
+    env_file = tmp_path / "selected.env"
+    env_file.write_text(
+        "APP__APP_NAME=dotenv\n"
+        if source in {"constructor", "environment", "dotenv"}
+        else "",
+        encoding="utf-8",
+    )
+    if source in {"constructor", "environment"}:
+        monkeypatch.setenv("APP__APP_NAME", "environment")
+
+    if source == "constructor":
+        settings = Settings(
+            app=AppSettings(app_name="constructor"),
+            _env_file=env_file,
+            _secrets_dir=secret_dir,
         )
+    else:
+        settings = load_settings(env_file=env_file, secrets_dir=secret_dir)
+
+    expected = "{{ project_slug }}" if source == "defaults" else source
+    assert settings.app.app_name == expected
 
 
-def test_env_file_on_disk_is_actually_read(
+def test_nested_secret_files_merge_with_other_sources(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """The precedence chain works end to end against a real file."""
-    env_file = tmp_path / ".env"
-    env_file.write_text("APP__APP_NAME=from-disk\nLOGGING__FILE_LEVEL=ERROR\n")
-    monkeypatch.setattr(settings_module, "ENV_FILES", (env_file,))
-    get_settings.cache_clear()
+    secret_dir = tmp_path / "secrets"
+    secret_dir.mkdir()
+    (secret_dir / "APP__SECRET_KEY").write_text("example-value", encoding="utf-8")
+    monkeypatch.setenv("APP__ENVIRONMENT", "production")
 
-    settings = get_settings()
-    assert settings.app.app_name == "from-disk"
-    assert settings.logging.file_level == "ERROR"
+    settings = load_settings(secrets_dir=secret_dir)
+
+    assert settings.app.secret_key is not None
+    assert settings.app.secret_key.get_secret_value() == "example-value"
+    assert "example-value" not in repr(settings)
+    assert settings.app.environment == "production"
+
+
+def test_no_files_are_discovered_automatically(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    monkeypatch.chdir(tmp_path)
+    for name in (".env", ".env.local"):
+        (tmp_path / name).write_text("APP__ENVIRONMENT=invalid\n", encoding="utf-8")
+    secret_dir = tmp_path / "secrets"
+    secret_dir.mkdir()
+    (secret_dir / "APP__SECRET_KEY").write_text("unrequested", encoding="utf-8")
+
+    settings = load_settings()
+
+    assert settings.app.environment == "development"
+    assert settings.app.secret_key is None
+
+
+def test_explicit_paths_work_outside_the_checkout(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    env_file = tmp_path / "selected.env"
+    env_file.write_text("APP__APP_NAME=from-disk\n", encoding="utf-8")
+    elsewhere = tmp_path / "elsewhere"
+    elsewhere.mkdir()
+    monkeypatch.chdir(elsewhere)
+
+    assert load_settings(env_file=env_file).app.app_name == "from-disk"
+    assert load_settings(env_file=Path("../selected.env")).app.app_name == "from-disk"
+
+
+def test_explicit_missing_env_file_fails(tmp_path: Path) -> None:
+    with pytest.raises(FileNotFoundError, match=r"absent\.env"):
+        load_settings(env_file=tmp_path / "absent.env")
+
+
+def test_explicit_missing_secrets_directory_fails(tmp_path: Path) -> None:
+    with pytest.raises(SettingsError, match="absent-secrets"):
+        load_settings(secrets_dir=tmp_path / "absent-secrets")

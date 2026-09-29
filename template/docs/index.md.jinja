@@ -19,17 +19,28 @@ uv run {{ project_slug }} info
 Or use it as a library:
 {% endif %}
 ```python
-from {{ package_name }}.logging import get_logger
-from {{ package_name }}.settings import get_settings
+from {{ package_name }}.logging import get_logger, setup_logging
+from {{ package_name }}.settings import load_settings
 
+settings = load_settings()
+setup_logging(settings.logging, as_json=settings.app.environment == "production")
 log = get_logger(__name__)
-log.info("started", environment=get_settings().app.environment)
+log.info("started", environment=settings.app.environment)
 ```
 
 ## Configuration
 
-Settings are resolved highest-priority first: real environment variables, then
-`.env.local`, then `.env`, then the defaults in `src/{{ package_name }}/settings.py`.
-`.env.example` lists every supported key.
+Call `load_settings()` once at startup, then pass settings to the modules that need
+them. It reads environment variables and defaults; files require explicit selection
+with `env_file=Path(".env")` or `secrets_dir=Path("/run/secrets")`.
+{% if project_type == "cli" %}
+```bash
+uv run {{ project_slug }} --env-file .env info
+```
+{% endif %}
+Priority is constructor overrides, environment variables, the selected dotenv file,
+the selected secret files, then defaults. All relative paths use the working
+directory. `.env.example` lists every supported key; secret filenames use the same
+nested names. Explicit missing paths fail at startup.
 
 See the [reference](reference.md) for the full API.

@@ -113,6 +113,10 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 
 `cli` adds `cli.py`, `__main__.py`, `tests/test_cli.py`, a `[project.scripts]` console script and the `typer` dependency. `library` ships everything else — settings, logging, tests, docs, hooks — without them, so an importable package carries no CLI machinery to delete.
 
+Generated projects load settings once at application startup with `load_settings()` and pass them to logging and other modules. Environment variables and model defaults work without files. Select local overrides explicitly with `--env-file .env` (CLI) or `load_settings(env_file=Path(".env"))`; mounted secrets also require an explicit `secrets_dir` or `--secrets-dir`. Relative paths use the working directory.
+
+When updating an existing project, replace `get_settings()` calls with startup loading and pass the returned settings to callers. Replace `setup_logging()` with `setup_logging(settings.logging, as_json=settings.app.environment == "production")`, and explicitly select any dotenv file or secrets directory you previously relied on being discovered.
+
 ### Assistant instructions
 
 Every project gets an `AGENTS.md`, which Claude Code, Cursor, opencode and the rest all read. `.ignore` holds only the delta from `.gitignore`, since ripgrep and fd already honor that; Cursor users who want a `.cursorignore` can copy it.
