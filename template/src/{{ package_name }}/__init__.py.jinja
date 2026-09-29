@@ -1,9 +1,12 @@
 """Top-level package for {{ project_slug }}."""
 
 from importlib.metadata import PackageNotFoundError, version
+from typing import Final
+
+PROJECT_NAME: Final = "{{ project_slug }}"
 
 try:
-    __version__ = version("{{ project_slug }}")
+    __version__ = version(PROJECT_NAME)
 except PackageNotFoundError:  # pragma: no cover - a source tree with no install
     __version__ = "0.0.0+unknown"
 
@@ -12,4 +15,4 @@ __email__ = "{{ author_email }}"
 
 # get_logger/load_settings stay unexported: re-exporting would pull in pydantic and
 # structlog for every importer, whether or not they're used.
-__all__ = ["__author__", "__email__", "__version__"]
+__all__ = ["PROJECT_NAME", "__author__", "__email__", "__version__"]

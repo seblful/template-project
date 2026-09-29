@@ -9,63 +9,61 @@ from {{ package_name }}.settings import Settings, load_settings
 
 
 def test_settings_load_from_env_file(test_settings: Settings) -> None:
-    assert test_settings.app.environment == "staging"
-    assert test_settings.app.app_name == "{{ project_slug }}"
-    assert test_settings.app.secret_key is None
+    assert test_settings.logging.console_format == "json"
     assert test_settings.logging.console_level == "INFO"
 
 
 def test_unrelated_env_file_keys_are_ignored(tmp_path: Path) -> None:
     env_file = tmp_path / ".env"
-    env_file.write_text("APP__APP_NAME=demo\nDATABASE_URL=postgres://localhost/db\n")
+    env_file.write_text(
+        "LOGGING__CONSOLE_FORMAT=json\nDATABASE_URL=postgres://localhost/db\n"
+    )
 
-    assert load_settings(env_file=env_file).app.app_name == "demo"
+    assert load_settings(env_file=env_file).logging.console_format == "json"
 
 
 @pytest.mark.parametrize(
     "entry",
-    ["APP__ENVIRONMEN=staging", "APP__ENVIRONMENT=prod"],
+    ["LOGGING__CONSOLE_FORMA=json", "LOGGING__CONSOLE_FORMAT=invalid"],
     ids=["unknown-field", "invalid-value"],
 )
 def test_invalid_settings_are_rejected(tmp_path: Path, entry: str) -> None:
     env_file = tmp_path / ".env"
     env_file.write_text(entry, encoding="utf-8")
 
-    with pytest.raises(ValidationError, match="app"):
+    with pytest.raises(ValidationError, match="logging"):
         load_settings(env_file=env_file)
 
 
 def test_settings_are_immutable(test_settings: Settings) -> None:
     with pytest.raises(ValidationError, match="frozen"):
-        test_settings.app.environment = "production"
+        test_settings.logging.console_format = "text"  # ty: ignore[invalid-assignment]
 
 
 def test_each_load_reads_the_current_environment(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     first = load_settings()
-    monkeypatch.setenv("APP__APP_NAME", "changed")
+    monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "json")
 
-    assert first.app.app_name == "{{ project_slug }}"
-    assert load_settings().app.app_name == "changed"
+    assert first.logging.console_format == "text"
+    assert load_settings().logging.console_format == "json"
 
 
 def test_whole_group_json_and_nested_env_values_merge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("APP", '{"app_name":"from-json","environment":"staging"}')
-    monkeypatch.setenv("APP__ENVIRONMENT", "production")
+    monkeypatch.setenv("LOGGING", '{"console_level":"DEBUG","console_format":"text"}')
+    monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "json")
 
     settings = load_settings()
 
-    assert settings.app.app_name == "from-json"
-    assert settings.app.environment == "production"
+    assert settings.logging.console_level == "DEBUG"
+    assert settings.logging.console_format == "json"
 
 
 def test_defaults_are_isolated_from_the_host() -> None:
     settings = load_settings()
 
-    assert settings.app.app_name == "{{ project_slug }}"
-    assert settings.app.environment == "development"
-    assert settings.app.secret_key is None
+    assert settings.logging.console_format == "text"
     assert settings.logging.console_level == "INFO"

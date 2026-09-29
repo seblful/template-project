@@ -23,9 +23,9 @@ from {{ package_name }}.logging import get_logger, setup_logging
 from {{ package_name }}.settings import load_settings
 
 settings = load_settings()
-setup_logging(settings.logging, as_json=settings.app.environment == "production")
+setup_logging(settings.logging)
 log = get_logger(__name__)
-log.info("started", environment=settings.app.environment)
+log.info("started")
 ```
 
 ## Configuration

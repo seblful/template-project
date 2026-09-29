@@ -5,7 +5,7 @@ from pathlib import Path
 import pytest
 from pydantic_settings import SettingsError
 
-from {{ package_name }}.settings import AppSettings, Settings, load_settings
+from {{ package_name }}.settings import LoggingSettings, Settings, load_settings
 
 pytestmark = pytest.mark.integration
 
@@ -39,28 +39,28 @@ def test_source_precedence(
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
     if source != "defaults":
-        (secret_dir / "APP__APP_NAME").write_text("secrets", encoding="utf-8")
+        (secret_dir / "LOGGING__LOG_FILE").write_text("secrets", encoding="utf-8")
     env_file = tmp_path / "selected.env"
     env_file.write_text(
-        "APP__APP_NAME=dotenv\n"
+        "LOGGING__LOG_FILE=dotenv\n"
         if source in {"constructor", "environment", "dotenv"}
         else "",
         encoding="utf-8",
     )
     if source in {"constructor", "environment"}:
-        monkeypatch.setenv("APP__APP_NAME", "environment")
+        monkeypatch.setenv("LOGGING__LOG_FILE", "environment")
 
     if source == "constructor":
         settings = Settings(
-            app=AppSettings(app_name="constructor"),
+            logging=LoggingSettings(log_file=Path("constructor")),
             _env_file=env_file,
             _secrets_dir=secret_dir,
         )
     else:
         settings = load_settings(env_file=env_file, secrets_dir=secret_dir)
 
-    expected = "{{ project_slug }}" if source == "defaults" else source
-    assert settings.app.app_name == expected
+    expected = Path("logs/app.log" if source == "defaults" else source)
+    assert settings.logging.log_file == expected
 
 
 def test_nested_secret_files_merge_with_other_sources(
@@ -68,15 +68,13 @@ def test_nested_secret_files_merge_with_other_sources(
 ) -> None:
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
-    (secret_dir / "APP__SECRET_KEY").write_text("example-value", encoding="utf-8")
-    monkeypatch.setenv("APP__ENVIRONMENT", "production")
+    (secret_dir / "LOGGING__FILE_LEVEL").write_text("DEBUG", encoding="utf-8")
+    monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "json")
 
     settings = load_settings(secrets_dir=secret_dir)
 
-    assert settings.app.secret_key is not None
-    assert settings.app.secret_key.get_secret_value() == "example-value"
-    assert "example-value" not in repr(settings)
-    assert settings.app.environment == "production"
+    assert settings.logging.file_level == "DEBUG"
+    assert settings.logging.console_format == "json"
 
 
 def test_no_files_are_discovered_automatically(
@@ -84,28 +82,32 @@ def test_no_files_are_discovered_automatically(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     for name in (".env", ".env.local"):
-        (tmp_path / name).write_text("APP__ENVIRONMENT=invalid\n", encoding="utf-8")
+        (tmp_path / name).write_text(
+            "LOGGING__CONSOLE_FORMAT=invalid\n", encoding="utf-8"
+        )
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
-    (secret_dir / "APP__SECRET_KEY").write_text("unrequested", encoding="utf-8")
+    (secret_dir / "LOGGING__FILE_LEVEL").write_text("unrequested", encoding="utf-8")
 
     settings = load_settings()
 
-    assert settings.app.environment == "development"
-    assert settings.app.secret_key is None
+    assert settings.logging.console_format == "text"
+    assert settings.logging.file_level == "INFO"
 
 
 def test_explicit_paths_work_outside_the_checkout(
     tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
     env_file = tmp_path / "selected.env"
-    env_file.write_text("APP__APP_NAME=from-disk\n", encoding="utf-8")
+    env_file.write_text("LOGGING__LOG_FILE=from-disk\n", encoding="utf-8")
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
     monkeypatch.chdir(elsewhere)
 
-    assert load_settings(env_file=env_file).app.app_name == "from-disk"
-    assert load_settings(env_file=Path("../selected.env")).app.app_name == "from-disk"
+    assert load_settings(env_file=env_file).logging.log_file == Path("from-disk")
+    assert load_settings(env_file=Path("../selected.env")).logging.log_file == Path(
+        "from-disk"
+    )
 
 
 def test_explicit_missing_env_file_fails(tmp_path: Path) -> None:

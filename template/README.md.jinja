@@ -28,9 +28,9 @@ from {{ package_name }}.logging import get_logger, setup_logging
 from {{ package_name }}.settings import load_settings
 
 settings = load_settings()
-setup_logging(settings.logging, as_json=settings.app.environment == "production")
+setup_logging(settings.logging)
 log = get_logger(__name__)
-log.info("started", environment=settings.app.environment)
+log.info("started")
 ```
 
 ## Configuration
@@ -63,20 +63,47 @@ settings = load_settings(env_file=Path(".env"))
 Settings are resolved with the following precedence, highest first:
 
 1. Explicit field overrides passed to the `Settings` constructor
-1. Real environment variables (`APP__APP_NAME=...`)
+1. Real environment variables (`LOGGING__CONSOLE_FORMAT=json`)
 1. The explicitly selected dotenv file
 1. Files in the explicitly selected secrets directory
 1. Defaults declared in `src/{{ package_name }}/settings.py`
 
-Deployment can supply environment variables or mounted secret files. To read `/run/secrets/APP__SECRET_KEY`, call `load_settings(secrets_dir=Path("/run/secrets"))`{% if project_type == "cli" %} or run `uv run {{ project_slug }} --secrets-dir /run/secrets info`{% endif %}. Secret filenames use the same nested names as environment variables. Both explicit sources can be selected together.
+Deployment can supply environment variables or mounted files. To load settings from `/run/secrets`, call `load_settings(secrets_dir=Path("/run/secrets"))`{% if project_type == "cli" %} or run `uv run {{ project_slug }} --secrets-dir /run/secrets info`{% endif %}. Secret filenames use the same nested names as environment variables. Both explicit sources can be selected together.
 
 Relative paths, including dotenv paths, secrets directories, and log paths, are relative to the process working directory. Use absolute paths when launching from another directory. Explicit missing configuration paths fail at startup. `.env.local` has no special meaning; it is read only if selected instead of `.env`.
 
-Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled `APP__`/`LOGGING__` key fails at startup.
+Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled `LOGGING__` key fails at startup.
+
+### Add application-specific settings
+
+Add fields only when the application uses them. The project name is available as
+`PROJECT_NAME` from the top-level package; it is not a runtime setting. If you need
+a deployment label for telemetry, keep it descriptive and configure behavior
+independently.
+
+For example, when integrating a service that needs credentials, add a group in
+`settings.py`:
+
+```python
+from pydantic import BaseModel, ConfigDict, SecretStr
+
+
+class ServiceSettings(BaseModel):
+    model_config = ConfigDict(extra="forbid", frozen=True)
+
+    api_key: SecretStr
+
+```
+
+Declare a required group as `service: ServiceSettings` in `Settings` when credentials
+are mandatory. Supply `SERVICE__API_KEY` through the environment or a file with that
+name in the selected secrets directory. `SecretStr` masks representations; access
+its value with `.get_secret_value()` only when passing it to the service client.
+Update `.env.example` when adding fields; its test checks for missing or obsolete keys.
 
 ## Logging
 
-`setup_logging(settings.logging, as_json=...)` sends JSON to the configured log file and uses the requested console format. The CLI selects JSON for production and human-readable output otherwise. Library logs are rendered through the same pipeline, so everything in the file has the same shape.
+`setup_logging(settings.logging)` sends JSON to the configured log file. Set `LOGGING__CONSOLE_FORMAT=json` for JSON console output; the default is `text`. Library logs are rendered through the same pipeline, so everything in the file has the same shape.
 
 ```python
 from {{ package_name }}.logging import get_logger

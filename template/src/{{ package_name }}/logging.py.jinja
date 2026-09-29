@@ -3,7 +3,7 @@
 Every record is routed through stdlib handlers via `ProcessorFormatter`, so that
 application logs and third-party library logs (httpx, uvicorn, sqlalchemy) come out
 in the same shape. The file always receives JSON; the console receives
-human-readable output in development and JSON in production.
+human-readable text or JSON according to `LoggingSettings.console_format`.
 """
 
 import io
@@ -83,12 +83,11 @@ def _build_formatter(*, as_json: bool) -> logging.Formatter:
     )
 
 
-def setup_logging(settings: LoggingSettings, *, as_json: bool = False) -> None:
+def setup_logging(settings: LoggingSettings) -> None:
     """Configure logging for the application, idempotently.
 
     Args:
         settings: Logging configuration supplied by the host application.
-        as_json: Render console records as JSON instead of human-readable text.
     """
     if _installed:
         return
@@ -113,7 +112,9 @@ def setup_logging(settings: LoggingSettings, *, as_json: bool = False) -> None:
     _force_utf8_stderr()
     console_handler = logging.StreamHandler(sys.stderr)
     console_handler.setLevel(c_level)
-    console_handler.setFormatter(_build_formatter(as_json=as_json))
+    console_handler.setFormatter(
+        _build_formatter(as_json=settings.console_format == "json")
+    )
 
     # Added, not replaced: pytest's capture handler and any host handlers keep working.
     root = logging.getLogger()

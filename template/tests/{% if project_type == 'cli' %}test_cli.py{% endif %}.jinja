@@ -1,5 +1,6 @@
 """End-to-end tests for the CLI."""
 
+import json
 import subprocess
 import sys
 from pathlib import Path
@@ -9,6 +10,7 @@ from typer.testing import CliRunner
 
 from {{ package_name }} import __version__
 from {{ package_name }}.cli import app
+from {{ package_name }}.logging import reset_logging
 
 runner = CliRunner()
 
@@ -56,16 +58,25 @@ def test_cli_loads_an_explicit_file_for_each_invocation(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     env_file = tmp_path / "selected.env"
-    env_file.write_text("APP__APP_NAME=selected\n", encoding="utf-8")
-    (tmp_path / ".env").write_text("APP__ENVIRONMENT=invalid\n", encoding="utf-8")
+    env_file.write_text(
+        "LOGGING__CONSOLE_FORMAT=json\nLOGGING__CONSOLE_LEVEL=DEBUG\n", encoding="utf-8"
+    )
+    (tmp_path / ".env").write_text(
+        "LOGGING__CONSOLE_FORMAT=invalid\n", encoding="utf-8"
+    )
 
+    assert runner.invoke(app, ["info"]).exit_code == 0
+    reset_logging()
     selected = runner.invoke(app, ["--env-file", str(env_file), "info"])
+    reset_logging()
     default = runner.invoke(app, ["info"])
 
     assert selected.exit_code == 0, selected.output
-    assert "selected" in selected.output
+    assert json.loads(selected.stderr)["event"] == "reporting project info"
+    assert selected.stdout.strip() == f"{{ project_slug }} v{__version__}"
     assert default.exit_code == 0, default.output
     assert "{{ project_slug }}" in default.output
+    assert default.stderr == ""
 
 
 def test_cli_loads_explicit_secrets(
@@ -74,12 +85,13 @@ def test_cli_loads_explicit_secrets(
     monkeypatch.chdir(tmp_path)
     secret_dir = tmp_path / "secrets"
     secret_dir.mkdir()
-    (secret_dir / "APP__APP_NAME").write_text("from-secrets", encoding="utf-8")
+    (secret_dir / "LOGGING__CONSOLE_LEVEL").write_text("DEBUG", encoding="utf-8")
+    (secret_dir / "LOGGING__CONSOLE_FORMAT").write_text("json", encoding="utf-8")
 
     result = runner.invoke(app, ["--secrets-dir", str(secret_dir), "info"])
 
     assert result.exit_code == 0, result.output
-    assert "from-secrets" in result.output
+    assert json.loads(result.stderr)["event"] == "reporting project info"
 
 
 @pytest.mark.parametrize("option", ["--env-file", "--secrets-dir"])
@@ -92,7 +104,7 @@ def test_cli_rejects_missing_config_paths(tmp_path: Path, option: str) -> None:
 def test_version_does_not_load_invalid_settings(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    monkeypatch.setenv("APP__ENVIRONMENT", "invalid")
+    monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "invalid")
 
     result = runner.invoke(app, ["--version"])
 

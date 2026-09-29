@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field, SecretStr
+from pydantic import BaseModel, ConfigDict, Field
 from pydantic_settings import (
     BaseSettings,
     NestedSecretsSettingsSource,
@@ -12,32 +12,16 @@ from pydantic_settings import (
 )
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
-Environment = Literal["development", "staging", "production"]
-
-# Keep the startup configuration stable for every module receiving it.
-_GROUP_CONFIG = ConfigDict(extra="forbid", frozen=True)
-
-
-class AppSettings(BaseModel):
-    """Application settings group."""
-
-    model_config = _GROUP_CONFIG  # extra="forbid" catches typos like APP__ENVIRONMEN
-
-    app_name: str = Field(default="{{ project_slug }}", description="Application name")
-    environment: Environment = Field(
-        default="development", description="Environment name"
-    )
-    # SecretStr keeps this out of logs and reprs; read it via .get_secret_value().
-    secret_key: SecretStr | None = Field(
-        default=None, description="Example secret value"
-    )
 
 
 class LoggingSettings(BaseModel):
     """Logging settings group."""
 
-    model_config = _GROUP_CONFIG
+    model_config = ConfigDict(extra="forbid", frozen=True)
 
+    console_format: Literal["text", "json"] = Field(
+        default="text", description="Console log format"
+    )
     file_level: LogLevel = Field(default="INFO", description="File log level")
     console_level: LogLevel = Field(default="INFO", description="Console log level")
     log_file: Path = Field(default=Path("logs/app.log"), description="Log file path")
@@ -50,7 +34,6 @@ class Settings(BaseSettings):
     dotenv file, an explicitly selected secrets directory, then model defaults.
     """
 
-    app: AppSettings = Field(default_factory=AppSettings)
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
@@ -59,7 +42,7 @@ class Settings(BaseSettings):
         secrets_dir=None,
         case_sensitive=False,
         frozen=True,
-        # Unknown keys belong to other tools; typos inside APP__/LOGGING__ still fail.
+        # Unknown keys belong to other tools; typos inside LOGGING__ still fail.
         extra="ignore",
         env_nested_delimiter="__",
     )
@@ -91,7 +74,7 @@ def load_settings(
 
     Args:
         env_file: Optional dotenv file; an explicit missing file is an error.
-        secrets_dir: Optional directory containing files such as `APP__SECRET_KEY`.
+        secrets_dir: Optional directory containing files named after settings fields.
 
     Relative paths are resolved against the current working directory. No files are
     discovered automatically. Pass the returned settings to modules that need them.

@@ -115,7 +115,9 @@ Answers are saved in `.copier-answers.yml` and reused on `copier update`:
 
 Generated projects load settings once at application startup with `load_settings()` and pass them to logging and other modules. Environment variables and model defaults work without files. Select local overrides explicitly with `--env-file .env` (CLI) or `load_settings(env_file=Path(".env"))`; mounted secrets also require an explicit `secrets_dir` or `--secrets-dir`. Relative paths use the working directory.
 
-When updating an existing project, replace `get_settings()` calls with startup loading and pass the returned settings to callers. Replace `setup_logging()` with `setup_logging(settings.logging, as_json=settings.app.environment == "production")`, and explicitly select any dotenv file or secrets directory you previously relied on being discovered.
+When updating an existing project, replace `get_settings()` calls with startup loading and pass the returned settings to callers. Replace `setup_logging()` with `setup_logging(settings.logging)`, and explicitly select any dotenv file or secrets directory you previously relied on being discovered.
+
+The default settings now cover logging only. Replace `APP__ENVIRONMENT=production` with `LOGGING__CONSOLE_FORMAT=json`, remove the `as_json` argument from logging setup, and use the package constant `PROJECT_NAME` instead of `settings.app.app_name`. The unused `APP__SECRET_KEY` field is removed; retain application-specific secret fields only where your code uses them.
 
 ### Assistant instructions
 

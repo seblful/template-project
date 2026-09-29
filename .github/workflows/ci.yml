@@ -110,16 +110,16 @@ jobs:
           from demo_proj import settings
 
           assert "site-packages" in Path(settings.__file__).parts
-          Path(".env").write_text("APP__ENVIRONMENT=invalid\n", encoding="utf-8")
-          assert settings.load_settings().app.environment == "development"
-          Path("selected.env").write_text("APP__APP_NAME=wheel\n", encoding="utf-8")
+          Path(".env").write_text("LOGGING__CONSOLE_FORMAT=invalid\n", encoding="utf-8")
+          assert settings.load_settings().logging.console_format == "text"
+          Path("selected.env").write_text("LOGGING__CONSOLE_FORMAT=json\n", encoding="utf-8")
           Path("secrets").mkdir()
-          Path("secrets/APP__SECRET_KEY").write_text("example", encoding="utf-8")
+          Path("secrets/LOGGING__FILE_LEVEL").write_text("DEBUG", encoding="utf-8")
           loaded = settings.load_settings(
               env_file=Path("selected.env"), secrets_dir=Path("secrets")
           )
-          assert loaded.app.app_name == "wheel"
-          assert loaded.app.secret_key.get_secret_value() == "example"
+          assert loaded.logging.console_format == "json"
+          assert loaded.logging.file_level == "DEBUG"
           PY
 
       - name: Docs

@@ -129,9 +129,25 @@ def test_logging_uses_supplied_settings_without_loading_the_environment(
 ) -> None:
     monkeypatch.chdir(tmp_path)
     monkeypatch.setenv("LOGGING__CONSOLE_LEVEL", "invalid")
-    setup_logging(LoggingSettings(log_file=Path("relative/app.log")), as_json=True)
+    setup_logging(
+        LoggingSettings(log_file=Path("relative/app.log"), console_format="json")
+    )
 
     get_logger("test").info("configured explicitly")
 
     assert json.loads(capsys.readouterr().err)["event"] == "configured explicitly"
     assert (tmp_path / "relative" / "app.log").is_file()
+
+
+def test_console_defaults_to_text(
+    tmp_path: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    setup_logging(LoggingSettings(log_file=tmp_path / "app.log"))
+
+    get_logger("test").info("readable event", answer=42)
+
+    output = capsys.readouterr().err
+    assert "readable event" in output
+    assert "answer=42" in output
+    with pytest.raises(json.JSONDecodeError):
+        json.loads(output)
