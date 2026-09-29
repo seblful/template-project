@@ -50,12 +50,12 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # The 3.10 row is a cli with a config file on purpose: only there does tomli
-        # stand in for the stdlib tomllib.
+        # The 3.11 row is a cli with a config file on purpose: the oldest Python meets
+        # the stdlib tomllib there.
         include:
           - {os: ubuntu-latest, python_version: "3.14", license: None, project_type: cli, config_file: "true", ci: github, claude_settings: "true"}
           - {os: ubuntu-latest, python_version: "3.14", license: MIT, project_type: library, config_file: "false", ci: gitlab, claude_settings: "false"}
-          - {os: ubuntu-latest, python_version: "3.10", license: Apache, project_type: cli, config_file: "true", ci: none, claude_settings: "false"}
+          - {os: ubuntu-latest, python_version: "3.11", license: Apache, project_type: cli, config_file: "true", ci: none, claude_settings: "false"}
           - {os: ubuntu-latest, python_version: "3.12", license: MIT, project_type: library, config_file: "false", ci: github, claude_settings: "true"}
           - {os: windows-latest, python_version: "3.14", license: Apache, project_type: cli, config_file: "false", ci: gitlab, claude_settings: "true"}
     steps:

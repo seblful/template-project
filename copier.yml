@@ -82,10 +82,11 @@ python_version:
   type: str
   help: What Python version should the project target? (major.minor)
   default: "3.14"
-  # Floor is 3.10: generated sources use PEP 604 unions in runtime type annotations.
+  # Floor is 3.11: 3.10 is end-of-life, and generated sources use the stdlib tomllib
+  # and logging.getLevelNamesMapping, both new in 3.11.
   validator: >-
-    {% if not (python_version | regex_search('^3\.1[0-9]$')) %}
-    python_version must be 3.10 or newer, major.minor only, e.g. 3.14 (a patch version
+    {% if not (python_version | regex_search('^3\.(1[1-9]|[2-9][0-9])$')) %}
+    python_version must be 3.11 or newer, major.minor only, e.g. 3.14 (a patch version
     produces an invalid "Programming Language :: Python :: X" classifier)
     {% endif %}
 

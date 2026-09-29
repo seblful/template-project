@@ -37,7 +37,7 @@ Your answers are kept in `.copier-answers.yml`. Notes for a breaking release pri
 | `config_file` | `cli` only: add `--config config.toml` support (default no) |
 | `author_name`, `author_email` | Required, no default |
 | `license` | None, MIT or Apache |
-| `python_version` | 3.10 or newer (default 3.14) |
+| `python_version` | 3.11 or newer (default 3.14) |
 | `ci` | `github` (Ubuntu and Windows), `gitlab` or `none` |
 | `claude_settings` | Add `.claude/settings.json` with Claude Code permissions |
 
