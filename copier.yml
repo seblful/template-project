@@ -183,11 +183,12 @@ _message_after_copy: |
 
   Docs tooling installs separately with `uv sync --group docs`.
 
-  Git hooks are installed: lint, formatting and types run on commit, the test suite
-  runs on push.
+  Git hooks are installed: lint, formatting and types run on commit, the tests and
+  the docs build run on push. Every check at once:
+
+      uv run pre-commit run --all-files --hook-stage manual
 
 _message_after_update: |
-  Template updated. Re-run the gates before committing:
+  Template updated. Re-run every check before committing:
 
-      uv run pre-commit run --all-files
-      uv run pytest --cov
+      uv run pre-commit run --all-files --hook-stage manual

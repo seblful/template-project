@@ -24,13 +24,13 @@ ______________________________________________________________________
 
 ### Checks
 
-These are the checks a task is verified against. Fix what they report; never skip the hooks with `--no-verify`.
+A task is verified against every check the project has: lint, format, types, secret scan, tests with the coverage gate and the docs build. Fix what they report; never skip the hooks with `--no-verify`.
 
 ```bash
-uv run pytest --cov                        # tests and the coverage gate
-uv run pre-commit run --all-files          # lint, format, types, secret scan
-uv run --group docs mkdocs build --strict  # docs, when docs/ or docstrings change
+uv run pre-commit run --all-files --hook-stage manual
 ```
+
+`.pre-commit-config.yaml` is where the checks are defined. Add a new one there, not to CI.
 
 ### Stack
 

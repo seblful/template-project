@@ -73,12 +73,11 @@ Use `logging.getLogger(__name__)` and leave handlers and levels to the applicati
 ## Development
 
 ```bash
-uv run pytest --cov                 # tests with the coverage gate
-uv run pre-commit run --all-files   # lint, format, types{% if ci != "none" %} — what CI runs{% endif %}
-uv run --group docs mkdocs serve    # docs at http://127.0.0.1:8000
+uv run pre-commit run --all-files --hook-stage manual   # every check{% if ci != "none" %}, as CI runs it{% endif %}
+uv run --group docs mkdocs serve                        # docs at http://127.0.0.1:8000
 ```
 
-Test order is random; replay a failure with `uv run pytest -p randomly --randomly-seed=<seed>`.
+Commits run lint, formatting and types; pushes run the tests and the docs build. Test order is random; replay a failure with `uv run pytest -p randomly --randomly-seed=<seed>`.
 {%- if ci == "gitlab" %}
 
 For the weekly dependency audit, add a pipeline schedule in GitLab with `SCHEDULED_AUDIT` set to `1`. The `pages` job publishes the docs when run manually.

@@ -42,38 +42,10 @@ jobs:
           path: ~/.cache/pre-commit
           key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      # --all-files runs the commit-stage hooks only; pre-push hooks are covered below.
-      # gitleaks scans staged changes, so this is not a full-history secret scan.
-      - name: Lint, format, types
-        run: uv run pre-commit run --all-files --show-diff-on-failure
-
-      - name: Tests
-        run: uv run pytest --cov --cov-report=xml --cov-report=term-missing
-
-      - name: Upload coverage
-        if: always()
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-${{ matrix.os }}
-          path: coverage.xml
-          if-no-files-found: ignore
-
-  docs:
-    name: docs
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@v7
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@v10.0.1
-        with:
-          enable-cache: true
-
-      - name: Build docs  # --strict fails on broken refs instead of building with holes
-        run: |
-          uv sync --locked --group docs
-          uv run mkdocs build --strict
+      # Every check lives in .pre-commit-config.yaml; the manual stage runs all of
+      # them. gitleaks scans staged changes, so this is not a full-history secret scan.
+      - name: Checks
+        run: uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
 
   audit:
     name: dependency audit

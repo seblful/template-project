@@ -1,7 +1,11 @@
 # Local hooks run via `uv run`, so uv.lock pins their versions instead of pre-commit's
 # own envs; `pre-commit autoupdate` can't silently change how this project is formatted.
+#
+# This file is the one definition of the project's checks. Commits run the fast ones,
+# pushes add the tests and the docs build, and the manual stage runs all of them:
+# `uv run pre-commit run --all-files --hook-stage manual` is what CI runs too.
 default_install_hook_types: [pre-commit, pre-push]
-default_stages: [pre-commit]
+default_stages: [pre-commit, manual]
 
 repos:
   - repo: local
@@ -23,28 +27,29 @@ repos:
         entry: uv run mdformat
         language: system
         types: [markdown]
+        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
+        exclude: ^docs/index\.md$
       - id: ty
         name: ty type check
         entry: uv run ty check
         language: system
-        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
-        exclude: ^docs/index\.md$
         types: [python]
         pass_filenames: false  # ty needs the whole project, not just staged files
       - id: pytest
         name: pytest
-        entry: uv run pytest
+        entry: uv run pytest --cov
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-push]
+        stages: [pre-push, manual]
       - id: mkdocs
         name: mkdocs build
         entry: uv run --group docs mkdocs build --strict
         language: system
-        files: ^(docs/|mkdocs\.yml$)
+        # src/ for docstrings, README.md because docs/index.md includes it.
+        files: ^(docs/|src/|README\.md$|mkdocs\.yml$)
         pass_filenames: false
-        stages: [pre-push]
+        stages: [pre-push, manual]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

@@ -41,7 +41,7 @@ Your answers are kept in `.copier-answers.yml`. Notes for a breaking release pri
 | `ci` | `github` (Ubuntu and Windows), `gitlab` or `none` |
 | `claude_settings` | Add `.claude/settings.json` with Claude Code permissions |
 
-Every project gets an `AGENTS.md` for coding assistants and runs the same checks locally and in CI: the pre-commit hooks, `pytest --cov`, `mkdocs build --strict` and a dependency audit.
+Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan, `pytest --cov` and `mkdocs build --strict`. Git hooks run them on commit and push, and `uv run pre-commit run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit.
 
 ## Developing the template
 

@@ -3,7 +3,7 @@
 
 stages:
   - check
-  - docs
+  - deploy
   - audit
 
 default:
@@ -32,34 +32,32 @@ workflow:
 
 check:
   stage: check
+  variables:
+    # Reports for GitLab's merge request widgets, added to the pytest hook's own run.
+    PYTEST_ADDOPTS: --cov-report=xml --cov-report=term --junitxml=report.xml
   script:
     - uv sync --locked  # fails on a stale lockfile instead of masking it
-    # gitleaks scans staged changes, so this is not a full-history secret scan.
-    - uv run pre-commit run --all-files --show-diff-on-failure
-    - uv run pytest --cov --cov-report=xml --cov-report=term --junitxml=report.xml
+    # Every check lives in .pre-commit-config.yaml; the manual stage runs all of them.
+    # --verbose prints the coverage total the `coverage` regex reads. gitleaks scans
+    # staged changes, so this is not a full-history secret scan.
+    - uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
+      --verbose
   coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'
   artifacts:
     when: always
+    paths:
+      - site  # built by the mkdocs hook, published by `pages`
+    expire_in: 1 week
     reports:
       junit: report.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
 
-docs:
-  stage: docs
-  script:
-    - uv sync --locked --group docs
-    - uv run mkdocs build --strict  # fails on broken refs, not holes in the built site
-  artifacts:
-    paths:
-      - site
-    expire_in: 1 week
-
 pages:
-  stage: docs
+  stage: deploy
   needs:
-    - docs
+    - check
   script:
     - mv site public
   artifacts:
