@@ -1,4 +1,4 @@
-This update crossed v0.9.4, which shrinks the CLI starter and moves every check into
+This update crossed v1.0.0, which shrinks the CLI starter and moves every check into
 .pre-commit-config.yaml:
 
 - Logging writes to stderr only. LOGGING__CONSOLE_FORMAT is now LOGGING__FORMAT,
