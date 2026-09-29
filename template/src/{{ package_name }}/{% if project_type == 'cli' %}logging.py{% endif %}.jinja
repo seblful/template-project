@@ -1,9 +1,10 @@
 """Structlog logging configured on top of the standard library's logging module.
 
-Every record is routed through stdlib handlers via `ProcessorFormatter`, so that
+Every record is routed through a stdlib handler via `ProcessorFormatter`, so that
 application logs and third-party library logs (httpx, uvicorn, sqlalchemy) come out
-in the same shape. The console receives human-readable text or JSON according to
-`LoggingSettings.console_format`; the optional log file always receives JSON.
+in the same shape: human-readable text or JSON on stderr, according to
+`LoggingSettings.format`. There is no log file on purpose: stderr is what containers
+and process managers collect.
 """
 
 # Lets the settings import below be type-only on every supported Python, not just on
@@ -13,24 +14,12 @@ from __future__ import annotations
 import io
 import logging
 import sys
-from logging.handlers import RotatingFileHandler
 from typing import TYPE_CHECKING, Final
 
 import structlog
 
 if TYPE_CHECKING:
     from {{ package_name }}.settings import LoggingSettings
-
-_LEVELS: Final = {
-    "DEBUG": logging.DEBUG,
-    "INFO": logging.INFO,
-    "WARNING": logging.WARNING,
-    "ERROR": logging.ERROR,
-    "CRITICAL": logging.CRITICAL,
-}
-
-_MAX_LOG_BYTES: Final = 10 * 1024 * 1024
-_LOG_BACKUP_COUNT: Final = 3
 
 # Doubles as the "already configured" flag; logging.root.handlers isn't safe since
 # pytest installs a capture handler around every test.
@@ -98,43 +87,22 @@ def setup_logging(settings: LoggingSettings) -> None:
         return
 
     _force_utf8_stderr()
-    console_handler = logging.StreamHandler(sys.stderr)
-    console_handler.setLevel(_LEVELS[settings.console_level])
-    console_handler.setFormatter(
-        _build_formatter(as_json=settings.console_format == "json")
-    )
-    handlers: list[logging.Handler] = [console_handler]
-
-    if settings.log_file is not None:
-        file_path = settings.log_file.resolve()
-        file_path.parent.mkdir(parents=True, exist_ok=True)
-        # delay=True, so a command that never logs leaves no empty file behind.
-        file_handler = RotatingFileHandler(
-            file_path,
-            maxBytes=_MAX_LOG_BYTES,
-            backupCount=_LOG_BACKUP_COUNT,
-            encoding="utf-8",
-            delay=True,
-        )
-        file_handler.setLevel(_LEVELS[settings.file_level])
-        file_handler.setFormatter(_build_formatter(as_json=True))
-        handlers.append(file_handler)
-
-    level = min(handler.level for handler in handlers)
+    level = logging.getLevelNamesMapping()[settings.level]
+    handler = logging.StreamHandler(sys.stderr)
+    handler.setFormatter(_build_formatter(as_json=settings.format == "json"))
 
     # Added, not replaced: pytest's capture handler and any host handlers keep working.
     root = logging.getLogger()
     root.setLevel(level)
-    for handler in handlers:
-        root.addHandler(handler)
-    _installed.extend(handlers)
+    root.addHandler(handler)
+    _installed.append(handler)
 
     structlog.configure(
         processors=[
             *_SHARED_PROCESSORS,
             structlog.stdlib.ProcessorFormatter.wrap_for_formatter,
         ],
-        # Drop events below every handler threshold before they are ever formatted.
+        # Drop events below the threshold before they are ever formatted.
         wrapper_class=structlog.make_filtering_bound_logger(level),
         logger_factory=structlog.stdlib.LoggerFactory(),
         cache_logger_on_first_use=True,
@@ -142,11 +110,7 @@ def setup_logging(settings: LoggingSettings) -> None:
 
 
 def reset_logging() -> None:
-    """Detach everything `setup_logging` installed and reset structlog.
-
-    Closing the file handler matters on Windows, where an open handle blocks the
-    directory from being removed, which is exactly what `tmp_path` teardown does.
-    """
+    """Detach everything `setup_logging` installed and reset structlog."""
     root = logging.getLogger()
     for handler in _installed:
         root.removeHandler(handler)

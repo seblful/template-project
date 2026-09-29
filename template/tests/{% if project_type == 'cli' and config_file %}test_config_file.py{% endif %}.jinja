@@ -1,0 +1,147 @@
+"""Tests for the optional TOML config file."""
+
+import json
+import re
+from pathlib import Path
+
+import pytest
+from pydantic import ValidationError
+from pydantic_settings import SettingsError
+from typer.testing import CliRunner
+
+from {{ package_name }}.cli import app
+from {{ package_name }}.config_file import load_settings_with_config
+from {{ package_name }}.settings import LogLevel
+
+pytestmark = pytest.mark.integration
+
+# Each source sets a distinct level, so the winner is visible in the result.
+SOURCES: dict[str, LogLevel] = {
+    "environment": "ERROR",
+    "dotenv": "WARNING",
+    "config": "DEBUG",
+    "defaults": "INFO",
+}
+
+
+def test_committed_config_example_matches_the_settings_model(
+    supported_keys: set[str],
+) -> None:
+    """The example covers the same keys as `.env.example`, one table per group."""
+    example = Path(__file__).resolve().parents[1] / "config.example.toml"
+    actual = set()
+    table = ""
+    for raw in example.read_text(encoding="utf-8").splitlines():
+        # Commented-out keys count: they document optional fields.
+        line = raw.strip().lstrip("#").strip()
+        if header := re.fullmatch(r"\[(\w+)\]", line):
+            table = header[1]
+        elif key := re.match(r"(\w+)\s*=", line):
+            actual.add(f"{table}__{key[1]}".upper() if table else key[1].upper())
+
+    assert actual == supported_keys
+    load_settings_with_config(config_file=example)
+
+
+@pytest.mark.parametrize("source", SOURCES)
+def test_config_file_ranks_below_the_environment_and_dotenv(
+    source: str, tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """Each source wins over all sources below it in the documented order."""
+    # Set the value in this source and in every source ranked below it.
+    names = list(SOURCES)
+    active = names[names.index(source) :]
+    env_file = tmp_path / "selected.env"
+    env_file.write_text("", encoding="utf-8")
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    if "environment" in active:
+        monkeypatch.setenv("LOGGING__LEVEL", SOURCES["environment"])
+    if "dotenv" in active:
+        env_file.write_text(f"LOGGING__LEVEL={SOURCES['dotenv']}\n", encoding="utf-8")
+    if "config" in active:
+        config_file.write_text(
+            f'[logging]\nlevel = "{SOURCES["config"]}"\n', encoding="utf-8"
+        )
+
+    settings = load_settings_with_config(config_file=config_file, env_file=env_file)
+
+    assert settings.logging.level == SOURCES[source]
+
+
+def test_config_file_merges_with_the_environment(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A variable overrides one field of a group and leaves the file's others."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        '[logging]\nformat = "json"\nlevel = "DEBUG"\n', encoding="utf-8"
+    )
+    monkeypatch.setenv("LOGGING__LEVEL", "WARNING")
+
+    settings = load_settings_with_config(config_file=config_file)
+
+    assert settings.logging.format == "json"
+    assert settings.logging.level == "WARNING"
+
+
+@pytest.mark.parametrize(
+    ("content", "error", "typo"),
+    [
+        ('[loging]\nformat = "json"\n', SettingsError, "loging"),
+        ('[logging]\nforma = "json"\n', ValidationError, "forma"),
+    ],
+    ids=["unknown-table", "unknown-field"],
+)
+def test_config_file_typos_are_rejected(
+    tmp_path: Path, content: str, error: type[Exception], typo: str
+) -> None:
+    """The file belongs to this app alone, so an unknown key at any level fails."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(content, encoding="utf-8")
+
+    with pytest.raises(error, match=typo):
+        load_settings_with_config(config_file=config_file)
+
+
+def test_no_config_file_is_discovered_automatically(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+) -> None:
+    """A `config.toml` in the working directory is never read."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / "config.toml").write_text(
+        '[logging]\nlevel = "invalid"\n', encoding="utf-8"
+    )
+
+    assert load_settings_with_config().logging.level == "INFO"
+
+
+@pytest.mark.parametrize("option", ["config_file", "env_file"])
+def test_explicit_missing_paths_fail(tmp_path: Path, option: str) -> None:
+    """A selected file that does not exist is an error, next to a real config."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text("", encoding="utf-8")
+    paths = {"config_file": config_file, option: tmp_path / "absent"}
+
+    with pytest.raises(FileNotFoundError, match="absent"):
+        load_settings_with_config(**paths)
+
+
+def test_cli_loads_an_explicit_config_file(tmp_path: Path) -> None:
+    """`--config` reads a TOML file with one table per settings group."""
+    config_file = tmp_path / "config.toml"
+    config_file.write_text(
+        '[logging]\nformat = "json"\nlevel = "DEBUG"\n', encoding="utf-8"
+    )
+
+    result = CliRunner().invoke(app, ["--config", str(config_file), "info"])
+
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stderr)["event"] == "reporting project info"
+
+
+def test_cli_rejects_a_missing_config_file(tmp_path: Path) -> None:
+    """A missing path is a usage error, reported before any command runs."""
+    result = CliRunner().invoke(app, ["--config", str(tmp_path / "absent"), "info"])
+
+    assert result.exit_code == 2

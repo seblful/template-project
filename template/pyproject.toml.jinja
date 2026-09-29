@@ -153,8 +153,9 @@ known-first-party = ["{{ package_name }}"]
 # and gain nothing from hiding annotation-only imports behind TYPE_CHECKING.
 "tests/**" = ["D", "S101", "PLR2004", "ARG", "TC"]
 {%- if project_type == "cli" %}
-# Typer reads parameter annotations at runtime to build options, so `Path` stays real.
-"src/{{ package_name }}/cli.py" = ["TC003"]
+# Typer reads parameter annotations at runtime to build options, so `Path` stays real;
+# `Settings` gains nothing either, since the entry point imports every module anyway.
+"src/{{ package_name }}/cli.py" = ["TC001", "TC003"]
 {%- endif %}
 
 [tool.ruff.format]

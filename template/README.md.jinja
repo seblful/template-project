@@ -30,28 +30,34 @@ get_logger(__name__).info("started", user_id=42)
 
 ## Configuration
 
-Settings come from environment variables such as `LOGGING__CONSOLE_FORMAT=json`, where `__` separates a group from its field. Files are read only when you select them:
+Settings come from environment variables such as `LOGGING__FORMAT=json`, where `__` separates a group from its field. Files are read only when you select them:
 {% if config_file %}
 ```bash
 cp config.example.toml config.toml   # shared baseline, one table per group
 cp .env.example .env                 # local overrides, gitignored
 uv run {{ project_slug }} --config config.toml --env-file .env info
 ```
+
+In Python, pass the same paths to `load_settings_with_config()` from `{{ package_name }}.config_file`.
+
+Highest priority first: constructor arguments, environment variables, the `.env` file, the config file, defaults. A missing selected path, or a misspelled key, fails at startup.
+
+To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example` and `config.example.toml`. A test checks that they match.
 {% else %}
 ```bash
 cp .env.example .env                 # local overrides, gitignored
 uv run {{ project_slug }} --env-file .env info
 ```
+
+In Python, pass the same path to `load_settings(env_file=...)`.
+
+Highest priority first: constructor arguments, environment variables, the `.env` file, defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
+
+To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`. A test checks that they match.
 {% endif %}
-`--secrets-dir /run/secrets` reads one file per setting, named like the variable. In Python, pass the same paths to `load_settings()`.
-
-Highest priority first: constructor arguments, environment variables, the `.env` file, secret files, {% if config_file %}the config file, {% endif %}defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
-
-To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`{% if config_file %} and `config.example.toml`{% endif %}. A test checks that they match.
-
 ## Logging
 
-Logs go to stderr as text, or as JSON with `LOGGING__CONSOLE_FORMAT=json`. Set `LOGGING__LOG_FILE` to also write JSON lines to a rotating file.
+Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`. `LOGGING__LEVEL` sets the lowest level that is logged.
 {%- else %}
 ```python
 import {{ package_name }}

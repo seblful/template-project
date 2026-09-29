@@ -7,8 +7,11 @@ from typing import Annotated
 import typer
 
 from {{ package_name }} import PROJECT_NAME, __version__
+{%- if config_file %}
+from {{ package_name }}.config_file import load_settings_with_config
+{%- endif %}
 from {{ package_name }}.logging import get_logger, setup_logging
-from {{ package_name }}.settings import Settings, load_settings
+from {{ package_name }}.settings import Settings{% if not config_file %}, load_settings{% endif %}
 
 app = typer.Typer(help=f"{PROJECT_NAME} CLI", no_args_is_help=True)
 
@@ -21,22 +24,21 @@ class GlobalOptions:
     before it parses the subcommand, so `info --help` would otherwise read and
     validate configuration just to print help.
     """
-{% if config_file %}
-    config_file: Path | None
-{%- endif %}
+
     env_file: Path | None
-    secrets_dir: Path | None
+{%- if config_file %}
+    config_file: Path | None
 
     def configure(self) -> Settings:
         """Load settings, set up logging and return the settings."""
-{%- if config_file %}
-        settings = load_settings(
-            config_file=self.config_file,
-            env_file=self.env_file,
-            secrets_dir=self.secrets_dir,
+        settings = load_settings_with_config(
+            config_file=self.config_file, env_file=self.env_file
         )
 {%- else %}
-        settings = load_settings(env_file=self.env_file, secrets_dir=self.secrets_dir)
+
+    def configure(self) -> Settings:
+        """Load settings, set up logging and return the settings."""
+        settings = load_settings(env_file=self.env_file)
 {%- endif %}
         setup_logging(settings.logging)
         return settings
@@ -52,6 +54,12 @@ def _version_callback(value: bool) -> None:
 @app.callback()
 def main(
     ctx: typer.Context,
+    env_file: Annotated[
+        Path | None,
+        typer.Option(
+            exists=True, dir_okay=False, readable=True, help="Load a dotenv file."
+        ),
+    ] = None,
 {%- if config_file %}
     config_file: Annotated[
         Path | None,
@@ -64,21 +72,6 @@ def main(
         ),
     ] = None,
 {%- endif %}
-    env_file: Annotated[
-        Path | None,
-        typer.Option(
-            exists=True, dir_okay=False, readable=True, help="Load a dotenv file."
-        ),
-    ] = None,
-    secrets_dir: Annotated[
-        Path | None,
-        typer.Option(
-            exists=True,
-            file_okay=False,
-            readable=True,
-            help="Load nested secret files.",
-        ),
-    ] = None,
     _version: Annotated[
         bool,
         typer.Option(
@@ -90,13 +83,7 @@ def main(
     ] = False,
 ) -> None:
     """Run the {{ project_slug }} CLI."""
-{%- if config_file %}
-    ctx.obj = GlobalOptions(
-        config_file=config_file, env_file=env_file, secrets_dir=secrets_dir
-    )
-{%- else %}
-    ctx.obj = GlobalOptions(env_file=env_file, secrets_dir=secrets_dir)
-{%- endif %}
+    ctx.obj = GlobalOptions(env_file=env_file{% if config_file %}, config_file=config_file{% endif %})
 
 
 @app.command()

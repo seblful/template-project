@@ -10,24 +10,24 @@ from {{ package_name }}.settings import Settings, load_settings
 
 def test_settings_load_from_env_file(test_settings: Settings) -> None:
     """A selected dotenv file overrides its keys and leaves the rest at defaults."""
-    assert test_settings.logging.console_format == "json"
-    assert test_settings.logging.console_level == "INFO"
+    assert test_settings.logging.format == "json"
+    assert test_settings.logging.level == "INFO"
 
 
 def test_unrelated_env_file_keys_are_ignored(tmp_path: Path) -> None:
     """Keys that match no settings field belong to other tools and pass silently."""
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "LOGGING__CONSOLE_FORMAT=json\nDATABASE_URL=postgres://localhost/db\n",
+        "LOGGING__FORMAT=json\nDATABASE_URL=postgres://localhost/db\n",
         encoding="utf-8",
     )
 
-    assert load_settings(env_file=env_file).logging.console_format == "json"
+    assert load_settings(env_file=env_file).logging.format == "json"
 
 
 @pytest.mark.parametrize(
     "entry",
-    ["LOGGING__CONSOLE_FORMA=json", "LOGGING__CONSOLE_FORMAT=invalid"],
+    ["LOGGING__FORMA=json", "LOGGING__FORMAT=invalid"],
     ids=["unknown-field", "invalid-value"],
 )
 def test_invalid_settings_are_rejected(tmp_path: Path, entry: str) -> None:
@@ -42,7 +42,7 @@ def test_invalid_settings_are_rejected(tmp_path: Path, entry: str) -> None:
 def test_settings_are_immutable(test_settings: Settings) -> None:
     """Loaded settings cannot be reassigned after startup."""
     with pytest.raises(ValidationError, match="frozen"):
-        test_settings.logging.console_format = "text"  # ty: ignore[invalid-assignment]
+        test_settings.logging.format = "text"  # ty: ignore[invalid-assignment]
 
 
 def test_each_load_reads_the_current_environment(
@@ -50,29 +50,28 @@ def test_each_load_reads_the_current_environment(
 ) -> None:
     """Nothing is cached, so a later load sees a changed environment."""
     first = load_settings()
-    monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "json")
+    monkeypatch.setenv("LOGGING__FORMAT", "json")
 
-    assert first.logging.console_format == "text"
-    assert load_settings().logging.console_format == "json"
+    assert first.logging.format == "text"
+    assert load_settings().logging.format == "json"
 
 
 def test_whole_group_json_and_nested_env_values_merge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A nested variable overrides the matching key of a whole-group JSON value."""
-    monkeypatch.setenv("LOGGING", '{"console_level":"DEBUG","console_format":"text"}')
-    monkeypatch.setenv("LOGGING__CONSOLE_FORMAT", "json")
+    monkeypatch.setenv("LOGGING", '{"level":"DEBUG","format":"text"}')
+    monkeypatch.setenv("LOGGING__FORMAT", "json")
 
     settings = load_settings()
 
-    assert settings.logging.console_level == "DEBUG"
-    assert settings.logging.console_format == "json"
+    assert settings.logging.level == "DEBUG"
+    assert settings.logging.format == "json"
 
 
 def test_defaults_are_isolated_from_the_host() -> None:
     """With the host's variables cleared, every field uses its declared default."""
     settings = load_settings()
 
-    assert settings.logging.console_format == "text"
-    assert settings.logging.console_level == "INFO"
-    assert settings.logging.log_file is None
+    assert settings.logging.format == "text"
+    assert settings.logging.level == "INFO"

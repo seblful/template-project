@@ -1,0 +1,85 @@
+"""An optional TOML config file, ranked below every other settings source."""
+
+# Lets `Path` below be a type-only import on every supported Python, like in settings.
+from __future__ import annotations
+
+from typing import TYPE_CHECKING, Any
+
+from pydantic_settings import (
+    BaseSettings,
+    PydanticBaseSettingsSource,
+    SettingsError,
+    TomlConfigSettingsSource,
+)
+
+from {{ package_name }}.settings import Settings, load_settings
+
+if TYPE_CHECKING:
+    from pathlib import Path
+
+
+class _ConfigFileSource(TomlConfigSettingsSource):
+    """Read the selected TOML file, rejecting top-level keys the model lacks.
+
+    The model ignores unknown top-level keys because a dotenv file is often shared
+    with other tools. A config file belongs to this application alone, so there a
+    misspelled table such as `[loging]` is a typo, not someone else's setting.
+    """
+
+    def __call__(self) -> dict[str, Any]:
+        """Return the file's values after checking its top-level keys."""
+        unknown = sorted(self.toml_data.keys() - self.settings_cls.model_fields.keys())
+        if unknown:
+            message = f"Unknown keys in {self.toml_file_path}: {', '.join(unknown)}"
+            raise SettingsError(message)
+        return super().__call__()
+
+
+def _settings_reading(config_file: Path) -> type[Settings]:
+    """Return a `Settings` subclass that also reads `config_file`.
+
+    pydantic-settings takes a TOML path only from class-level configuration, not per
+    call like `_env_file`. A subclass per load keeps concurrent loads with different
+    files apart, where setting the path on `Settings` itself would be global state.
+    """
+
+    class _ConfiguredSettings(Settings):
+        @classmethod
+        def settings_customise_sources(
+            cls,
+            settings_cls: type[BaseSettings],
+            init_settings: PydanticBaseSettingsSource,
+            env_settings: PydanticBaseSettingsSource,
+            dotenv_settings: PydanticBaseSettingsSource,
+            file_secret_settings: PydanticBaseSettingsSource,
+        ) -> tuple[PydanticBaseSettingsSource, ...]:
+            # The file ranks lowest: it holds the shared baseline, and anything set
+            # for one deployment through its environment overrides it.
+            return (
+                init_settings,
+                env_settings,
+                dotenv_settings,
+                file_secret_settings,
+                _ConfigFileSource(settings_cls, toml_file=config_file),
+            )
+
+    return _ConfiguredSettings
+
+
+def load_settings_with_config(
+    *, config_file: Path | None = None, env_file: Path | None = None
+) -> Settings:
+    """Load settings like `load_settings`, with a TOML file below every other source.
+
+    Args:
+        config_file: Optional TOML file with one table per settings group.
+        env_file: Optional dotenv file.
+    """
+    if config_file is None:
+        return load_settings(env_file=env_file)
+    # Checked here because pydantic-settings silently skips a missing file.
+    for path, kind in ((config_file, "Config file"), (env_file, "Environment file")):
+        if path is not None and not path.is_file():
+            message = f"{kind} not found: {path}"
+            raise FileNotFoundError(message)
+    return _settings_reading(config_file)(_env_file=env_file)

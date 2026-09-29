@@ -5,6 +5,7 @@ from collections.abc import Iterator
 from pathlib import Path
 
 import pytest
+from pydantic import BaseModel
 
 from {{ package_name }}.logging import reset_logging
 from {{ package_name }}.settings import Settings, load_settings
@@ -25,16 +26,29 @@ def _isolated_settings(monkeypatch: pytest.MonkeyPatch) -> None:
 
 @pytest.fixture(autouse=True)
 def _isolated_logging() -> Iterator[None]:
-    """Detach any handlers a test installed and close the log file it opened."""
+    """Detach any handler a test installed."""
     yield
     reset_logging()
+
+
+@pytest.fixture
+def supported_keys() -> set[str]:
+    """Return every variable name the model reads, groups expanded to their fields."""
+    keys = set()
+    for name, field in Settings.model_fields.items():
+        group = field.annotation
+        if isinstance(group, type) and issubclass(group, BaseModel):
+            keys.update(f"{name}__{nested}" for nested in group.model_fields)
+        else:
+            keys.add(name)
+    return {key.upper() for key in keys}
 
 
 @pytest.fixture
 def tmp_env_file(tmp_path: Path) -> Path:
     """Create a temporary .env file."""
     env_file = tmp_path / ".env"
-    env_file.write_text("LOGGING__CONSOLE_FORMAT=json\n", encoding="utf-8")
+    env_file.write_text("LOGGING__FORMAT=json\n", encoding="utf-8")
     return env_file
 
 

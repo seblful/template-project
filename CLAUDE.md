@@ -31,6 +31,7 @@ CI (`.github/workflows/ci.yml`) runs exactly this across a matrix of answers. Tr
 - **Comments in generated files explain *why*, not *what*.** The existing `pyproject.toml.jinja` is the reference for tone. A reader of a generated project has no access to this repo, so a decision that looks odd must justify itself in place.
 - **Every answer in `copier.yml` needs a validator** unless it is a `choices` list or a `bool` — both are already constrained by copier itself.
 - **A file that only some answers produce gets a conditional filename**, not an `_exclude` entry: `_exclude` has to guess whether copier matches the source name or the rendered one. `_exclude` is for whole directories. A conditional name that renders empty is skipped silently, so assert the result in CI.
+- **An answer adds files, not branches inside Python files.** `config_file` is the model: `config_file.py` and `test_config_file.py` exist only when it is set, and `settings.py` does not mention it. Keep `{% if %}` in `.py` sources to the few places a feature has to surface, such as a CLI option.
 - **`author_name` and `author_email` have no defaults on purpose.** Don't add any — a default there attributes strangers' projects to whoever maintains the template. Automation passes `-d`.
 - **Don't add a dependency to `pyproject.toml.jinja` without capping the major version** when upstream has a known breaking release coming. `mkdocs<2` is there for a reason.
 
