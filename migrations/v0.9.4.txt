@@ -1,0 +1,15 @@
+This update crossed v0.9.4, which shrinks the CLI starter and moves every check into
+.pre-commit-config.yaml:
+
+- Logging writes to stderr only. LOGGING__CONSOLE_FORMAT is now LOGGING__FORMAT,
+  LOGGING__CONSOLE_LEVEL is now LOGGING__LEVEL, and LOGGING__LOG_FILE and
+  LOGGING__FILE_LEVEL are gone. Rename them in your .env and deployment config.
+- --secrets-dir and load_settings(secrets_dir=...) are gone. Map secret files to
+  environment variables instead.
+- With config_file, load_settings(config_file=...) is now load_settings_with_config()
+  in <package>.config_file; load_settings() takes env_file only.
+- `uv run pre-commit run --all-files --hook-stage manual` runs every check, tests
+  and docs build included, and CI runs exactly that. Add new checks to
+  .pre-commit-config.yaml, not to the CI file.
+- docs/index.md now includes README.md instead of repeating it. Move anything you
+  added to docs/index.md into README.md, or keep it below the include line.

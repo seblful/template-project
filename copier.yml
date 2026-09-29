@@ -167,6 +167,16 @@ _migrations:
       - -c
       - "import pathlib, sys; print(pathlib.Path(sys.argv[1]).read_text('utf-8'))"
       - "{{ _copier_conf.src_path }}/migrations/v0.9.3.txt"
+  - version: v0.9.4
+    when: "{{ _stage == 'after' }}"
+    command:
+      - uv
+      - run
+      - --no-project
+      - python
+      - -c
+      - "import pathlib, sys; print(pathlib.Path(sys.argv[1]).read_text('utf-8'))"
+      - "{{ _copier_conf.src_path }}/migrations/v0.9.4.txt"
 
 _message_after_copy: |
   {{ project_slug }} is ready.
