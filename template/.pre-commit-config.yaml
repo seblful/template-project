@@ -27,6 +27,8 @@ repos:
         name: ty type check
         entry: uv run ty check
         language: system
+        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
+        exclude: ^docs/index\.md$
         types: [python]
         pass_filenames: false  # ty needs the whole project, not just staged files
       - id: pytest

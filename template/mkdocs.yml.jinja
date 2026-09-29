@@ -42,9 +42,15 @@ nav:
   - Home: index.md
   - Reference: reference.md
 
+# index.md includes README.md, which lives outside docs/ and isn't watched otherwise.
+watch:
+  - README.md
+
 markdown_extensions:
   - admonition
   - pymdownx.highlight
+  - pymdownx.snippets:
+      check_paths: true  # a renamed README fails the build, not renders an empty page
   - pymdownx.superfences:
       custom_fences:
         - name: mermaid
