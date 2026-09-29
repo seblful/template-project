@@ -2,12 +2,9 @@
 
 {{ project_description }}
 
-## Requirements
+## Setup
 
-- Python {{ python_version }}+
-- [uv](https://docs.astral.sh/uv/)
-
-## Installation
+Needs Python {{ python_version }}+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
@@ -16,12 +13,11 @@ uv sync
 ## Usage
 {% if project_type == "cli" %}
 ```bash
-uv run {{ project_slug }} info       # run the CLI
-uv run {{ project_slug }} --version  # print the version
-python -m {{ package_name }}         # equivalent module entry point
+uv run {{ project_slug }} info
+uv run {{ project_slug }} --version
 ```
 
-Or use it as a library:
+From Python:
 
 ```python
 from {{ package_name }}.logging import get_logger, setup_logging
@@ -29,109 +25,33 @@ from {{ package_name }}.settings import load_settings
 
 settings = load_settings()
 setup_logging(settings.logging)
-log = get_logger(__name__)
-log.info("started")
+get_logger(__name__).info("started", user_id=42)
 ```
 
 ## Configuration
 
-Startup reads environment variables and model defaults. No {% if config_file %}config file, {% endif %}dotenv file or secrets directory is discovered automatically. Load settings once in your entry point and pass the relevant groups to the modules that need them.
+Settings come from environment variables such as `LOGGING__CONSOLE_FORMAT=json`, where `__` separates a group from its field. Files are read only when you select them:
 {% if config_file %}
-There are two file formats for the same settings, each with a committed example that a test checks against the settings model:
-
-- **`config.toml`** holds the shared baseline, one table per settings group. Copy `config.example.toml` to start one. It contains no secrets, so it can be committed or shipped with a deployment.
-- **`.env`** holds local overrides as variables, where `__` separates a group from its field: `LOGGING__CONSOLE_FORMAT=json`. Copy `.env.example` to start one; it is gitignored.
-
-Select either or both before the subcommand:
-
 ```bash
-cp config.example.toml config.toml
-cp .env.example .env
+cp config.example.toml config.toml   # shared baseline, one table per group
+cp .env.example .env                 # local overrides, gitignored
 uv run {{ project_slug }} --config config.toml --env-file .env info
 ```
-
-In Python:
-
-```python
-from pathlib import Path
-
-from {{ package_name }}.settings import load_settings
-
-settings = load_settings(config_file=Path("config.toml"), env_file=Path(".env"))
-```
 {% else %}
-`__` separates a settings group from its field: `LOGGING__CONSOLE_FORMAT=json`.
-
-For local overrides, copy the committed `.env.example` (checked against the settings model) to a gitignored `.env`, then select it before the subcommand:
-
 ```bash
-cp .env.example .env
+cp .env.example .env                 # local overrides, gitignored
 uv run {{ project_slug }} --env-file .env info
 ```
-
-In Python:
-
-```python
-from pathlib import Path
-
-from {{ package_name }}.settings import load_settings
-
-settings = load_settings(env_file=Path(".env"))
-```
 {% endif %}
-Settings are resolved with the following precedence, highest first:
+`--secrets-dir /run/secrets` reads one file per setting, named like the variable. In Python, pass the same paths to `load_settings()`.
 
-1. Explicit field overrides passed to the `Settings` constructor
-1. Real environment variables
-1. The explicitly selected dotenv file
-1. Files in the explicitly selected secrets directory
-{%- if config_file %}
-1. The explicitly selected config file
-{%- endif %}
-1. Defaults declared in `src/{{ package_name }}/settings.py`
+Highest priority first: constructor arguments, environment variables, the `.env` file, secret files, {% if config_file %}the config file, {% endif %}defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
 
-Deployment can supply environment variables or mounted files. To load settings from `/run/secrets`, call `load_settings(secrets_dir=Path("/run/secrets"))` or run `uv run {{ project_slug }} --secrets-dir /run/secrets info`. Secret filenames use the same nested names as environment variables. All explicit sources can be selected together.
-
-Relative paths, including {% if config_file %}config and {% endif %}dotenv paths, secrets directories, and log paths, are relative to the process working directory. An explicitly selected path that does not exist fails at startup with `FileNotFoundError`. `.env.local` has no special meaning; it is read only if selected instead of `.env`.
-
-Unknown keys in an env file are ignored, so `.env` can be shared with other tooling, but a misspelled key inside a settings group fails at startup.{% if config_file %} The config file belongs to this application alone, so an unknown key anywhere in it fails too.{% endif %}
-
-### Add application-specific settings
-
-Add fields only when the application uses them. The project name is available as
-`PROJECT_NAME` from the top-level package; it is not a runtime setting.
-
-For example, when integrating a service that needs credentials, add a group in
-`settings.py`:
-
-```python
-from pydantic import BaseModel, ConfigDict, SecretStr
-
-
-class ServiceSettings(BaseModel):
-    model_config = ConfigDict(extra="forbid", frozen=True)
-
-    api_key: SecretStr
-```
-
-Declare a required group as `service: ServiceSettings` in `Settings` when credentials
-are mandatory. Supply `SERVICE__API_KEY` through the environment or a file with that
-name in the selected secrets directory. `SecretStr` masks representations; access
-its value with `.get_secret_value()` only when passing it to the service client.
-A plain top-level field such as `debug: bool` works too, as `DEBUG`.
-Update `.env.example`{% if config_file %} and `config.example.toml`{% endif %} when adding fields; a test
-checks for missing or obsolete keys.
+To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`{% if config_file %} and `config.example.toml`{% endif %}. A test checks that they match.
 
 ## Logging
 
-`setup_logging(settings.logging)` writes to stderr, as human-readable text by default or as JSON with `LOGGING__CONSOLE_FORMAT=json`. File logging is off until `LOGGING__LOG_FILE` names a path; that file always receives JSON and rotates at 10 MB. Library logs are rendered through the same pipeline, so every record has the same shape.
-
-```python
-from {{ package_name }}.logging import get_logger
-
-log = get_logger(__name__)
-log.info("order placed", order_id=42, total="19.99")
-```
+Logs go to stderr as text, or as JSON with `LOGGING__CONSOLE_FORMAT=json`. Set `LOGGING__LOG_FILE` to also write JSON lines to a rotating file.
 {%- else %}
 ```python
 import {{ package_name }}
@@ -141,53 +61,25 @@ print({{ package_name }}.__version__)
 
 ## Logging
 
-Log through the standard library and leave configuration to the application that imports this package:
-
-```python
-import logging
-
-log = logging.getLogger(__name__)
-```
-
-Never attach handlers or set levels on the root logger from library code.
+Use `logging.getLogger(__name__)` and leave handlers and levels to the application that imports this package.
 {%- endif %}
 
 ## Development
 
 ```bash
-uv run pytest                       # run tests
-uv run pytest --cov                 # run tests with the coverage gate
-uv run pytest -m "not slow"         # skip the slow ones
-uv run ruff check .                 # lint
-uv run ruff format .                # format
-uv run ty check                     # type check
-uv run pre-commit run --all-files   # the full gate{% if ci != "none" %}, which is what CI runs{% endif %}
+uv run pytest --cov                 # tests with the coverage gate
+uv run pre-commit run --all-files   # lint, format, types{% if ci != "none" %} — what CI runs{% endif %}
+uv run --group docs mkdocs serve    # docs at http://127.0.0.1:8000
 ```
 
-Test order is randomized on every run (`pytest-randomly`). A failure prints the seed; replay it with `uv run pytest -p randomly --randomly-seed=<seed>`.
-{% if ci == "github" %}
-### CI
+Test order is random; replay a failure with `uv run pytest -p randomly --randomly-seed=<seed>`.
+{%- if ci == "gitlab" %}
 
-[`.github/workflows/ci.yml`](.github/workflows/ci.yml) runs the pre-commit suite and the test suite on Ubuntu and Windows, builds the docs with `--strict`, and audits dependencies weekly. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
-
-[`.github/dependabot.yml`](.github/dependabot.yml) opens a weekly pull request for the pinned action versions and another for the pre-commit hook revs; Python dependencies stay on `uv lock --upgrade`.
-{% elif ci == "gitlab" %}
-### CI
-
-[`.gitlab-ci.yml`](.gitlab-ci.yml) runs the pre-commit suite and the test suite, builds the docs with `--strict`, and audits dependencies. The hook suite is the single source of truth, so CI cannot drift from what runs locally.
-
-Two things need setting up in the GitLab UI: a pipeline schedule with `SCHEDULED_AUDIT` set to `1`, for the weekly dependency audit, and — if the docs should be published — a run of the manual `pages` job.
-{% endif %}
-### Docs
-
-```bash
-uv sync --group docs                # install docs dependencies
-uv run mkdocs serve                 # serve docs locally at http://127.0.0.1:8000
-uv run mkdocs build --strict        # build static site into site/ (as CI does)
-```
+For the weekly dependency audit, add a pipeline schedule in GitLab with `SCHEDULED_AUDIT` set to `1`. The `pages` job publishes the docs when run manually.
+{%- endif %}
 {%- if license and license != "None" %}
 
 ## License
 
-{{ license }} License - see [LICENSE](LICENSE) for details.
+{{ license }} — see [LICENSE](LICENSE).
 {%- endif %}

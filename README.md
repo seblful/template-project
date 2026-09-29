@@ -1,37 +1,16 @@
 # Python Project Template
 
-A [Copier](https://copier.readthedocs.io/) template for Python projects with modern tooling.
+A [Copier](https://copier.readthedocs.io/) template for Python projects: uv, Ruff, ty, pytest, pre-commit and MkDocs, plus Typer, pydantic-settings and structlog for CLI projects.
 
-## Stack
+## Create a project
 
-| Tool | Purpose |
-|------|---------|
-| [uv](https://github.com/astral-sh/uv) | Dependency management |
-| [Ruff](https://github.com/astral-sh/ruff) | Linting and formatting |
-| [ty](https://github.com/astral-sh/ty) | Type checking |
-| [pytest](https://pytest.org/) | Testing with coverage |
-| [Pydantic](https://docs.pydantic.dev/) | Settings management |
-| [structlog](https://www.structlog.org/) | Structured logging |
-| [Typer](https://typer.tiangolo.com/) | CLI interface (`project_type=cli`) |
-| [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
-| [pre-commit](https://pre-commit.com/) | Automated quality checks |
-| [MkDocs](https://www.mkdocs.org/) | Documentation |
-
-## Prerequisites
-
-- [uv](https://github.com/astral-sh/uv)
-- [copier](https://copier.readthedocs.io/) 9.2+ — no plugins needed
-
-## Create a Project
+Needs [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uvx copier copy --trust gh:seblful/template-project new-project
-cd new-project
 ```
 
-`--trust` is required: generation runs `git init`, `uv sync` and `pre-commit install`, then makes the initial commit. No formatter runs, on `copy` or `update`: the template ships formatted and CI proves it.
-
-There is deliberately no default author, so `--defaults` alone will not generate a project. Pass the two answers explicitly in automation:
+`--trust` lets Copier run `git init`, `uv sync` and `pre-commit install`, then make the first commit. There is no default author, so automation must pass one:
 
 ```bash
 uvx copier copy --trust --defaults \
@@ -39,107 +18,33 @@ uvx copier copy --trust --defaults \
   gh:seblful/template-project new-project
 ```
 
-## Update a Project
-
-Pull the latest template changes into an existing generated project:
+## Update a project
 
 ```bash
-cd your-project
 uvx copier update --trust
 ```
 
-Copier re-applies the template, preserving your answers from `.copier-answers.yml`. Upgrade notes for a release print during the update when it crosses that release; they live in [`migrations/`](migrations/).
+Your answers are kept in `.copier-answers.yml`. Notes for a breaking release print during the update; they live in [`migrations/`](migrations/).
 
-## Project Structure
+## Questions
 
-```
-new-project/
-├── .github/workflows/ci.yml   # or .gitlab-ci.yml, or neither — see the ci answer
-├── src/
-│   └── <package_name>/
-│       ├── __init__.py       # metadata only — no re-exports
-│       ├── __main__.py       # cli: python -m <package_name>
-│       ├── cli.py            # cli
-│       ├── logging.py        # cli
-│       ├── settings.py       # cli
-│       └── py.typed
-├── tests/
-│   ├── conftest.py           # cli
-│   ├── test_cli.py           # cli
-│   ├── test_config_roundtrip.py  # cli
-│   ├── test_logging.py       # cli
-│   ├── test_settings.py      # cli
-│   └── test_package.py
-├── docs/
-├── .claude/settings.json     # only when claude_settings=true
-├── .env.example              # cli: the committed config contract; copy to .env
-├── config.example.toml       # cli with config_file=true; copy to config.toml
-├── .python-version
-├── AGENTS.md
-├── pyproject.toml
-├── TODO.md
-└── README.md
-```
+| Answer | Choices |
+|--------|---------|
+| `project_slug` | Project name, kebab-case |
+| `package_name` | Python package, snake_case |
+| `project_description` | One line |
+| `project_type` | `cli`: an application with a Typer CLI, settings and logging. `library`: a package with no runtime dependencies |
+| `config_file` | `cli` only: add `--config config.toml` support (default no) |
+| `author_name`, `author_email` | Required, no default |
+| `license` | None, MIT or Apache |
+| `python_version` | 3.10 or newer (default 3.14) |
+| `ci` | `github` (Ubuntu and Windows), `gitlab` or `none` |
+| `claude_settings` | Add `.claude/settings.json` with Claude Code permissions |
 
-Files marked `cli` are generated only for `project_type=cli`.
+Every project gets an `AGENTS.md` for coding assistants and runs the same checks locally and in CI: the pre-commit hooks, `pytest --cov`, `mkdocs build --strict` and a dependency audit.
 
-## Commands in a Generated Project
+## Developing the template
 
-```bash
-uv run <project_slug>             # run the CLI (project_type=cli)
-uv run pytest                     # run tests
-uv run pytest --cov               # run tests with the coverage gate
-uv run ruff check . --fix         # lint and auto-fix
-uv run ruff format .              # format
-uv run ty check                   # type check
-uv run pre-commit run --all-files # everything CI runs
-```
+Template files are not valid Python until rendered, so the only real check is to generate a project and run its gates. [CI](.github/workflows/ci.yml) does that for a matrix of answers and tests `copier update` from the last release. See [CLAUDE.md](CLAUDE.md).
 
-## Configuration
-
-Answers are saved in `.copier-answers.yml` and reused on `copier update`:
-
-| Variable | Description |
-|----------|-------------|
-| `project_slug` | Project name (kebab-case) |
-| `package_name` | Python package name (snake_case) |
-| `project_description` | One-line description |
-| `project_type` | `cli` (Typer entry point) or `library` |
-| `config_file` | `cli` only: also load an explicitly selected TOML config file (default no) |
-| `author_name` / `author_email` | Author information — no default, must be answered |
-| `license` | None, MIT, or Apache |
-| `python_version` | Target Python version (3.10+, default 3.14) |
-| `ci` | github, gitlab, or none |
-| `claude_settings` | Ship `.claude/settings.json` with project-scoped permissions |
-
-### `project_type`
-
-`cli` is an application: `cli.py`, `__main__.py`, a `[project.scripts]` console script, pydantic-settings configuration, structlog logging, `.env.example` and their tests, with `typer`, `structlog`, `pydantic` and `pydantic-settings` as dependencies. `library` is an importable package with no runtime dependencies and no settings or logging setup of its own, since both belong to the application that imports it; it keeps the tests, docs, hooks and CI.
-
-A `cli` project loads settings once per command with `load_settings()` and passes them to logging and other modules. Environment variables and model defaults work without files; a dotenv file or secrets directory is read only when selected with `--env-file` / `--secrets-dir` or the matching `load_settings` arguments. Logs go to stderr; a JSON log file is opt-in through `LOGGING__LOG_FILE`.
-
-### `config_file`
-
-Adds `--config` and `load_settings(config_file=...)` for a TOML file with one table per settings group, plus a committed `config.example.toml` checked against the model like `.env.example`. The file is the lowest-ranked source above the defaults, so environment variables, a selected `.env` and secret files all override it. Unlike `.env`, it belongs to the application alone, so an unknown key anywhere in it is an error. Off by default: most projects configure through the environment and never need it.
-
-### Assistant instructions
-
-Every project gets an `AGENTS.md`, which Claude Code, Cursor, opencode and the rest all read. `.ignore` holds only the delta from `.gitignore`, since ripgrep and fd already honor that; Cursor users who want a `.cursorignore` can copy it.
-
-## Continuous Integration
-
-The `ci` answer picks one pipeline definition, or none. Both run the same three things — the pre-commit suite plus `pytest --cov`, a strict `mkdocs build`, and a dependency audit — so the choice does not change what is checked.
-
-| `ci` | Generates | Notes |
-|------|-----------|-------|
-| `github` | `.github/workflows/ci.yml` | Ubuntu and Windows matrix; weekly audit via `schedule:` |
-| `gitlab` | `.gitlab-ci.yml` | Linux only; audit needs a pipeline schedule with `SCHEDULED_AUDIT` set, and a manual `pages` job publishes the docs |
-| `none` | nothing | `uv run pre-commit run --all-files` is still the local gate, and the pre-push hooks still run the tests and the docs build |
-
-## Developing the Template
-
-The template cannot be linted directly — `from {{ package_name }} import ...` is not valid Python. The only real check is to generate a project and run its gates; [CI](.github/workflows/ci.yml) does exactly that across a matrix of answers, plus a `copier update` smoke test from the previous tag. See [CLAUDE.md](CLAUDE.md).
-
-## Versioning
-
-The template is released as git tags (`v0.9.2`, `v0.9.3`, …), which `copier copy` and `copier update` resolve to.
+Releases are git tags (`v0.9.2`, `v0.9.3`, …).
