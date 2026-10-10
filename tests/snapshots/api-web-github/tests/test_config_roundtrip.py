@@ -48,9 +48,15 @@ def test_source_precedence(
     env_file = tmp_path / "selected.env"
     env_file.write_text("", encoding="utf-8")
     if "environment" in active:
-        monkeypatch.setenv("LOGGING__LEVEL", SOURCES["environment"])
+        monkeypatch.setenv(
+            "DEMO_PROJ_LOGGING__LEVEL",
+            SOURCES["environment"],
+        )
     if "dotenv" in active:
-        env_file.write_text(f"LOGGING__LEVEL={SOURCES['dotenv']}\n", encoding="utf-8")
+        env_file.write_text(
+            f"DEMO_PROJ_LOGGING__LEVEL={SOURCES['dotenv']}\n",
+            encoding="utf-8",
+        )
 
     if source == "constructor":
         settings = Settings(
@@ -68,7 +74,10 @@ def test_no_files_are_discovered_automatically(
     """No `.env` file in the working directory is ever read."""
     monkeypatch.chdir(tmp_path)
     for name in (".env", ".env.local"):
-        (tmp_path / name).write_text("LOGGING__FORMAT=invalid\n", encoding="utf-8")
+        (tmp_path / name).write_text(
+            "DEMO_PROJ_LOGGING__FORMAT=invalid\n",
+            encoding="utf-8",
+        )
 
     assert load_settings().logging.format == "text"
 
@@ -78,7 +87,10 @@ def test_explicit_paths_work_outside_the_checkout(
 ) -> None:
     """Absolute and relative dotenv paths both resolve from the working directory."""
     env_file = tmp_path / "selected.env"
-    env_file.write_text("LOGGING__LEVEL=DEBUG\n", encoding="utf-8")
+    env_file.write_text(
+        "DEMO_PROJ_LOGGING__LEVEL=DEBUG\n",
+        encoding="utf-8",
+    )
     elsewhere = tmp_path / "elsewhere"
     elsewhere.mkdir()
     monkeypatch.chdir(elsewhere)

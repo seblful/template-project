@@ -70,7 +70,7 @@ print({{ package_name }}.__version__)
 
 ## Configuration
 
-Settings come from environment variables such as `LOGGING__FORMAT=json`, where `__` separates a group from its field. A dotenv file is read only when you select it:
+Settings come from environment variables such as `{{ package_name | upper }}_LOGGING__FORMAT=json`, where the upper-cased package name prefixes every variable and `__` separates a group from its field. A dotenv file is read only when you select it:
 
 ```bash
 cp .env.example .env   # local overrides, gitignored
@@ -89,7 +89,7 @@ To add a setting, add a field to a group in `src/{{ package_name }}/settings.py`
 
 ## Logging
 
-Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`{% if project_type == "api" %}, uvicorn's access and error logs included{% endif %}. `LOGGING__LEVEL` sets the lowest level that is logged.
+Logs go to stderr as text, or as JSON with `{{ package_name | upper }}_LOGGING__FORMAT=json`{% if project_type == "api" %}, uvicorn's access and error logs included{% endif %}. `{{ package_name | upper }}_LOGGING__LEVEL` sets the lowest level that is logged, in any letter case. Python warnings are logged too.
 {%- elif project_type == "library" %}
 
 ## Logging

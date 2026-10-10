@@ -30,3 +30,9 @@ uv_build and pre-commit with prek, and trims the defaults:
   in random order, and coverage has no minimum. Re-add what you rely on.
 - mkdocstrings is gone: docs/reference.md is deleted and the docs are the README,
   built with Zensical alone. The pymdown-extensions cap went with it.
+- Settings variables carry a prefix, the upper-cased package name: LOGGING__FORMAT is
+  now <PACKAGE_NAME>_LOGGING__FORMAT, so my_app reads MY_APP_LOGGING__FORMAT. Rename
+  the keys in your .env and deployment config; unprefixed ones are now ignored
+  without an error.
+- LOGGING__LEVEL accepts any letter case, and Python warnings are logged through the
+  same handler. Loggers no longer cache their setup on first use.

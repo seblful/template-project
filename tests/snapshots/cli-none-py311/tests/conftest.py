@@ -12,7 +12,8 @@ from demo_proj.settings import Settings, load_settings
 
 # Built from the model rather than listed, so a field added later is cleared too.
 # Keys are upper-cased first because settings match env vars case-insensitively.
-_ENV_NAMES = tuple(name.upper() for name in Settings.model_fields)
+_PREFIX = Settings.model_config.get("env_prefix", "").upper()
+_ENV_NAMES = tuple(f"{_PREFIX}{name.upper()}" for name in Settings.model_fields)
 _ENV_PREFIXES = tuple(f"{name}__" for name in _ENV_NAMES)
 
 
@@ -41,14 +42,17 @@ def supported_keys() -> set[str]:
             keys.update(f"{name}__{nested}" for nested in group.model_fields)
         else:
             keys.add(name)
-    return {key.upper() for key in keys}
+    return {f"{_PREFIX}{key.upper()}" for key in keys}
 
 
 @pytest.fixture
 def tmp_env_file(tmp_path: Path) -> Path:
     """Create a temporary .env file."""
     env_file = tmp_path / ".env"
-    env_file.write_text("LOGGING__FORMAT=json\n", encoding="utf-8")
+    env_file.write_text(
+        "DEMO_PROJ_LOGGING__FORMAT=json\n",
+        encoding="utf-8",
+    )
     return env_file
 
 

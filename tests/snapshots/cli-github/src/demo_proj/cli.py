@@ -60,4 +60,5 @@ def show_settings(ctx: typer.Context) -> None:
     """Print the settings the application would run with, as JSON."""
     settings = configure(ctx)
     get_logger(__name__).debug("showing settings")
+    # Secret fields must be SecretStr: it dumps masked, where a plain str would leak.
     typer.echo(settings.model_dump_json(indent=2))

@@ -3,8 +3,8 @@
 Every record is routed through a stdlib handler via `ProcessorFormatter`, so that
 application logs and third-party library logs (httpx, uvicorn, sqlalchemy) come out
 in the same shape: human-readable text or JSON on stderr, according to
-`LoggingSettings.format`. There is no log file on purpose: stderr is what containers
-and process managers collect.
+`LoggingSettings.format`. Python warnings are routed through the same handler. There
+is no log file on purpose: stderr is what containers and process managers collect.
 """
 
 import io
@@ -45,7 +45,8 @@ def _force_utf8_stderr() -> None:
 
     `reconfigure` mutates the existing wrapper in place. Rebinding `sys.stderr` to a
     fresh `TextIOWrapper` would leave the original free to be garbage collected,
-    closing the underlying buffer out from under the replacement.
+    closing the underlying buffer out from under the replacement. Setting `PYTHONUTF8`
+    would do the same, but an installed console script cannot set its own environment.
     """
     stderr = sys.stderr
     if isinstance(stderr, io.TextIOWrapper) and (stderr.encoding or "").lower() not in {
@@ -91,6 +92,7 @@ def setup_logging(settings: LoggingSettings) -> None:
     root.setLevel(level)
     root.addHandler(handler)
     _installed.append(handler)
+    logging.captureWarnings(True)
 
     structlog.configure(
         processors=[
@@ -100,7 +102,9 @@ def setup_logging(settings: LoggingSettings) -> None:
         # Drop events below the threshold before they are ever formatted.
         wrapper_class=structlog.make_filtering_bound_logger(level),
         logger_factory=structlog.stdlib.LoggerFactory(),
-        cache_logger_on_first_use=True,
+        # Off, so a logger made at import time follows a later setup_logging or
+        # reset_logging; caching would pin it to whichever configuration it first used.
+        cache_logger_on_first_use=False,
     )
 
 
@@ -111,4 +115,5 @@ def reset_logging() -> None:
         root.removeHandler(handler)
         handler.close()
     _installed.clear()
+    logging.captureWarnings(False)
     structlog.reset_defaults()

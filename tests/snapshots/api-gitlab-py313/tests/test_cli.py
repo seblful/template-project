@@ -57,7 +57,10 @@ def test_serve_passes_the_env_file_on_to_the_serving_process(
 ) -> None:
     """The selected file reaches uvicorn, which loads it where the app is built."""
     env_file = tmp_path / "selected.env"
-    env_file.write_text("LOGGING__FORMAT=json\n", encoding="utf-8")
+    env_file.write_text(
+        "DEMO_PROJ_LOGGING__FORMAT=json\n",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(app, ["serve", "--env-file", str(env_file)])
 
@@ -70,7 +73,10 @@ def test_serve_validates_settings_before_starting(
 ) -> None:
     """Invalid settings fail in `serve` itself, and uvicorn never starts."""
     env_file = tmp_path / "selected.env"
-    env_file.write_text("LOGGING__FORMAT=invalid\n", encoding="utf-8")
+    env_file.write_text(
+        "DEMO_PROJ_LOGGING__FORMAT=invalid\n",
+        encoding="utf-8",
+    )
 
     result = runner.invoke(app, ["serve", "--env-file", str(env_file)])
 

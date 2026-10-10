@@ -18,7 +18,7 @@ def test_unrelated_env_file_keys_are_ignored(tmp_path: Path) -> None:
     """Keys that match no settings field belong to other tools and pass silently."""
     env_file = tmp_path / ".env"
     env_file.write_text(
-        "LOGGING__FORMAT=json\nDATABASE_URL=postgres://localhost/db\n",
+        "{{ package_name | upper }}_LOGGING__FORMAT=json\nDATABASE_URL=postgres://db\n",
         encoding="utf-8",
     )
 
@@ -27,7 +27,10 @@ def test_unrelated_env_file_keys_are_ignored(tmp_path: Path) -> None:
 
 @pytest.mark.parametrize(
     "entry",
-    ["LOGGING__FORMA=json", "LOGGING__FORMAT=invalid"],
+    [
+        "{{ package_name | upper }}_LOGGING__FORMA=json",
+        "{{ package_name | upper }}_LOGGING__FORMAT=invalid",
+    ],
     ids=["unknown-field", "invalid-value"],
 )
 def test_invalid_settings_are_rejected(tmp_path: Path, entry: str) -> None:
@@ -50,18 +53,39 @@ def test_each_load_reads_the_current_environment(
 ) -> None:
     """Nothing is cached, so a later load sees a changed environment."""
     first = load_settings()
-    monkeypatch.setenv("LOGGING__FORMAT", "json")
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__FORMAT", "json")
 
     assert first.logging.format == "text"
     assert load_settings().logging.format == "json"
+
+
+def test_variables_without_the_package_prefix_are_not_read(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """A generic name such as `LOGGING__FORMAT` belongs to someone else."""
+    monkeypatch.setenv("LOGGING__FORMAT", "json")
+
+    assert load_settings().logging.format == "text"
+
+
+def test_level_is_accepted_in_any_letter_case(
+    monkeypatch: pytest.MonkeyPatch,
+) -> None:
+    """`debug` is normalized to the canonical `DEBUG` instead of being rejected."""
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__LEVEL", "debug")
+
+    assert load_settings().logging.level == "DEBUG"
 
 
 def test_whole_group_json_and_nested_env_values_merge(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
     """A nested variable overrides the matching key of a whole-group JSON value."""
-    monkeypatch.setenv("LOGGING", '{"level":"DEBUG","format":"text"}')
-    monkeypatch.setenv("LOGGING__FORMAT", "json")
+    monkeypatch.setenv(
+        "{{ package_name | upper }}_LOGGING",
+        '{"level":"DEBUG","format":"text"}',
+    )
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__FORMAT", "json")
 
     settings = load_settings()
 

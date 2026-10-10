@@ -22,7 +22,7 @@ Each feature is a package under `src/demo_proj/`, shaped like `health/`: `router
 
 ## Configuration
 
-Settings come from environment variables such as `LOGGING__FORMAT=json`, where `__` separates a group from its field. A dotenv file is read only when you select it:
+Settings come from environment variables such as `DEMO_PROJ_LOGGING__FORMAT=json`, where the upper-cased package name prefixes every variable and `__` separates a group from its field. A dotenv file is read only when you select it:
 
 ```bash
 cp .env.example .env   # local overrides, gitignored
@@ -37,7 +37,7 @@ To add a setting, add a field to a group in `src/demo_proj/settings.py` (use `Se
 
 ## Logging
 
-Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`, uvicorn's access and error logs included. `LOGGING__LEVEL` sets the lowest level that is logged.
+Logs go to stderr as text, or as JSON with `DEMO_PROJ_LOGGING__FORMAT=json`, uvicorn's access and error logs included. `DEMO_PROJ_LOGGING__LEVEL` sets the lowest level that is logged, in any letter case. Python warnings are logged too.
 
 ## Development
 

@@ -62,11 +62,15 @@ def test_cli_loads_an_explicit_file_for_each_invocation(
     """`--env-file` applies to its own run only; a `.env` in the cwd is never read."""
     monkeypatch.chdir(tmp_path)
     env_file = tmp_path / "selected.env"
+    prefix = "{{ package_name | upper }}_"
     env_file.write_text(
-        "LOGGING__FORMAT=json\nLOGGING__LEVEL=DEBUG\n",
+        f"{prefix}LOGGING__FORMAT=json\n{prefix}LOGGING__LEVEL=DEBUG\n",
         encoding="utf-8",
     )
-    (tmp_path / ".env").write_text("LOGGING__FORMAT=invalid\n", encoding="utf-8")
+    (tmp_path / ".env").write_text(
+        f"{prefix}LOGGING__FORMAT=invalid\n",
+        encoding="utf-8",
+    )
 
     assert runner.invoke(app, ["settings"]).exit_code == 0
     reset_logging()
@@ -97,7 +101,7 @@ def test_version_and_help_do_not_load_settings(
     args: list[str], monkeypatch: pytest.MonkeyPatch
 ) -> None:
     """Invalid configuration cannot break `--version` or a subcommand's `--help`."""
-    monkeypatch.setenv("LOGGING__FORMAT", "invalid")
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__FORMAT", "invalid")
 
     result = runner.invoke(app, args)
 

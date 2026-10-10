@@ -2,11 +2,15 @@
 
 import json
 import logging
+import warnings
 
 import pytest
 
 from demo_proj.logging import get_logger, reset_logging, setup_logging
 from demo_proj.settings import LoggingSettings
+
+# Made at import, as application modules do, before any setup has run.
+_MODULE_LOGGER = get_logger("module")
 
 
 def _json_records(captured: str) -> list[dict[str, object]]:
@@ -111,11 +115,41 @@ def test_reset_logging_detaches_and_allows_reconfiguration(
     assert _json_records(capsys.readouterr().err)[0]["event"] == "reconfigured"
 
 
+def test_a_logger_made_at_import_follows_the_latest_setup(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """A module-level logger is not pinned to the configuration it first logged with."""
+    setup_logging(LoggingSettings(format="json", level="WARNING"))
+    _MODULE_LOGGER.warning("first")
+    reset_logging()
+
+    setup_logging(LoggingSettings(format="json", level="DEBUG"))
+    _MODULE_LOGGER.debug("second")
+
+    events = [r["event"] for r in _json_records(capsys.readouterr().err)]
+    assert events == ["first", "second"]
+
+
+def test_warnings_are_rendered_like_other_records(
+    capsys: pytest.CaptureFixture[str],
+) -> None:
+    """`warnings.warn` output goes through the handler instead of raw to stderr."""
+    setup_logging(LoggingSettings(format="json"))
+
+    with warnings.catch_warnings():
+        warnings.simplefilter("always")
+        warnings.warn("careful", UserWarning, stacklevel=2)
+
+    record = _json_records(capsys.readouterr().err)[0]
+    assert record["logger"] == "py.warnings"
+    assert "careful" in str(record["event"])
+
+
 def test_logging_uses_supplied_settings_without_loading_the_environment(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """Setup takes its settings as an argument and never reads the environment."""
-    monkeypatch.setenv("LOGGING__LEVEL", "invalid")
+    monkeypatch.setenv("DEMO_PROJ_LOGGING__LEVEL", "invalid")
     setup_logging(LoggingSettings(format="json"))
 
     get_logger("test").info("configured explicitly")

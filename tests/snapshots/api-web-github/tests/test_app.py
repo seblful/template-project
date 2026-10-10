@@ -20,7 +20,7 @@ def test_serving_app_configures_logging_from_the_environment(
     monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
 ) -> None:
     """The app uvicorn builds logs in the format the environment selects."""
-    monkeypatch.setenv("LOGGING__FORMAT", "json")
+    monkeypatch.setenv("DEMO_PROJ_LOGGING__FORMAT", "json")
 
     assert isinstance(create_serving_app(), FastAPI)
 

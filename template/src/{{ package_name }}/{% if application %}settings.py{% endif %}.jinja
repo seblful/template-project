@@ -3,7 +3,7 @@
 from pathlib import Path
 from typing import Literal
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
 LogLevel = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -19,9 +19,17 @@ class LoggingSettings(BaseModel):
     )
     level: LogLevel = Field(default="INFO", description="Lowest level that is logged")
 
+    @field_validator("level", mode="before")
+    @classmethod
+    def _upper_case_level(cls, value: object) -> object:
+        """Accept the level in any letter case, as in `LEVEL=info`."""
+        return value.upper() if isinstance(value, str) else value
+
 
 class Settings(BaseSettings):
-    """Application settings, grouped under `__`-delimited prefixes.
+    """Application settings, read from variables prefixed `{{ package_name | upper }}_`.
+
+    Groups are `__`-delimited, as in `{{ package_name | upper }}_LOGGING__LEVEL`.
 
     Precedence: constructor overrides, environment variables, an explicitly selected
     dotenv file, then model defaults.
@@ -30,6 +38,8 @@ class Settings(BaseSettings):
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
 
     model_config = SettingsConfigDict(
+        # Keeps generic names the platform sets, such as HOST or PORT, from colliding.
+        env_prefix="{{ package_name | upper }}_",
         env_file_encoding="utf-8",
         env_nested_delimiter="__",
         frozen=True,
