@@ -1,0 +1,98 @@
+"""End-to-end tests for the CLI."""
+
+import json
+import subprocess
+import sys
+from pathlib import Path
+
+import pytest
+import uvicorn
+from fastapi import FastAPI
+from typer.testing import CliRunner
+
+from {{ package_name }} import __version__
+from {{ package_name }}.cli import app
+
+runner = CliRunner()
+
+
+@pytest.fixture
+def served(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
+    """Record what `serve` passes to uvicorn, instead of starting a server."""
+    calls: dict[str, object] = {}
+
+    def fake_run(application: FastAPI, **kwargs: object) -> None:
+        calls.update(kwargs, application=application)
+
+    monkeypatch.setattr(uvicorn, "run", fake_run)
+    return calls
+
+
+def test_serve_runs_the_app_with_logging_left_to_the_application(
+    served: dict[str, object],
+) -> None:
+    """`serve` hands uvicorn the app, the address, and no logging config of its own."""
+    result = runner.invoke(app, ["serve", "--port", "9000"])
+
+    assert result.exit_code == 0, result.output
+    assert isinstance(served["application"], FastAPI)
+    assert served["host"] == "127.0.0.1"
+    assert served["port"] == 9000
+    assert served["log_config"] is None
+
+
+def test_serve_loads_an_explicit_env_file(
+    tmp_path: Path, served: dict[str, object]
+) -> None:
+    """Settings from `--env-file` are validated before the server starts."""
+    env_file = tmp_path / "selected.env"
+    env_file.write_text("LOGGING__FORMAT=invalid\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["serve", "--env-file", str(env_file)])
+
+    assert result.exit_code != 0
+    assert served == {}
+
+
+def test_serve_rejects_a_missing_env_file(tmp_path: Path) -> None:
+    """A missing path is a usage error, reported before anything loads."""
+    result = runner.invoke(app, ["serve", "--env-file", str(tmp_path / "absent")])
+
+    assert result.exit_code == 2
+
+
+def test_openapi_prints_the_schema() -> None:
+    """`openapi` prints valid JSON that describes every route."""
+    result = runner.invoke(app, ["openapi"])
+
+    assert result.exit_code == 0, result.output
+    assert "/api/health" in json.loads(result.stdout)["paths"]
+
+
+def test_version_flag_works_without_a_subcommand() -> None:
+    """`--version` does not trip over no_args_is_help or "Missing command"."""
+    result = runner.invoke(app, ["--version"])
+
+    assert result.exit_code == 0
+    assert __version__ in result.output
+
+
+def test_bare_invocation_shows_help() -> None:
+    """No arguments prints help rather than failing."""
+    result = runner.invoke(app, [])
+
+    assert "Usage:" in result.output
+
+
+def test_module_is_executable(tmp_path: Path) -> None:
+    """`python -m {{ package_name }}` is a working entry point."""
+    result = subprocess.run(
+        [sys.executable, "-m", "{{ package_name }}", "--version"],
+        capture_output=True,
+        text=True,
+        cwd=tmp_path,
+        check=False,
+    )
+
+    assert result.returncode == 0, result.stderr
+    assert __version__ in result.stdout

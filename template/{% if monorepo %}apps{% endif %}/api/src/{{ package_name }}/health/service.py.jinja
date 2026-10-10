@@ -1,0 +1,9 @@
+"""Health check logic, free of FastAPI so it is testable without HTTP."""
+
+from {{ package_name }} import __version__
+from {{ package_name }}.health.schemas import Health
+
+
+def get_health() -> Health:
+    """Report that the service is up, and its version."""
+    return Health(status="ok", version=__version__)

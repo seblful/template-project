@@ -1,0 +1,36 @@
+[project]
+name = "{{ project_slug }}"
+description = "{{ project_description }}"
+requires-python = ">={{ python_version }}"
+version = "0.1.0"
+authors = [
+    { name = "{{ author_name }}", email = "{{ author_email }}" }
+]
+classifiers = [
+    "Private :: Do Not Upload",  # a deployed service, never a PyPI package
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: {{ python_version }}",
+    "Typing :: Typed",
+]
+# Floors only: uv.lock pins what actually runs, and a cap here would only get in the
+# way of the upgrades `uv lock --upgrade` exists for.
+dependencies = [
+    "fastapi>=0.143.0",
+    "uvicorn>=0.54.0",
+    "typer>=0.12.0",
+    "structlog>=24.1.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.14.2",
+]
+
+[project.scripts]
+{{ project_slug }} = "{{ package_name }}.cli:app"
+
+[build-system]
+# Capped as uv itself recommends: uv_build may change its settings in a minor release.
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+# Explicit because package_name need not be project_slug with underscores.
+module-name = "{{ package_name }}"

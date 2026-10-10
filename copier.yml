@@ -39,7 +39,29 @@ project_type:
   choices:
     - cli
     - library
+    - api
   default: cli
+
+# Derived, never asked. `when: false` also keeps them out of the answers file, so an
+# update recomputes them from project_type instead of replaying a stale value.
+monorepo:
+  type: bool
+  # cli and library stay a single package at the root, where `uv tool install` and
+  # PyPI expect it; only an api lives in apps/, so that a frontend can join it later.
+  default: "{{ project_type == 'api' }}"
+  when: false
+
+application:
+  type: bool
+  # Applications load settings and configure logging; a library leaves both to its host.
+  default: "{{ project_type in ['cli', 'api'] }}"
+  when: false
+
+python_prefix:
+  type: str
+  # Where the Python package sits relative to the root, for paths in shared config.
+  default: "{{ 'apps/api/' if monorepo else '' }}"
+  when: false
 
 config_file:
   type: bool
@@ -203,6 +225,13 @@ _message_after_copy: |
   .env.example is the committed contract listing every supported key; your own .env is
   gitignored and yours to edit. Select it explicitly with --env-file or
   load_settings(env_file=Path(".env")); files are never discovered automatically.
+  {%- elif project_type == 'api' %}
+      cp apps/api/.env.example apps/api/.env
+      uv run {{ project_slug }} serve --env-file apps/api/.env
+
+  The interactive API docs are then at http://127.0.0.1:8000/api/docs.
+  apps/api/.env.example is the committed contract listing every supported key; your
+  own .env is gitignored and yours to edit. Files are never discovered automatically.
   {%- endif %}
 
   Docs tooling installs separately with `uv sync --group docs`.

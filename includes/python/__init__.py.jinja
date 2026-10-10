@@ -9,7 +9,7 @@ try:
     __version__ = version(PROJECT_NAME)
 except PackageNotFoundError:  # pragma: no cover - a source tree with no install
     __version__ = "0.0.0+unknown"
-{% if project_type == "cli" %}
+{% if application %}
 # get_logger/load_settings stay unexported: re-exporting would pull in pydantic and
 # structlog for every importer, whether or not they're used.
 {%- endif %}

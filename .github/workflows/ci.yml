@@ -59,6 +59,8 @@ jobs:
           - {os: ubuntu-latest, answers: cli-config-py311}
           - {os: ubuntu-latest, answers: library-py312-github}
           - {os: windows-latest, answers: cli-gitlab}
+          - {os: ubuntu-latest, answers: api-github}
+          - {os: windows-latest, answers: api-gitlab-py311}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -78,7 +80,7 @@ jobs:
           path: |
             ~/.cache/prek
             ~/AppData/Local/prek
-          key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml') }}
+          key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml.jinja') }}
 
       - name: Generate and check a project
         run: |
@@ -107,7 +109,7 @@ jobs:
           path: |
             ~/.cache/prek
             ~/AppData/Local/prek
-          key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml') }}
+          key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml.jinja') }}
 
       - name: Update a project from the latest tag
         run: |

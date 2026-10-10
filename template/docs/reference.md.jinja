@@ -5,7 +5,7 @@ Generated from docstrings by [mkdocstrings](https://mkdocstrings.github.io/). `_
 ## Package
 
 ::: {{ package_name }}
-{%- if project_type == "cli" %}
+{%- if application %}
 
 ## Settings
 
@@ -20,6 +20,22 @@ Generated from docstrings by [mkdocstrings](https://mkdocstrings.github.io/). `_
 ## Logging
 
 ::: {{ package_name }}.logging
+{%- endif %}
+{%- if project_type == "api" %}
+
+## Application
+
+::: {{ package_name }}.app
+
+## Health
+
+::: {{ package_name }}.health.router
+
+::: {{ package_name }}.health.schemas
+
+::: {{ package_name }}.health.service
+{%- endif %}
+{%- if application %}
 
 ## CLI
 

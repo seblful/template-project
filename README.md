@@ -33,7 +33,7 @@ Your answers are kept in `.copier-answers.yml`. Notes for a breaking release pri
 | `project_slug` | Project name, kebab-case |
 | `package_name` | Python package, snake_case |
 | `project_description` | One line |
-| `project_type` | `cli`: an application with a Typer CLI, settings and logging. `library`: a package with no runtime dependencies |
+| `project_type` | `cli`: an application with a Typer CLI, settings and logging. `library`: a package with no runtime dependencies. `api`: a FastAPI service in `apps/api/`, a uv workspace member, with the same settings and logging |
 | `config_file` | `cli` only: add `--config config.toml` support (default no) |
 | `author_name`, `author_email` | Required, no default |
 | `license` | None, MIT or Apache |

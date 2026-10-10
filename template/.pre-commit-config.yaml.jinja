@@ -48,7 +48,7 @@ repos:
         entry: uv run --group docs zensical build --strict
         language: system
         # src/ for docstrings, README.md because docs/index.md includes it.
-        files: ^(docs/|src/|README\.md$|zensical\.toml$)
+        files: ^(docs/|{{ python_prefix }}src/|README\.md$|zensical\.toml$)
         pass_filenames: false
         stages: [pre-push, manual]
   - repo: https://github.com/pre-commit/pre-commit-hooks

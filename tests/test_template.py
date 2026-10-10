@@ -68,6 +68,21 @@ ANSWER_SETS: dict[str, dict[str, Any]] = {
         "ci": "gitlab",
         "claude_settings": True,
     },
+    # A license on purpose: an api still gets no release.yml, since it is deployed.
+    "api-github": {
+        "python_version": "3.14",
+        "license": "MIT",
+        "project_type": "api",
+        "ci": "github",
+        "claude_settings": True,
+    },
+    "api-gitlab-py311": {
+        "python_version": "3.11",
+        "license": "None",
+        "project_type": "api",
+        "ci": "gitlab",
+        "claude_settings": False,
+    },
 }
 
 CLI_FILES = [
@@ -81,6 +96,29 @@ CLI_FILES = [
     "tests/test_settings.py",
     "tests/test_logging.py",
     "tests/test_config_roundtrip.py",
+]
+# An api is a uv workspace member in apps/api; the root keeps only shared tooling.
+API = "apps/api"
+API_FILES = [
+    f"{API}/pyproject.toml",
+    f"{API}/.env.example",
+    f"{API}/src/{PACKAGE}/__init__.py",
+    f"{API}/src/{PACKAGE}/__main__.py",
+    f"{API}/src/{PACKAGE}/app.py",
+    f"{API}/src/{PACKAGE}/cli.py",
+    f"{API}/src/{PACKAGE}/settings.py",
+    f"{API}/src/{PACKAGE}/logging.py",
+    f"{API}/src/{PACKAGE}/py.typed",
+    f"{API}/src/{PACKAGE}/health/router.py",
+    f"{API}/src/{PACKAGE}/health/schemas.py",
+    f"{API}/src/{PACKAGE}/health/service.py",
+    f"{API}/tests/conftest.py",
+    f"{API}/tests/test_cli.py",
+    f"{API}/tests/test_health.py",
+    f"{API}/tests/test_package.py",
+    f"{API}/tests/test_settings.py",
+    f"{API}/tests/test_logging.py",
+    f"{API}/tests/test_config_roundtrip.py",
 ]
 CONFIG_FILES = [
     f"src/{PACKAGE}/config_file.py",
@@ -229,16 +267,22 @@ def test_answers_produce_the_right_files(project: Project) -> None:
     """
     answers = project.answers
     cli = answers["project_type"] == "cli"
+    api = answers["project_type"] == "api"
     config = cli and answers["config_file"]
     expected = {
-        "tests/test_package.py": True,
+        "src": not api,
+        "tests": not api,
+        "tests/test_package.py": not api,
+        "apps": api,
         **dict.fromkeys(CLI_FILES, cli),
         **dict.fromkeys(CONFIG_FILES, config),
+        **dict.fromkeys(API_FILES, api),
         ".github": answers["ci"] == "github",
         ".github/workflows/ci.yml": answers["ci"] == "github",
         ".github/dependabot.yml": answers["ci"] == "github",
+        # Only a package is published; an api is deployed.
         ".github/workflows/release.yml": (
-            answers["ci"] == "github" and answers["license"] != "None"
+            answers["ci"] == "github" and answers["license"] != "None" and not api
         ),
         ".gitlab-ci.yml": answers["ci"] == "gitlab",
         ".claude": answers["claude_settings"],
@@ -249,7 +293,10 @@ def test_answers_produce_the_right_files(project: Project) -> None:
 
     pyproject = (project.path / "pyproject.toml").read_text(encoding="utf-8")
     assert ("[project.scripts]" in pyproject) == cli
-    assert ("\ndependencies = []\n" in pyproject) == (not cli)
+    assert ("\ndependencies = []\n" in pyproject) == (
+        answers["project_type"] == "library"
+    )
+    assert ("[tool.uv.workspace]" in pyproject) == api
     if cli:
         cli_source = (project.path / CLI_FILES[0]).read_text(encoding="utf-8")
         assert ('"--config"' in cli_source) == config
@@ -261,8 +308,11 @@ def test_installed_wheel_works(project: Project, tmp_path: Path) -> None:
     Packaging only: settings behavior is the generated test suite's job. Running
     outside the checkout keeps the import from falling back to the source tree.
     """
+    project_type = project.answers["project_type"]
     dist = tmp_path / "dist"
-    _run("uv", "build", "--wheel", "--out-dir", str(dist), cwd=project.path)
+    # The api is a workspace member; the workspace root itself ships nothing.
+    package = ["--package", "demo-proj"] if project_type == "api" else []
+    _run("uv", "build", *package, "--wheel", "--out-dir", str(dist), cwd=project.path)
     wheel = next(dist.glob("*.whl"))
     smoke = tmp_path / "smoke"
     smoke.mkdir()
@@ -280,9 +330,12 @@ def test_installed_wheel_works(project: Project, tmp_path: Path) -> None:
         "python", "-c", f"import {PACKAGE}; print({PACKAGE}.__version__)"
     )
     assert version.strip() == "0.1.0"
-    if project.answers["project_type"] == "cli":
+    if project_type in {"cli", "api"}:
         assert "demo-proj 0.1.0" in run_installed("demo-proj", "--version")
+    if project_type == "cli":
         run_installed("demo-proj", "info")
+    if project_type == "api":
+        assert '"/api/health"' in run_installed("demo-proj", "openapi")
 
     assert list(smoke.iterdir()) == []
 

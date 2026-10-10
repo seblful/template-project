@@ -1,3 +1,23 @@
+{%- if monorepo -%}
+# The workspace root ships nothing. It pins the shared dev tooling, installs the apps
+# into one environment, and holds the tool config every app is checked against.
+[project]
+name = "{{ project_slug }}-workspace"
+version = "0"
+requires-python = ">={{ python_version }}"
+dependencies = ["{{ project_slug }}"]
+
+[tool.uv]
+package = false
+
+[tool.uv.workspace]
+# Listed, not globbed: a TypeScript app in apps/ has no pyproject.toml to find.
+members = ["apps/api"]
+
+[tool.uv.sources]
+{{ project_slug }} = { workspace = true }
+
+{% else -%}
 [project]
 name = "{{ project_slug }}"
 description = "{{ project_description }}"
@@ -41,6 +61,7 @@ dependencies = []
 [project.scripts]
 {{ project_slug }} = "{{ package_name }}.cli:app"
 {% endif %}
+{% endif -%}
 [dependency-groups]
 dev = [
     "pytest>=9.0.0,<10",
@@ -50,12 +71,15 @@ dev = [
     "mdformat>=1.0.0,<2",
     "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
     "prek>=0.5.5,<0.6",  # pre-1.0: breaking changes land between patch releases
+{%- if monorepo %}
+    "httpx2>=2.13.1,<3",  # what Starlette's TestClient sends its requests through
+{%- endif %}
 ]
 docs = [  # a group, not an extra: docs tooling isn't a feature of the installed package
     "zensical>=0.0.69,<0.1",  # pre-1.0: breaking changes land between patch releases
     "mkdocstrings[python]>=1.0.0,<2",  # renders docs/reference.md from docstrings
 ]
-
+{% if not monorepo %}
 [build-system]
 # Capped as uv itself recommends: uv_build may change its settings in a minor release.
 requires = ["uv_build>=0.13.0,<0.14"]
@@ -64,9 +88,9 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 # Explicit because package_name need not be project_slug with underscores.
 module-name = "{{ package_name }}"
-
+{% endif %}
 [tool.pytest.ini_options]
-testpaths = ["tests"]
+testpaths = ["{{ python_prefix }}tests"]
 # No --cov-fail-under here: a partial run (a single file, or -k) would then report
 # false-low coverage. Measure explicitly: `uv run pytest --cov` (see [tool.coverage]).
 addopts = "-ra --strict-markers --strict-config"
@@ -83,7 +107,7 @@ markers = [
 [tool.ruff]
 # No target-version: ruff infers it from requires-python.
 line-length = 88
-src = ["src"]
+src = ["{{ python_prefix }}src"]
 
 [tool.ruff.lint]
 # COM/ISC001/Q are absent: the formatter already owns commas, quotes and string joins,
@@ -131,7 +155,7 @@ select = [
 
 [tool.ruff.lint.pydocstyle]
 convention = "google"
-{% if project_type == "cli" %}
+{% if application %}
 [tool.ruff.lint.flake8-bugbear]
 extend-immutable-calls = ["typer.Argument", "typer.Option"]
 
@@ -151,11 +175,16 @@ known-first-party = ["{{ package_name }}"]
 [tool.ruff.lint.per-file-ignores]
 # Tests don't need docstrings, may use asserts, magic values, and unused fixture args,
 # and gain nothing from hiding annotation-only imports behind TYPE_CHECKING.
-"tests/**" = ["D", "S101", "PLR2004", "ARG", "TC"]
-{%- if project_type == "cli" %}
+"{{ python_prefix }}tests/**" = ["D", "S101", "PLR2004", "ARG", "TC"]
+{%- if application %}
 # Typer reads parameter annotations at runtime to build options, so `Path` stays real;
 # `Settings` gains nothing either, since the entry point imports every module anyway.
-"src/{{ package_name }}/cli.py" = ["TC001", "TC003"]
+"{{ python_prefix }}src/{{ package_name }}/cli.py" = ["TC001", "TC003"]
+{%- endif %}
+{%- if project_type == "api" %}
+# FastAPI reads route annotations at runtime to validate and document each response,
+# so a model named only in a return type is a runtime import.
+"{{ python_prefix }}src/{{ package_name }}/**/router.py" = ["TC001"]
 {%- endif %}
 
 [tool.ruff.format]
@@ -164,7 +193,7 @@ docstring-code-format = true
 line-ending = "lf"
 
 [tool.coverage.run]
-source = ["src/{{ package_name }}"]
+source = ["{{ python_prefix }}src/{{ package_name }}"]
 branch = true
 
 [tool.coverage.report]

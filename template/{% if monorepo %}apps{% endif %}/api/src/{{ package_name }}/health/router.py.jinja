@@ -1,0 +1,14 @@
+"""HTTP routes of the health check: status codes and paths, no logic."""
+
+from fastapi import APIRouter
+
+from {{ package_name }}.health.schemas import Health
+from {{ package_name }}.health.service import get_health
+
+router = APIRouter(prefix="/health", tags=["health"])
+
+
+@router.get("")
+def read_health() -> Health:
+    """Return the service's health."""
+    return get_health()
