@@ -4,11 +4,20 @@
 
 ## Setup
 
+{% if has_frontend -%}
+Needs [Bun](https://bun.sh/) for the app and [uv](https://docs.astral.sh/uv/) for the git hooks and the docs, which bring their own Python {{ python_version }}.
+
+```bash
+uv sync
+bun install
+```
+{%- else -%}
 Needs Python {{ python_version }}+ and [uv](https://docs.astral.sh/uv/).
 
 ```bash
 uv sync
 ```
+{%- endif %}
 
 ## Usage
 {% if project_type == "cli" %}
@@ -60,8 +69,9 @@ To add a setting, add a field to a group in `src/{{ package_name }}/settings.py`
 Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`. `LOGGING__LEVEL` sets the lowest level that is logged.
 {%- elif project_type == "api" %}
 ```bash
-uv run {{ project_slug }} serve     # interactive docs at http://127.0.0.1:8000/api/docs
-uv run {{ project_slug }} openapi   # the OpenAPI schema, as JSON
+uv run {{ project_slug }} serve            # interactive docs at http://127.0.0.1:8000/api/docs
+uv run {{ project_slug }} serve --reload   # restarts on source changes, for development
+uv run {{ project_slug }} openapi          # the OpenAPI schema, as JSON
 ```
 
 The API lives in `apps/api/`, a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/) member. The root holds the shared tooling and its config, so every command runs from the root.
@@ -84,6 +94,15 @@ To add a setting, add a field to a group in `apps/api/src/{{ package_name }}/set
 ## Logging
 
 Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`, uvicorn's access and error logs included. `LOGGING__LEVEL` sets the lowest level that is logged.
+{%- elif project_type == "frontend" %}
+```bash
+bun run --cwd apps/web dev     # http://localhost:5173, reloads as you edit
+bun run --cwd apps/web build   # static files in apps/web/dist
+```
+
+The app lives in `apps/web/`, a [Bun workspace](https://bun.sh/docs/install/workspaces): React, [TanStack Router](https://tanstack.com/router) and [TanStack Query](https://tanstack.com/query), styled with [Tailwind CSS](https://tailwindcss.com/), built by [Vite](https://vite.dev/).
+
+`src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `counter/` shows. Routes are declared in `src/router.tsx`, which type-checks every link against them.
 {%- else %}
 ```python
 import {{ package_name }}
@@ -100,10 +119,14 @@ Use `logging.getLogger(__name__)` and leave handlers and levels to the applicati
 
 ```bash
 uv run prek run --all-files --hook-stage manual   # every check{% if ci != "none" %}, as CI runs it{% endif %}
-uv run --group docs zensical serve                # docs at http://localhost:8000
+uv run --group docs zensical serve                # docs at http://localhost:{{ '8001' if monorepo else '8000' }}
 ```
 
+{% if has_python -%}
 Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests and the docs build. Test order is random; replay a failure with `uv run pytest -p randomly --randomly-seed=<seed>`.
+{%- else -%}
+Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests, the production build and the docs build.
+{%- endif %}
 {%- if ci == "gitlab" %}
 
 For the weekly dependency audit, add a pipeline schedule in GitLab with `SCHEDULED_AUDIT` set to `1`. The `pages` job publishes the docs when run manually.

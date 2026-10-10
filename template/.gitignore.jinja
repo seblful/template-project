@@ -11,6 +11,12 @@ dist/
 
 # Virtual environments (uv)
 .venv/
+{%- if has_frontend %}
+
+# Frontend (Bun, Vite); dist/ above already covers the build output.
+node_modules/
+*.tsbuildinfo
+{%- endif %}
 
 # Environments
 # .env.example is the committed config contract; every other .env file stays local.

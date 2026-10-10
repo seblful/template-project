@@ -11,14 +11,24 @@
       "Bash(uv sync *)",
       "Bash(uv lock *)",
       "Bash(uv tree *)",
+{%- if has_python %}
       "Bash(uv run pytest *)",
       "Bash(uv run ruff *)",
       "Bash(uv run ty *)",
+{%- endif %}
       "Bash(uv run mdformat *)",
       "Bash(uv run prek run *)",
       "Bash(uv run prek install *)",
       "Bash(uv run --group docs zensical build *)",
       "Bash(uv run --group docs zensical serve *)",
+{%- if has_frontend %}
+      "Bash(bun install --frozen-lockfile)",
+      "Bash(bun run biome *)",
+      "Bash(bun run --cwd apps/web typecheck)",
+      "Bash(bun run --cwd apps/web test *)",
+      "Bash(bun run --cwd apps/web build)",
+      "Bash(bun run --cwd apps/web dev)",
+{%- endif %}
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git switch -c *)",

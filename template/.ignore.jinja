@@ -9,6 +9,9 @@
 # Committed, generated, thousands of lines long. Comments get their own line: in this
 # syntax a trailing `# ...` is part of the pattern, not a comment.
 uv.lock
+{%- if has_frontend %}
+bun.lock
+{%- endif %}
 
 # Belt and suspenders: .gitignore covers these too, but a leaked key stays unindexed.
 *.key

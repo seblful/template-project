@@ -47,13 +47,30 @@ def serve(
     ] = None,
     host: Annotated[str, typer.Option(help="Interface to bind.")] = "127.0.0.1",
     port: Annotated[int, typer.Option(help="Port to bind.")] = 8000,
+    reload: Annotated[
+        bool, typer.Option(help="Restart on source changes, for development.")
+    ] = False,
 ) -> None:
     """Serve the API with uvicorn."""
-    settings = load_settings(env_file=env_file)
-    setup_logging(settings.logging)
-    # log_config=None stops uvicorn from replacing the handler setup_logging installed,
-    # so its access and error logs come out in the application's format.
-    uvicorn.run(create_app(), host=host, port=port, log_config=None)
+    # Fails fast on bad settings, before uvicorn starts, and sets up logging for the
+    # reload supervisor, which never serves itself.
+    setup_logging(load_settings(env_file=env_file).logging)
+    uvicorn.run(
+        # A factory by import string, which reload requires: the child imports it.
+        "{{ package_name }}.app:create_serving_app",
+        factory=True,
+        host=host,
+        port=port,
+        # Loaded into the environment, which a reload child inherits; variables that
+        # are already set still win, as they do with load_settings(env_file=...).
+        env_file=env_file,
+        reload=reload,
+        # The package only: the default, the working directory, would poll .venv too.
+        reload_dirs=[str(Path(__file__).parent)] if reload else None,
+        # Keeps uvicorn from replacing the handler setup_logging installed, so its
+        # access and error logs come out in the application's format.
+        log_config=None,
+    )
 
 
 @app.command()

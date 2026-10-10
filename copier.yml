@@ -11,28 +11,7 @@ project_slug:
     project_slug must be kebab-case: lowercase letters and digits separated by single hyphens (e.g. my-cool-project)
     {% endif %}
 
-package_name:
-  type: str
-  help: What is your Python package name? (snake_case)
-  default: "{{ project_slug | replace('-', '_') }}"
-  validator: >-
-    {% if not (package_name | regex_search('^[a-z][a-z0-9_]*$')) %}
-    package_name must be a valid Python identifier: lowercase letter first, then lowercase letters, digits or underscores (e.g. my_cool_project)
-    {% endif %}
-
-project_description:
-  type: str
-  help: What is the project description?
-  default: A Python project.
-  # Rendered inside quoted TOML and YAML strings, where these characters break parsing.
-  validator: >-
-    {% if not project_description.strip() %}
-    project_description must not be empty
-    {% elif project_description | regex_search('["\\\\\x00-\x1f]') %}
-    project_description must not contain double quotes, backslashes or control
-    characters such as line breaks
-    {% endif %}
-
+# Asked before the names below, since it decides whether there is a Python package.
 project_type:
   type: str
   help: What kind of project is this?
@@ -40,6 +19,7 @@ project_type:
     - cli
     - library
     - api
+    - frontend
   default: cli
 
 # Derived, never asked. `when: false` also keeps them out of the answers file, so an
@@ -47,8 +27,24 @@ project_type:
 monorepo:
   type: bool
   # cli and library stay a single package at the root, where `uv tool install` and
-  # PyPI expect it; only an api lives in apps/, so that a frontend can join it later.
+  # PyPI expect it. api and frontend live in apps/, so the other can join later.
+  default: "{{ project_type in ['api', 'frontend'] }}"
+  when: false
+
+has_python:
+  type: bool
+  # A frontend still uses uv, for the hooks and the docs, but ships no Python code.
+  default: "{{ project_type != 'frontend' }}"
+  when: false
+
+has_backend:
+  type: bool
   default: "{{ project_type == 'api' }}"
+  when: false
+
+has_frontend:
+  type: bool
+  default: "{{ project_type == 'frontend' }}"
   when: false
 
 application:
@@ -60,8 +56,31 @@ application:
 python_prefix:
   type: str
   # Where the Python package sits relative to the root, for paths in shared config.
-  default: "{{ 'apps/api/' if monorepo else '' }}"
+  default: "{{ 'apps/api/' if has_backend else '' }}"
   when: false
+
+package_name:
+  type: str
+  help: What is your Python package name? (snake_case)
+  default: "{{ project_slug | replace('-', '_') }}"
+  when: "{{ has_python }}"
+  validator: >-
+    {% if not (package_name | regex_search('^[a-z][a-z0-9_]*$')) %}
+    package_name must be a valid Python identifier: lowercase letter first, then lowercase letters, digits or underscores (e.g. my_cool_project)
+    {% endif %}
+
+project_description:
+  type: str
+  help: What is the project description?
+  default: "{{ 'A web frontend.' if project_type == 'frontend' else 'A Python project.' }}"
+  # Rendered inside quoted TOML and YAML strings, where these characters break parsing.
+  validator: >-
+    {% if not project_description.strip() %}
+    project_description must not be empty
+    {% elif project_description | regex_search('["\\\x00-\x1f]') %}
+    project_description must not contain double quotes, backslashes or control
+    characters such as line breaks
+    {% endif %}
 
 config_file:
   type: bool
@@ -149,6 +168,9 @@ _tasks:
   # runs these tasks there as well, and prek install fails outside a repo.
   - ["git", "init"]
   - ["uv", "sync"]
+  # No bun.lock ships with the template: the first install resolves current versions.
+  - command: ["bun", "install"]
+    when: "{{ has_frontend }}"
   # Also on update: a hook type the template adds reaches a checkout only via install.
   # --force because a shim left by pre-commit would otherwise survive as a legacy hook
   # that prek still runs, and it fails now that pre-commit is no longer installed.
@@ -232,6 +254,10 @@ _message_after_copy: |
   The interactive API docs are then at http://127.0.0.1:8000/api/docs.
   apps/api/.env.example is the committed contract listing every supported key; your
   own .env is gitignored and yours to edit. Files are never discovered automatically.
+  {%- elif project_type == 'frontend' %}
+      bun run --cwd apps/web dev
+
+  The app is then at http://localhost:5173 and reloads as you edit apps/web/src.
   {%- endif %}
 
   Docs tooling installs separately with `uv sync --group docs`.

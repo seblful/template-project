@@ -42,6 +42,18 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked  # fails on a stale lockfile instead of masking it
 
+      # Only a project with a frontend has a package.json. Its packageManager field
+      # pins the Bun version, as .python-version pins Python's.
+      - name: Install Bun
+        if: hashFiles('package.json') != ''
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      - name: Install frontend dependencies
+        if: hashFiles('package.json') != ''
+        run: bun install --frozen-lockfile  # fails on a stale bun.lock, as uv does
+
       - name: Cache prek environments
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
@@ -77,3 +89,14 @@ jobs:
       # uv still marks experimental, instead of printing a warning on every run.
       - name: Audit locked dependencies
         run: uv audit --locked --preview-features audit-command
+
+      - name: Install Bun
+        if: hashFiles('package.json') != ''
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+        with:
+          bun-version-file: package.json
+
+      # Reads bun.lock against the npm advisory database; installs nothing.
+      - name: Audit frontend dependencies
+        if: hashFiles('package.json') != ''
+        run: bun audit

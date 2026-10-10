@@ -1,5 +1,11 @@
+{%- if has_frontend -%}
+# Local hooks run via `uv run` or `bun run`, so uv.lock and bun.lock pin their versions
+# instead of prek's own envs; `prek update` can't silently change how this project is
+# formatted.
+{%- else -%}
 # Local hooks run via `uv run`, so uv.lock pins their versions instead of prek's own
 # envs; `prek update` can't silently change how this project is formatted.
+{%- endif %}
 #
 # This file is the one definition of the project's checks. Commits run the fast ones,
 # pushes add the tests and the docs build, and the manual stage runs all of them:
@@ -11,6 +17,7 @@ default_stages: [pre-commit, manual]
 repos:
   - repo: local
     hooks:
+{%- if has_python %}
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix --exit-non-zero-on-fix --force-exclude
@@ -23,6 +30,7 @@ repos:
         language: system
         types_or: [python, pyi]
         require_serial: true
+{%- endif %}
       - id: mdformat
         name: mdformat
         entry: uv run mdformat
@@ -30,6 +38,7 @@ repos:
         types: [markdown]
         # mdformat escapes the `--8<--` include marker, which snippets then ignores.
         exclude: ^docs/index\.md$
+{%- if has_python %}
       - id: ty
         name: ty type check
         entry: uv run ty check
@@ -43,14 +52,52 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push, manual]
+{%- endif %}
       - id: zensical
         name: zensical build
         entry: uv run --group docs zensical build --strict
         language: system
+{%- if has_python %}
         # src/ for docstrings, README.md because docs/index.md includes it.
         files: ^(docs/|{{ python_prefix }}src/|README\.md$|zensical\.toml$)
+{%- else %}
+        # README.md because docs/index.md includes it.
+        files: ^(docs/|README\.md$|zensical\.toml$)
+{%- endif %}
         pass_filenames: false
         stages: [pre-push, manual]
+{%- if has_frontend %}
+      # `bun run`, not bunx: it runs only what bun.lock installed, never a download.
+      - id: biome
+        name: biome check
+        entry: bun run biome check --write --no-errors-on-unmatched --files-ignore-unknown=true
+        language: system
+        # The TypeScript world only; Python and its config have their own hooks.
+        files: ^(apps/web/|package\.json$|biome\.json$)
+        types_or: [ts, tsx, javascript, jsx, json, css]
+        require_serial: true
+      - id: tsc
+        name: tsc type check
+        entry: bun run --cwd apps/web typecheck
+        language: system
+        files: ^apps/web/
+        pass_filenames: false  # tsc checks the whole program, not just staged files
+      - id: vitest
+        name: vitest
+        entry: bun run --cwd apps/web test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+      # The bundler sees what tsc does not: CSS, plugins and the production build.
+      - id: vite-build
+        name: vite build
+        entry: bun run --cwd apps/web build
+        language: system
+        files: ^apps/web/
+        pass_filenames: false
+        stages: [pre-push, manual]
+{%- endif %}
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0
     hooks:

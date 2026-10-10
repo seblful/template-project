@@ -83,6 +83,20 @@ ANSWER_SETS: dict[str, dict[str, Any]] = {
         "ci": "gitlab",
         "claude_settings": False,
     },
+    "frontend-github": {
+        "python_version": "3.14",
+        "license": "MIT",
+        "project_type": "frontend",
+        "ci": "github",
+        "claude_settings": True,
+    },
+    "frontend-gitlab": {
+        "python_version": "3.13",
+        "license": "None",
+        "project_type": "frontend",
+        "ci": "gitlab",
+        "claude_settings": False,
+    },
 }
 
 CLI_FILES = [
@@ -113,12 +127,33 @@ API_FILES = [
     f"{API}/src/{PACKAGE}/health/schemas.py",
     f"{API}/src/{PACKAGE}/health/service.py",
     f"{API}/tests/conftest.py",
+    f"{API}/tests/test_app.py",
     f"{API}/tests/test_cli.py",
     f"{API}/tests/test_health.py",
     f"{API}/tests/test_package.py",
     f"{API}/tests/test_settings.py",
     f"{API}/tests/test_logging.py",
     f"{API}/tests/test_config_roundtrip.py",
+]
+# A frontend is a Bun workspace member in apps/web; bun.lock comes from the first
+# install, so it is generated rather than rendered.
+WEB = "apps/web"
+WEB_FILES = [
+    "package.json",
+    "bun.lock",
+    "biome.json",
+    f"{WEB}/package.json",
+    f"{WEB}/tsconfig.json",
+    f"{WEB}/vite.config.ts",
+    f"{WEB}/index.html",
+    f"{WEB}/src/main.tsx",
+    f"{WEB}/src/router.tsx",
+    f"{WEB}/src/styles.css",
+    f"{WEB}/src/test-setup.ts",
+    f"{WEB}/src/routes/root.tsx",
+    f"{WEB}/src/routes/index.tsx",
+    f"{WEB}/src/features/counter/Counter.tsx",
+    f"{WEB}/src/features/counter/Counter.test.tsx",
 ]
 CONFIG_FILES = [
     f"src/{PACKAGE}/config_file.py",
@@ -129,16 +164,14 @@ CONFIG_FILES = [
 # Hooks from every repo in the generated .pre-commit-config.yaml. Asserting that they
 # passed proves the manual stage really runs all of them, remote repos included.
 REQUIRED_HOOKS = [
-    "ruff check",
-    "ruff format",
     "mdformat",
-    "ty type check",
-    "pytest",
     "zensical build",
     "trim trailing whitespace",
     "uv-lock",
     "Detect hardcoded secrets",
 ]
+PYTHON_HOOKS = ["ruff check", "ruff format", "ty type check", "pytest"]
+FRONTEND_HOOKS = ["biome check", "tsc type check", "vitest", "vite build"]
 
 # `[^$]` before `{{` excludes GitHub Actions' own `${{ ... }}` expressions.
 UNRENDERED_JINJA = re.compile(r"(^|[^$])\{\{|\{%", re.MULTILINE)
@@ -176,10 +209,14 @@ def _generate(dst: Path, answers: dict[str, Any], vcs_ref: str = "HEAD") -> None
     )
 
 
-def _run_every_check(path: Path, *, github: bool = False) -> None:
+def _run_every_check(
+    path: Path, *, project_type: str = "cli", github: bool = False
+) -> None:
     """Run the project's single definition of its checks, as its CI does.
 
-    With `github`, also require zizmor, which skips itself when there is no workflow.
+    The hooks required depend on `project_type`: Python and frontend projects each
+    add their own. With `github`, also require zizmor, which skips itself when there
+    is no workflow.
     """
     result = _run(
         "uv",
@@ -192,7 +229,12 @@ def _run_every_check(path: Path, *, github: bool = False) -> None:
         "--show-diff-on-failure",
         cwd=path,
     )
-    for hook in [*REQUIRED_HOOKS, *(["zizmor"] if github else [])]:
+    required = [
+        *REQUIRED_HOOKS,
+        *(FRONTEND_HOOKS if project_type == "frontend" else PYTHON_HOOKS),
+        *(["zizmor"] if github else []),
+    ]
+    for hook in required:
         assert re.search(rf"^{re.escape(hook)}\.+Passed$", result.stdout, re.M), (
             f"hook {hook!r} did not run and pass:\n{result.stdout}"
         )
@@ -220,7 +262,11 @@ def test_every_check_passes(project: Project) -> None:
     assert (hooks / "pre-push").is_file()
     assert (hooks / "commit-msg").is_file()
 
-    _run_every_check(project.path, github=project.answers["ci"] == "github")
+    _run_every_check(
+        project.path,
+        project_type=project.answers["project_type"],
+        github=project.answers["ci"] == "github",
+    )
 
 
 def test_commit_message_hook_enforces_conventional_commits(project: Project) -> None:
@@ -250,7 +296,7 @@ def test_no_unrendered_jinja_survives(project: Project) -> None:
     leftovers = [
         name
         for name in tracked
-        if name != "uv.lock"
+        if name not in {"uv.lock", "bun.lock"}
         and UNRENDERED_JINJA.search(
             (project.path / name).read_text(encoding="utf-8", errors="replace")
         )
@@ -268,21 +314,26 @@ def test_answers_produce_the_right_files(project: Project) -> None:
     answers = project.answers
     cli = answers["project_type"] == "cli"
     api = answers["project_type"] == "api"
+    frontend = answers["project_type"] == "frontend"
+    library = answers["project_type"] == "library"
+    monorepo = api or frontend
     config = cli and answers["config_file"]
     expected = {
-        "src": not api,
-        "tests": not api,
-        "tests/test_package.py": not api,
-        "apps": api,
+        "src": not monorepo,
+        "tests": not monorepo,
+        "tests/test_package.py": not monorepo,
+        "apps": monorepo,
+        "docs/reference.md": not frontend,
         **dict.fromkeys(CLI_FILES, cli),
         **dict.fromkeys(CONFIG_FILES, config),
         **dict.fromkeys(API_FILES, api),
+        **dict.fromkeys(WEB_FILES, frontend),
         ".github": answers["ci"] == "github",
         ".github/workflows/ci.yml": answers["ci"] == "github",
         ".github/dependabot.yml": answers["ci"] == "github",
         # Only a package is published; an api is deployed.
         ".github/workflows/release.yml": (
-            answers["ci"] == "github" and answers["license"] != "None" and not api
+            answers["ci"] == "github" and answers["license"] != "None" and not monorepo
         ),
         ".gitlab-ci.yml": answers["ci"] == "gitlab",
         ".claude": answers["claude_settings"],
@@ -293,9 +344,8 @@ def test_answers_produce_the_right_files(project: Project) -> None:
 
     pyproject = (project.path / "pyproject.toml").read_text(encoding="utf-8")
     assert ("[project.scripts]" in pyproject) == cli
-    assert ("\ndependencies = []\n" in pyproject) == (
-        answers["project_type"] == "library"
-    )
+    # A library forces nothing on its consumers; a frontend's root holds only tooling.
+    assert ("\ndependencies = []\n" in pyproject) == (library or frontend)
     assert ("[tool.uv.workspace]" in pyproject) == api
     if cli:
         cli_source = (project.path / CLI_FILES[0]).read_text(encoding="utf-8")
@@ -309,6 +359,8 @@ def test_installed_wheel_works(project: Project, tmp_path: Path) -> None:
     outside the checkout keeps the import from falling back to the source tree.
     """
     project_type = project.answers["project_type"]
+    if project_type == "frontend":
+        pytest.skip("a frontend ships no Python package")
     dist = tmp_path / "dist"
     # The api is a workspace member; the workspace root itself ships nothing.
     package = ["--package", "demo-proj"] if project_type == "api" else []

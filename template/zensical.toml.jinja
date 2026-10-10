@@ -2,13 +2,18 @@
 site_name = "{{ project_slug }}"
 site_description = "{{ project_description }}"
 site_author = "{{ author_name }}"
+{%- if monorepo %}
+dev_addr = "localhost:8001"  # `zensical serve`; 8000 belongs to the API
+{%- endif %}
 # Uncomment once the docs have a home; repo_name needs repo_url set alongside it.
 # site_url = "https://example.github.io/{{ project_slug }}/"
 # repo_url = "https://github.com/example/{{ project_slug }}"
 # repo_name = "example/{{ project_slug }}"
 nav = [
   { "Home" = "index.md" },
+{%- if has_python %}
   { "Reference" = "reference.md" },
+{%- endif %}
 ]
 
 [project.theme]
@@ -25,6 +30,7 @@ media = "(prefers-color-scheme: dark)"
 scheme = "slate"
 toggle.icon = "lucide/moon"
 toggle.name = "Switch to light mode"
+{%- if has_python %}
 
 [project.plugins.mkdocstrings.handlers.python]
 paths = ["{{ python_prefix }}src"]
@@ -36,6 +42,7 @@ show_root_heading = true
 members_order = "source"
 separate_signature = true
 show_signature_annotations = true
+{%- endif %}
 
 [project.markdown_extensions]
 admonition = {}

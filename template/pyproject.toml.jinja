@@ -1,14 +1,20 @@
 {%- if monorepo -%}
+{%- if has_python -%}
 # The workspace root ships nothing. It pins the shared dev tooling, installs the apps
 # into one environment, and holds the tool config every app is checked against.
+{%- else -%}
+# The root ships nothing. It pins the tooling uv provides for every project, whatever
+# its language: the git hooks and the docs.
+{%- endif %}
 [project]
 name = "{{ project_slug }}-workspace"
 version = "0"
 requires-python = ">={{ python_version }}"
-dependencies = ["{{ project_slug }}"]
+dependencies = [{% if has_backend %}"{{ project_slug }}"{% endif %}]
 
 [tool.uv]
 package = false
+{%- if has_backend %}
 
 [tool.uv.workspace]
 # Listed, not globbed: a TypeScript app in apps/ has no pyproject.toml to find.
@@ -16,6 +22,7 @@ members = ["apps/api"]
 
 [tool.uv.sources]
 {{ project_slug }} = { workspace = true }
+{%- endif %}
 
 {% else -%}
 [project]
@@ -64,22 +71,29 @@ dependencies = []
 {% endif -%}
 [dependency-groups]
 dev = [
+{%- if has_python %}
     "pytest>=9.0.0,<10",
     "pytest-cov>=7.0.0,<8",
     "pytest-randomly>=5.0.0,<6",  # catches order-dependence from shared module state
     "ruff>=0.17.0,<0.18",
+{%- endif %}
     "mdformat>=1.0.0,<2",
+{%- if has_python %}
     "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
+{%- endif %}
     "prek>=0.5.5,<0.6",  # pre-1.0: breaking changes land between patch releases
-{%- if monorepo %}
+{%- if has_backend %}
     "httpx2>=2.13.1,<3",  # what Starlette's TestClient sends its requests through
 {%- endif %}
 ]
 docs = [  # a group, not an extra: docs tooling isn't a feature of the installed package
     "zensical>=0.0.69,<0.1",  # pre-1.0: breaking changes land between patch releases
+{%- if has_python %}
     "mkdocstrings[python]>=1.0.0,<2",  # renders docs/reference.md from docstrings
+{%- endif %}
 ]
-{% if not monorepo %}
+{%- if not monorepo %}
+
 [build-system]
 # Capped as uv itself recommends: uv_build may change its settings in a minor release.
 requires = ["uv_build>=0.13.0,<0.14"]
@@ -88,7 +102,9 @@ build-backend = "uv_build"
 [tool.uv.build-backend]
 # Explicit because package_name need not be project_slug with underscores.
 module-name = "{{ package_name }}"
-{% endif %}
+{%- endif %}
+{%- if has_python %}
+
 [tool.pytest.ini_options]
 testpaths = ["{{ python_prefix }}tests"]
 # No --cov-fail-under here: a partial run (a single file, or -k) would then report
@@ -205,3 +221,4 @@ exclude_also = [
     "raise NotImplementedError",
     "@(abc\\.)?abstractmethod",
 ]
+{%- endif %}

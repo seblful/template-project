@@ -7,9 +7,9 @@ from pathlib import Path
 
 import pytest
 import uvicorn
-from fastapi import FastAPI
 from typer.testing import CliRunner
 
+import {{ package_name }}
 from {{ package_name }} import __version__
 from {{ package_name }}.cli import app
 
@@ -21,7 +21,7 @@ def served(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
     """Record what `serve` passes to uvicorn, instead of starting a server."""
     calls: dict[str, object] = {}
 
-    def fake_run(application: FastAPI, **kwargs: object) -> None:
+    def fake_run(application: str, **kwargs: object) -> None:
         calls.update(kwargs, application=application)
 
     monkeypatch.setattr(uvicorn, "run", fake_run)
@@ -31,20 +31,44 @@ def served(monkeypatch: pytest.MonkeyPatch) -> dict[str, object]:
 def test_serve_runs_the_app_with_logging_left_to_the_application(
     served: dict[str, object],
 ) -> None:
-    """`serve` hands uvicorn the app, the address, and no logging config of its own."""
+    """`serve` hands uvicorn the factory, the address, and no logging config."""
     result = runner.invoke(app, ["serve", "--port", "9000"])
 
     assert result.exit_code == 0, result.output
-    assert isinstance(served["application"], FastAPI)
+    assert served["application"] == "{{ package_name }}.app:create_serving_app"
+    assert served["factory"] is True
     assert served["host"] == "127.0.0.1"
     assert served["port"] == 9000
+    assert served["reload"] is False
     assert served["log_config"] is None
 
 
-def test_serve_loads_an_explicit_env_file(
+def test_reload_watches_only_the_package(served: dict[str, object]) -> None:
+    """`--reload` watches the package, not the working directory and its `.venv`."""
+    result = runner.invoke(app, ["serve", "--reload"])
+
+    assert result.exit_code == 0, result.output
+    assert served["reload"] is True
+    assert served["reload_dirs"] == [str(Path({{ package_name }}.__file__).parent)]
+
+
+def test_serve_passes_the_env_file_on_to_the_serving_process(
     tmp_path: Path, served: dict[str, object]
 ) -> None:
-    """Settings from `--env-file` are validated before the server starts."""
+    """The selected file reaches uvicorn, which loads it where the app is built."""
+    env_file = tmp_path / "selected.env"
+    env_file.write_text("LOGGING__FORMAT=json\n", encoding="utf-8")
+
+    result = runner.invoke(app, ["serve", "--env-file", str(env_file)])
+
+    assert result.exit_code == 0, result.output
+    assert served["env_file"] == env_file
+
+
+def test_serve_validates_settings_before_starting(
+    tmp_path: Path, served: dict[str, object]
+) -> None:
+    """Invalid settings fail in `serve` itself, and uvicorn never starts."""
     env_file = tmp_path / "selected.env"
     env_file.write_text("LOGGING__FORMAT=invalid\n", encoding="utf-8")
 
