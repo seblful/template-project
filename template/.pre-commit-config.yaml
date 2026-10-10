@@ -42,12 +42,12 @@ repos:
         pass_filenames: false
         always_run: true
         stages: [pre-push, manual]
-      - id: mkdocs
-        name: mkdocs build
-        entry: uv run --group docs mkdocs build --strict
+      - id: zensical
+        name: zensical build
+        entry: uv run --group docs zensical build --strict
         language: system
         # src/ for docstrings, README.md because docs/index.md includes it.
-        files: ^(docs/|src/|README\.md$|mkdocs\.yml$)
+        files: ^(docs/|src/|README\.md$|zensical\.toml$)
         pass_filenames: false
         stages: [pre-push, manual]
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -58,17 +58,16 @@ repos:
       - id: mixed-line-ending
         args: [--fix=lf]
       - id: check-yaml
-        exclude: ^mkdocs\.yml$
       - id: check-toml
       - id: check-json
       - id: check-added-large-files
       - id: check-merge-conflict
       - id: detect-private-key
   - repo: https://github.com/astral-sh/uv-pre-commit
-    rev: 0.9.7
+    rev: 0.13.0
     hooks:
       - id: uv-lock
   - repo: https://github.com/gitleaks/gitleaks
-    rev: v8.28.0
+    rev: v8.30.1
     hooks:
       - id: gitleaks

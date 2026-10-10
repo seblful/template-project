@@ -1,6 +1,6 @@
 # Python Project Template
 
-A [Copier](https://copier.readthedocs.io/) template for Python projects: uv, Ruff, ty, pytest, pre-commit and MkDocs, plus Typer, pydantic-settings and structlog for CLI projects.
+A [Copier](https://copier.readthedocs.io/) template for Python projects: uv, Ruff, ty, pytest, pre-commit and Zensical, plus Typer, pydantic-settings and structlog for CLI projects.
 
 ## Create a project
 
@@ -41,7 +41,7 @@ Your answers are kept in `.copier-answers.yml`. Notes for a breaking release pri
 | `ci` | `github` (Ubuntu and Windows), `gitlab` or `none` |
 | `claude_settings` | Add `.claude/settings.json` with Claude Code permissions |
 
-Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan, `pytest --cov` and `mkdocs build --strict`. Git hooks run them on commit and push, and `uv run pre-commit run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit.
+Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan, `pytest --cov` and `zensical build --strict`. Git hooks run them on commit and push, and `uv run pre-commit run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit.
 
 ## Developing the template
 

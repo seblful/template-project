@@ -74,7 +74,7 @@ Use `logging.getLogger(__name__)` and leave handlers and levels to the applicati
 
 ```bash
 uv run pre-commit run --all-files --hook-stage manual   # every check{% if ci != "none" %}, as CI runs it{% endif %}
-uv run --group docs mkdocs serve                        # docs at http://127.0.0.1:8000
+uv run --group docs zensical serve                      # docs at http://localhost:8000
 ```
 
 Commits run lint, formatting and types; pushes run the tests and the docs build. Test order is random; replay a failure with `uv run pytest -p randomly --randomly-seed=<seed>`.

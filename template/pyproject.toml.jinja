@@ -45,25 +45,25 @@ dependencies = []
 dev = [
     "pytest>=9.0.0,<10",
     "pytest-cov>=7.0.0,<8",
-    "pytest-randomly>=4.0.0,<5",  # catches order-dependence from shared module state
-    "ruff>=0.15.10,<0.16",
+    "pytest-randomly>=5.0.0,<6",  # catches order-dependence from shared module state
+    "ruff>=0.17.0,<0.18",
     "mdformat>=1.0.0,<2",
     "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
     "pre-commit>=4.0.0,<5",
 ]
 docs = [  # a group, not an extra: docs tooling isn't a feature of the installed package
-    # <2 is load-bearing: MkDocs 2.0 drops the plugin system material/mkdocstrings need
-    "mkdocs>=1.6.0,<2",
-    "mkdocs-material>=9.5.0,<10",
-    "mkdocstrings[python]>=0.25.0,<2",
+    "zensical>=0.0.69,<0.1",  # pre-1.0: breaking changes land between patch releases
+    "mkdocstrings[python]>=1.0.0,<2",  # renders docs/reference.md from docstrings
 ]
 
 [build-system]
-requires = ["hatchling>=1.27"]  # floor for PEP 639's `license` and `license-files`
-build-backend = "hatchling.build"
+# Capped as uv itself recommends: uv_build may change its settings in a minor release.
+requires = ["uv_build>=0.13.0,<0.14"]
+build-backend = "uv_build"
 
-[tool.hatch.build.targets.wheel]
-packages = ["src/{{ package_name }}"]
+[tool.uv.build-backend]
+# Explicit because package_name need not be project_slug with underscores.
+module-name = "{{ package_name }}"
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]

@@ -95,7 +95,7 @@ REQUIRED_HOOKS = [
     "mdformat",
     "ty type check",
     "pytest",
-    "mkdocs build",
+    "zensical build",
     "trim trailing whitespace",
     "uv-lock",
     "Detect hardcoded secrets",
