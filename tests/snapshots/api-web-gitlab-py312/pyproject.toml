@@ -26,7 +26,7 @@ dependencies = [
 [project.scripts]
 demo-proj = "demo_proj.cli:app"
 
-# ty, prek and zensical are pre-1.0: breaking changes land between patch releases.
+# ty and prek are pre-1.0: breaking changes land between patch releases.
 [dependency-groups]
 dev = [
     "pytest>=9.0.0,<10",
@@ -36,9 +36,6 @@ dev = [
     "ty>=0.0.28,<0.1",
     "prek>=0.5.5,<0.6",
     "httpx2>=2.13.1,<3",  # what FastAPI's TestClient sends its requests through
-]
-docs = [
-    "zensical>=0.0.69,<0.1",
 ]
 
 [build-system]

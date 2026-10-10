@@ -20,7 +20,7 @@ ______________________________________________________________________
 
 ### Checks
 
-A task is verified against every check the project has: lint, format, types, secret scan, tests with coverage and the docs build. Fix what they report; never skip the hooks with `--no-verify`.
+A task is verified against every check the project has: lint, format, types, secret scan, tests with coverage. Fix what they report; never skip the hooks with `--no-verify`.
 
 ```bash
 uv run prek run --all-files --hook-stage manual
@@ -38,7 +38,6 @@ uv run prek run --all-files --hook-stage manual
 | [pytest](https://pytest.org/) | Testing + coverage |
 | [prek](https://prek.j178.dev/) | Git hooks, reading `.pre-commit-config.yaml` |
 | [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
-| [Zensical](https://zensical.org/) | Documentation (`uv sync --group docs`) |
 | [FastAPI](https://fastapi.tiangolo.com/) | HTTP API, served by [uvicorn](https://www.uvicorn.org/) |
 | [structlog](https://www.structlog.org/) | Structured logging |
 | [pydantic](https://docs.pydantic.dev/) | Data validation and settings |

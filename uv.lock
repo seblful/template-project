@@ -535,7 +535,6 @@ dev = [
     { name = "mdformat" },
     { name = "prek" },
     { name = "pytest" },
-    { name = "pyyaml" },
     { name = "ruff" },
 ]
 
@@ -544,11 +543,10 @@ dev = [
 [package.metadata.requires-dev]
 dev = [
     { name = "actionlint-py", specifier = ">=1.7.0,<2" },
-    { name = "copier", specifier = ">=9.2.0,<10" },
+    { name = "copier", specifier = ">=9.3.0,<10" },
     { name = "mdformat", specifier = ">=1.0.0,<2" },
     { name = "prek", specifier = ">=0.5.5,<0.6" },
     { name = "pytest", specifier = ">=9.0.0,<10" },
-    { name = "pyyaml", specifier = ">=6.0,<7" },
     { name = "ruff", specifier = ">=0.17.0,<0.18" },
 ]
 

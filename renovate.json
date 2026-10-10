@@ -23,15 +23,9 @@
     },
     {
       "customType": "regex",
-      "description": "The Bun version: the template's packageManager and the CI that tests it",
-      "managerFilePatterns": [
-        "/^template/.+/package\\.json\\.jinja$/",
-        "/^\\.github/workflows/ci\\.yml$/"
-      ],
-      "matchStrings": [
-        "\"packageManager\": \"bun@(?<currentValue>[\\d.]+)\"",
-        "BUN_VERSION: \"(?<currentValue>[\\d.]+)\""
-      ],
+      "description": "The Bun version in the template's packageManager, which this repo's CI reads from a snapshot",
+      "managerFilePatterns": ["/^template/.+/package\\.json\\.jinja$/"],
+      "matchStrings": ["\"packageManager\": \"bun@(?<currentValue>[\\d.]+)\""],
       "depNameTemplate": "bun",
       "packageNameTemplate": "oven-sh/bun",
       "datasourceTemplate": "github-releases",

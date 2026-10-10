@@ -16,8 +16,6 @@
       "Bash(uv run mdformat *)",
       "Bash(uv run prek run *)",
       "Bash(uv run prek install *)",
-      "Bash(uv run --group docs zensical build *)",
-      "Bash(uv run --group docs zensical serve *)",
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git switch -c *)",

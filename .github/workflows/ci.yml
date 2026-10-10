@@ -20,9 +20,6 @@ env:
   GIT_AUTHOR_EMAIL: ci@example.com
   GIT_COMMITTER_NAME: template-ci
   GIT_COMMITTER_EMAIL: ci@example.com
-  # The only place this repo names a Bun version; the template's packageManager must
-  # match it, which tests/test_rendering.py checks.
-  BUN_VERSION: "1.4.2"
   # Generated projects resolve dependencies as of the commit that last changed the
   # template's floors (see tests/conftest.py), so an upstream release cannot fail an
   # unrelated change. The schedule resolves the newest releases instead, and so finds
@@ -94,11 +91,12 @@ jobs:
         with:
           enable-cache: true
 
-      # Web answer sets run `bun install` while generating.
+      # Web answer sets run `bun install` while generating. The version is the one the
+      # template pins, read from a rendered package.json the snapshot test keeps current.
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
-          bun-version: ${{ env.BUN_VERSION }}
+          bun-version-file: tests/snapshots/api-web-github/web/package.json
 
       - name: Cache prek environments
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0

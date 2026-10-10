@@ -1,10 +1,10 @@
-This update crossed v1.0.1, which replaces MkDocs with Zensical, hatchling with
+This update crossed v1.1.0, which drops the docs site, replaces hatchling with
 uv_build and pre-commit with prek, and trims the defaults:
 
-- mkdocs.yml is gone and zensical.toml replaces it. Port anything you added to
-  mkdocs.yml, such as nav entries or extensions, to zensical.toml.
-- Preview the docs with `uv run --group docs zensical serve`. The hook that builds
-  them is now `zensical`, not `mkdocs`.
+- The docs site is gone: mkdocs.yml, docs/, the docs dependency group, the mkdocs
+  hook and GitLab's pages job. The README is the documentation, and GitHub and
+  GitLab render it. Unmodified files are deleted by this update; one you changed
+  shows up as a conflict. To keep a site, restore them from your history.
 - If you added [tool.hatch.*] settings to pyproject.toml, move them to
   [tool.uv.build-backend].
 - prek reads the same .pre-commit-config.yaml. Every check now runs with
@@ -28,8 +28,6 @@ uv_build and pre-commit with prek, and trims the defaults:
 - Ruff selects E, F, W, I, B, UP, SIM, RUF and PT; the stricter families are listed in
   pyproject.toml, commented out. pytest no longer turns warnings into errors or runs
   in random order, and coverage has no minimum. Re-add what you rely on.
-- mkdocstrings is gone: docs/reference.md is deleted and the docs are the README,
-  built with Zensical alone. The pymdown-extensions cap went with it.
 - Settings variables carry a prefix, the upper-cased package name: LOGGING__FORMAT is
   now <PACKAGE_NAME>_LOGGING__FORMAT, so my_app reads MY_APP_LOGGING__FORMAT. Rename
   the keys in your .env and deployment config; unprefixed ones are now ignored

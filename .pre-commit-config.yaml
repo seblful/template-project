@@ -1,36 +1,37 @@
 # Local hooks run via `uv run`, so uv.lock pins their versions, as in the template.
-# Rendered projects are checked by their own hooks, in the slow tests: here mdformat
-# would escape the `--8<--` marker in their docs/index.md, among other rewrites.
-exclude: ^tests/snapshots/
+# Snapshots are rendered projects, checked by their own hooks in the slow tests. Their
+# CI files are checked here too, by check-yaml and zizmor, which cannot read the Jinja
+# sources they come from.
+exclude: ^tests/snapshots/(?!.*(/\.github/workflows/|/\.gitlab-ci\.yml$))
 repos:
   - repo: local
     hooks:
-      # tests/ and migrations/ only: template/ is linted by the generated project's own
-      # config, once rendered, and its few plain .py files follow those rules, not these.
+      # tests/ only: template/ is linted by the generated project's own config, once
+      # rendered, and its few plain .py files follow those rules, not these.
       - id: ruff-check
         name: ruff check
         entry: uv run ruff check --fix --exit-non-zero-on-fix
         language: system
         types: [python]
-        files: ^(tests|migrations)/
+        files: ^tests/
       - id: ruff-format
         name: ruff format
         entry: uv run ruff format
         language: system
         types: [python]
-        files: ^(tests|migrations)/
+        files: ^tests/
       - id: mdformat
         name: mdformat
         entry: uv run mdformat
         language: system
         types: [markdown]
-        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
-        exclude: ^template/docs/index\.md$
       - id: actionlint
         name: actionlint
         entry: uv run actionlint
         language: system
-        files: ^(\.github|template/\.github)/workflows/.*\.ya?ml$
+        # Not the snapshots': actionlint resolves a local reusable workflow from this
+        # repo's root. tests/test_rendering.py runs it inside each rendered project.
+        files: ^\.github/workflows/.*\.ya?ml$
       # These formats have no inline comments: `uv.lock  # note` silently stops
       # matching uv.lock, because the `# note` becomes part of the pattern.
       - id: no-inline-ignore-comments
@@ -54,8 +55,7 @@ repos:
     rev: v8.30.1
     hooks:
       - id: gitleaks
-  # Covers the template's release workflow too, which is not a .jinja file. Its ci.yml
-  # is one, so only the generated projects' own zizmor hook sees that.
+  # Sees the template's workflows as rendered, in tests/snapshots.
   - repo: https://github.com/zizmorcore/zizmor-pre-commit
     rev: v1.30.1
     hooks:

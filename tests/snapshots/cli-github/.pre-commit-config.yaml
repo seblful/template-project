@@ -1,5 +1,5 @@
 # The one definition of this project's checks: commits run the fast ones, pushes add
-# the tests and the docs build, and the manual stage runs all of them. CI runs
+# the tests, and the manual stage runs all of them. CI runs
 # `uv run prek run --all-files --hook-stage manual`, so add a check here, not to CI.
 #
 # Local hooks go through `uv run`, so the lockfile pins their versions
@@ -27,8 +27,6 @@ repos:
         entry: uv run mdformat
         language: system
         types: [markdown]
-        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
-        exclude: ^docs/index\.md$
       - id: ty
         name: ty type check
         entry: uv run ty check
@@ -41,14 +39,6 @@ repos:
         language: system
         pass_filenames: false
         always_run: true
-        stages: [pre-push, manual]
-      - id: zensical
-        name: zensical build
-        entry: uv run --group docs zensical build --strict
-        language: system
-        # README.md because docs/index.md includes it.
-        files: ^(docs/|README\.md$|zensical\.toml$)
-        pass_filenames: false
         stages: [pre-push, manual]
   - repo: https://github.com/pre-commit/pre-commit-hooks
     rev: v6.0.0

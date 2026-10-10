@@ -16,8 +16,6 @@
       "Bash(uv run mdformat *)",
       "Bash(uv run prek run *)",
       "Bash(uv run prek install *)",
-      "Bash(uv run --group docs zensical build *)",
-      "Bash(uv run --group docs zensical serve *)",
       "Bash(bun install --cwd web --frozen-lockfile)",
       "Bash(bun run --cwd web check)",
       "Bash(bun run --cwd web typecheck)",

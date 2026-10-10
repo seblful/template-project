@@ -37,9 +37,6 @@ htmlcov/
 # Logs
 *.log
 
-# Docs
-site/
-
 # Secrets
 *.key
 *.pem

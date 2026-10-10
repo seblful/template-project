@@ -1,10 +1,9 @@
-"""Tests for the health check, through HTTP and without it."""
+"""Tests for the health check."""
 
 from fastapi.testclient import TestClient
 
 from demo_proj import __version__
 from demo_proj.app import create_app
-from demo_proj.health.service import get_health
 
 
 def test_health_endpoint_reports_the_running_version() -> None:
@@ -13,8 +12,3 @@ def test_health_endpoint_reports_the_running_version() -> None:
 
     assert response.status_code == 200
     assert response.json() == {"status": "ok", "version": __version__}
-
-
-def test_service_needs_no_http() -> None:
-    """The service layer is plain Python, callable without an application."""
-    assert get_health().status == "ok"

@@ -8,19 +8,17 @@ affects. After an intended change, refresh them and read the diff:
     uv run pytest --update-snapshots
 
 Whether those files then pass their own checks is the slow tier's job; see
-`test_generated_projects.py`.
+`test_generated_projects.py`. This repo's own hooks check the snapshots' CI files.
 """
 
 import difflib
-import json
 import re
 import shutil
 from pathlib import Path
 from typing import Any
 
 import pytest
-import yaml
-from support import ANSWER_SETS, BASE_ANSWERS, REPO, Project, generate, run
+from support import ANSWER_SETS, BASE_ANSWERS, Project, generate, run
 
 SNAPSHOTS = Path(__file__).parent / "snapshots"
 # Names the rendered project has no say in: the answers file records where the
@@ -101,31 +99,13 @@ def test_no_unrendered_jinja_survives(rendered: Project) -> None:
     assert leftovers == []
 
 
-def test_ci_configuration_is_valid(rendered: Project) -> None:
-    """The CI files for the chosen provider pass that provider's offline checks."""
-    match rendered.answers["ci"]:
-        case "github":
-            # By path: with no .git, actionlint finds no project to look in.
-            workflows = sorted((rendered.path / ".github/workflows").glob("*.yml"))
-            run("actionlint", *map(str, workflows), cwd=rendered.path)
-        case "gitlab":
-            # Parse only: real validation needs a GitLab token, which this repo lacks.
-            yaml.safe_load((rendered.path / ".gitlab-ci.yml").read_text("utf-8"))
-        case _:
-            assert not (rendered.path / ".github").exists()
-            assert not (rendered.path / ".gitlab-ci.yml").exists()
-
-
-def test_bun_version_matches_what_ci_installs(rendered: Project) -> None:
-    """The Bun the template pins is the Bun this repo's CI tests it with."""
-    manifest = rendered.path / "web" / "package.json"
-    if not manifest.is_file():
-        pytest.skip("no web app in this answer set")
-    workflow = yaml.safe_load((REPO / ".github/workflows/ci.yml").read_text("utf-8"))
-
-    package = json.loads(manifest.read_text("utf-8"))
-
-    assert package["packageManager"] == f"bun@{workflow['env']['BUN_VERSION']}"
+def test_github_workflows_pass_actionlint(rendered: Project) -> None:
+    """The rendered GitHub workflows pass actionlint, reusable calls included."""
+    workflows = sorted((rendered.path / ".github/workflows").glob("*.yml"))
+    if not workflows:
+        pytest.skip("no GitHub workflows in this answer set")
+    # By path, from the project: with no .git, actionlint finds no project to look in.
+    run("actionlint", *map(str, workflows), cwd=rendered.path)
 
 
 @pytest.mark.parametrize(

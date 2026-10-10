@@ -26,10 +26,9 @@ Use `logging.getLogger(__name__)` and leave handlers and levels to the applicati
 
 ```bash
 uv run prek run --all-files --hook-stage manual   # every check, as CI runs it
-uv run --group docs zensical serve                # docs at http://localhost:8000
 ```
 
-Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests and the docs build.
+Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests.
 
 ## License
 

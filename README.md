@@ -1,6 +1,6 @@
 # Python Project Template
 
-A [Copier](https://copier.readthedocs.io/) template for Python projects: uv, Ruff, ty, pytest, prek and Zensical, plus Typer, pydantic-settings and structlog for applications, FastAPI for an API and an optional React web app beside it.
+A [Copier](https://copier.readthedocs.io/) template for Python projects: uv, Ruff, ty, pytest and prek, plus Typer, pydantic-settings and structlog for applications, FastAPI for an API and an optional React web app beside it.
 
 ## Create a project
 
@@ -41,7 +41,7 @@ Your answers are kept in `.copier-answers.yml`. Notes for a breaking release pri
 | `python_version` | 3.11 or newer (default 3.14) |
 | `ci` | `github` (Ubuntu and Windows), `gitlab` or `none` |
 
-Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan, `pytest --cov` and `zensical build --strict`. Git hooks run them on commit and push and check commit messages; `uv run prek run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit, and a GitHub project that publishes gets a release workflow for PyPI.
+Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan and `pytest --cov`. Git hooks run them on commit and push and check commit messages; `uv run prek run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit, and a GitHub project that publishes gets a release workflow for PyPI.
 
 ## Developing the template
 

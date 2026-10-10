@@ -1,6 +1,6 @@
 _subdirectory: template
 
-_min_copier_version: "9.2.0"  # _tasks below need _copier_operation, added in 9.2
+_min_copier_version: "9.3.0"  # _migrations below use the format added in 9.3
 
 project_slug:
   type: str
@@ -49,7 +49,7 @@ project_description:
   type: str
   help: What is the project description?
   default: A Python project.
-  # Rendered inside quoted TOML and YAML strings, where these characters break parsing.
+  # Rendered inside a quoted TOML string, where these characters break parsing.
   validator: >-
     {% if not project_description.strip() %}
     project_description must not be empty
@@ -63,7 +63,7 @@ author_name:
   help: What is the author name?
   # No default: an empty answer must fail, not silently attribute the project to us.
   # The character check matches project_description's: this lands in quoted strings
-  # too, in pyproject.toml, zensical.toml and __init__.py.
+  # too, in pyproject.toml and __init__.py.
   validator: >-
     {% if not author_name.strip() %}
     author_name must not be empty
@@ -100,8 +100,6 @@ publish:
 python_version:
   type: str
   help: What Python version should the project target? (major.minor)
-  # Not 3.15 yet: PyYAML, which Zensical needs, has no 3.15 wheels, so installing the
-  # docs group on Windows would need a C compiler. Flip this once PyYAML ships them.
   default: "3.14"
   # Floor is 3.11: 3.10 is end-of-life, and generated sources use the stdlib tomllib
   # and logging.getLevelNamesMapping, both new in 3.11.
@@ -174,16 +172,24 @@ _migrations:
   # uv needs no such step: `uv run` syncs itself.
   - command: ["bun", "install", "--cwd", "web"]
     when: "{{ _stage == 'after' and web }}"
-  # Prints migrations/vX.Y.Z.txt for every release the update crosses. A note lives
-  # there, not in _message_after_update, which every later update would print too.
-  # uv's Python runs it because Windows has no `cat`.
-  - command:
+  # One entry per note in migrations/, in release order: copier runs an entry with a
+  # version only on an update that crosses it, after the update. A note lives there,
+  # not in _message_after_update, which every later update would print too. uv's
+  # Python prints it because Windows has no `cat`.
+  - version: v0.9.0
+    command: &print-note
       - uv
       - run
       - --no-project
       - python
-      - "{{ _copier_conf.src_path }}/migrations/notes.py"
-    when: "{{ _stage == 'after' }}"
+      - -X
+      - utf8
+      - -c
+      - "import sys; print(open(sys.argv[1], encoding='utf-8').read())"
+      - "{{ _copier_conf.src_path }}/migrations/{{ _version_current }}.txt"
+  - {version: v0.9.3, command: *print-note}
+  - {version: v1.0.0, command: *print-note}
+  - {version: v1.1.0, command: *print-note}
 
 _message_after_copy: |
   {{ project_slug }} is ready.
@@ -212,10 +218,9 @@ _message_after_copy: |
       bun run --cwd web dev
   {%- endif %}
 
-  Docs tooling installs separately with `uv sync --group docs`.
-
   Git hooks are installed: lint, formatting, types and the commit message format are
-  checked on commit, the tests and the docs build on push. Every check at once:
+  checked on commit, the tests{% if web %} and the production build{% endif %} on push.
+  Every check at once:
 
       uv run prek run --all-files --hook-stage manual
 

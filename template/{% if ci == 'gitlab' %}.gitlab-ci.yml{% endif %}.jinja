@@ -3,7 +3,6 @@
 
 stages:
   - check
-  - deploy
   - audit
 
 default:
@@ -74,31 +73,12 @@ check:
   coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'
   artifacts:
     when: always
-    paths:
-      - site  # built by the zensical hook, published by `pages`
     expire_in: 1 week
     reports:
       junit: report.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-
-pages:
-  stage: deploy
-  needs:
-    - check
-  script:
-    - mv site public
-  artifacts:
-    paths:
-      - public
-  rules:
-    - if: $SCHEDULED_AUDIT  # `needs: check`, which a scheduled pipeline skips
-      when: never
-    # Manual: a project that starts "Private :: Do Not Upload" shouldn't auto-publish.
-    - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
-      when: manual
-      allow_failure: true
 
 audit:
   stage: audit

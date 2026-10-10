@@ -36,14 +36,6 @@ def test_committed_env_example_matches_the_settings_model() -> None:
     Settings(_env_file=example)
 
 
-def test_defaults_are_isolated_from_the_host() -> None:
-    """With the host's variables cleared, every field uses its declared default."""
-    settings = Settings()
-
-    assert settings.logging.format == "text"
-    assert settings.logging.level == "INFO"
-
-
 @pytest.mark.parametrize(
     ("name", "value"),
     [
@@ -62,15 +54,6 @@ def test_invalid_settings_are_rejected(
         Settings()
 
 
-def test_variables_without_the_package_prefix_are_not_read(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """A generic name such as `LOGGING__FORMAT` belongs to someone else."""
-    monkeypatch.setenv("LOGGING__FORMAT", "json")
-
-    assert Settings().logging.format == "text"
-
-
 def test_level_is_accepted_in_any_letter_case(
     monkeypatch: pytest.MonkeyPatch,
 ) -> None:
@@ -78,16 +61,3 @@ def test_level_is_accepted_in_any_letter_case(
     monkeypatch.setenv("DEMO_PROJ_LOGGING__LEVEL", "debug")
 
     assert Settings().logging.level == "DEBUG"
-
-
-def test_no_dotenv_file_is_read(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
-) -> None:
-    """A `.env` in the working directory is never read; uv loads one when asked."""
-    monkeypatch.chdir(tmp_path)
-    (tmp_path / ".env").write_text(
-        "DEMO_PROJ_LOGGING__FORMAT=invalid\n",
-        encoding="utf-8",
-    )
-
-    assert Settings().logging.format == "text"

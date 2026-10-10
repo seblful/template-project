@@ -20,7 +20,7 @@ classifiers = [
 # work without it, and never with an upper bound.
 dependencies = []
 
-# ty, prek and zensical are pre-1.0: breaking changes land between patch releases.
+# ty and prek are pre-1.0: breaking changes land between patch releases.
 [dependency-groups]
 dev = [
     "pytest>=9.0.0,<10",
@@ -29,9 +29,6 @@ dev = [
     "mdformat>=1.0.0,<2",
     "ty>=0.0.28,<0.1",
     "prek>=0.5.5,<0.6",
-]
-docs = [
-    "zensical>=0.0.69,<0.1",
 ]
 
 [build-system]

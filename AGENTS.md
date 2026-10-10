@@ -39,7 +39,7 @@ CI (`.github/workflows/ci.yml`) runs the same tests, one answer set per job. Tru
 - **An answer adds files, not branches inside Python files.** `project_type == 'api'` is the model: `app.py` and `health/` exist only then, and `settings.py` does not mention it. Two sources may render to the same path when their conditions are exclusive: the cli's and the api's `cli.py` are separate files, not one with an `{% if %}` in it. Keep `{% if %}` in `.py` sources to the few places a feature has to surface.
 - **`author_name` and `author_email` have no defaults on purpose.** Don't add any — a default there attributes strangers' projects to whoever maintains the template. Automation passes `-d`.
 - **The exact pins inside `template/` (action hashes, hook revs, the Bun version, the web app's npm ranges) are bumped by Renovate**, configured in `renovate.json` with regex managers because Dependabot cannot read `.jinja` files; Dependabot keeps this repo's own pins. Renovate only runs where its GitHub app is installed. A bump changes what the template renders, so on its branch run `uv run pytest --update-snapshots` and push the refreshed snapshots. Floors in `pyproject.toml.jinja` are deliberate and stay manual.
-- **Don't add a dependency to `pyproject.toml.jinja` without capping the major version** when upstream has a known breaking release coming. Pre-1.0 tools such as `ty` and `zensical` are capped below `0.1` for that reason.
+- **Don't add a dependency to `pyproject.toml.jinja` without capping the major version** when upstream has a known breaking release coming. Pre-1.0 tools such as `ty` and `prek` are capped below their next minor release for that reason.
 
 ## Versioning
 

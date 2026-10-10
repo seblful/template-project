@@ -48,12 +48,8 @@ def _force_utf8_stderr() -> None:
     closing the underlying buffer out from under the replacement. Setting `PYTHONUTF8`
     would do the same, but an installed console script cannot set its own environment.
     """
-    stderr = sys.stderr
-    if isinstance(stderr, io.TextIOWrapper) and (stderr.encoding or "").lower() not in {
-        "utf-8",
-        "utf8",
-    }:
-        stderr.reconfigure(encoding="utf-8")
+    if isinstance(sys.stderr, io.TextIOWrapper):
+        sys.stderr.reconfigure(encoding="utf-8", errors="backslashreplace")
 
 
 def _build_formatter(*, as_json: bool) -> logging.Formatter:
