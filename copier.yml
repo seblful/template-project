@@ -81,6 +81,8 @@ license:
 python_version:
   type: str
   help: What Python version should the project target? (major.minor)
+  # Not 3.15 yet: PyYAML, which Zensical needs, has no 3.15 wheels, so installing the
+  # docs group on Windows would need a C compiler. Flip this once PyYAML ships them.
   default: "3.14"
   # Floor is 3.11: 3.10 is end-of-life, and generated sources use the stdlib tomllib
   # and logging.getLevelNamesMapping, both new in 3.11.
@@ -122,11 +124,13 @@ _exclude:
 # rewrite the user's own code inside the update diff.
 _tasks:
   # Not gated on copy: `copier update` renders the new version into a scratch dir and
-  # runs these tasks there as well, and pre-commit install fails outside a repo.
+  # runs these tasks there as well, and prek install fails outside a repo.
   - ["git", "init"]
   - ["uv", "sync"]
   # Also on update: a hook type the template adds reaches a checkout only via install.
-  - ["uv", "run", "pre-commit", "install"]
+  # --force because a shim left by pre-commit would otherwise survive as a legacy hook
+  # that prek still runs, and it fails now that pre-commit is no longer installed.
+  - ["uv", "run", "prek", "install", "--force"]
   - command: ["git", "add", "-A"]
     when: "{{ _copier_operation == 'copy' }}"
   # -c avoids needing a global git identity (e.g. a fresh CI runner).
@@ -203,12 +207,12 @@ _message_after_copy: |
 
   Docs tooling installs separately with `uv sync --group docs`.
 
-  Git hooks are installed: lint, formatting and types run on commit, the tests and
-  the docs build run on push. Every check at once:
+  Git hooks are installed: lint, formatting, types and the commit message format are
+  checked on commit, the tests and the docs build on push. Every check at once:
 
-      uv run pre-commit run --all-files --hook-stage manual
+      uv run prek run --all-files --hook-stage manual
 
 _message_after_update: |
   Template updated. Re-run every check before committing:
 
-      uv run pre-commit run --all-files --hook-stage manual
+      uv run prek run --all-files --hook-stage manual

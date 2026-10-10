@@ -1,0 +1,3 @@
+# template/.pre-commit-config.yaml is a file the template ships, not a project here:
+# its hooks only make sense in a generated project, which the tests run them in.
+template/

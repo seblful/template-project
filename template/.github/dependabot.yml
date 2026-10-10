@@ -7,6 +7,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7  # lets a compromised release be yanked before it reaches you
     groups:
       github-actions:
         patterns: ["*"]
@@ -15,6 +17,8 @@ updates:
     directory: /
     schedule:
       interval: weekly
+    cooldown:
+      default-days: 7  # lets a compromised release be yanked before it reaches you
     groups:
       pre-commit:
         patterns: ["*"]

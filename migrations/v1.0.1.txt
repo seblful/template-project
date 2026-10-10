@@ -1,9 +1,14 @@
-This update crossed v1.0.1, which replaces MkDocs with Zensical and hatchling with
-uv_build:
+This update crossed v1.0.1, which replaces MkDocs with Zensical, hatchling with
+uv_build and pre-commit with prek:
 
 - mkdocs.yml is gone and zensical.toml replaces it. Port anything you added to
   mkdocs.yml, such as nav entries or extensions, to zensical.toml.
-- Preview the docs with `uv run --group docs zensical serve`. The pre-commit hook
-  that builds them is now `zensical`, not `mkdocs`.
+- Preview the docs with `uv run --group docs zensical serve`. The hook that builds
+  them is now `zensical`, not `mkdocs`.
 - If you added [tool.hatch.*] settings to pyproject.toml, move them to
   [tool.uv.build-backend].
+- prek reads the same .pre-commit-config.yaml. Every check now runs with
+  `uv run prek run --all-files --hook-stage manual`. The update reinstalled the git
+  hooks with prek, removing any .git/hooks/*.legacy files.
+- A commit-msg hook now rejects commit messages that are not Conventional Commits.
+- The dependency audit runs `uv audit` instead of pip-audit.

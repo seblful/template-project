@@ -1,0 +1,6 @@
+rules:
+  # CI also runs on tags, which zizmor reads as a release, but this repo publishes
+  # nothing: a tag only marks a version for copier to resolve.
+  cache-poisoning:
+    ignore:
+      - ci.yml

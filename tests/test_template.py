@@ -28,9 +28,10 @@ BASE_ANSWERS: dict[str, Any] = {
 
 # Together these cover every value of every answer at least once. The py311 set is a
 # cli with a config file on purpose: the oldest Python meets the stdlib tomllib there.
+# cli-config-github runs the newest Python, which CI runs on Linux only.
 ANSWER_SETS: dict[str, dict[str, Any]] = {
     "cli-config-github": {
-        "python_version": "3.14",
+        "python_version": "3.15",
         "license": "None",
         "project_type": "cli",
         "config_file": True,
@@ -137,12 +138,15 @@ def _generate(dst: Path, answers: dict[str, Any], vcs_ref: str = "HEAD") -> None
     )
 
 
-def _run_every_check(path: Path) -> None:
-    """Run the project's single definition of its checks, as its CI does."""
+def _run_every_check(path: Path, *, github: bool = False) -> None:
+    """Run the project's single definition of its checks, as its CI does.
+
+    With `github`, also require zizmor, which skips itself when there is no workflow.
+    """
     result = _run(
         "uv",
         "run",
-        "pre-commit",
+        "prek",
         "run",
         "--all-files",
         "--hook-stage",
@@ -150,7 +154,7 @@ def _run_every_check(path: Path) -> None:
         "--show-diff-on-failure",
         cwd=path,
     )
-    for hook in REQUIRED_HOOKS:
+    for hook in [*REQUIRED_HOOKS, *(["zizmor"] if github else [])]:
         assert re.search(rf"^{re.escape(hook)}\.+Passed$", result.stdout, re.M), (
             f"hook {hook!r} did not run and pass:\n{result.stdout}"
         )
@@ -176,8 +180,30 @@ def test_every_check_passes(project: Project) -> None:
     hooks = project.path / ".git" / "hooks"
     assert (hooks / "pre-commit").is_file()
     assert (hooks / "pre-push").is_file()
+    assert (hooks / "commit-msg").is_file()
 
-    _run_every_check(project.path)
+    _run_every_check(project.path, github=project.answers["ci"] == "github")
+
+
+def test_commit_message_hook_enforces_conventional_commits(project: Project) -> None:
+    """The commit-msg hook rejects a free-form subject, accepts a conventional one."""
+
+    def commit(message: str) -> subprocess.CompletedProcess[str]:
+        """Make an empty commit with `message`, the hooks enabled."""
+        identity = ("-c", "user.name=Demo Author", "-c", "user.email=demo@example.com")
+        return subprocess.run(
+            ["git", *identity, "commit", "--allow-empty", "-m", message],
+            cwd=project.path,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            check=False,
+        )
+
+    rejected = commit("updated some stuff")
+    assert rejected.returncode != 0, rejected.stdout + rejected.stderr
+    accepted = commit("chore: check the commit-msg hook")
+    assert accepted.returncode == 0, accepted.stdout + accepted.stderr
 
 
 def test_no_unrendered_jinja_survives(project: Project) -> None:
@@ -211,6 +237,9 @@ def test_answers_produce_the_right_files(project: Project) -> None:
         ".github": answers["ci"] == "github",
         ".github/workflows/ci.yml": answers["ci"] == "github",
         ".github/dependabot.yml": answers["ci"] == "github",
+        ".github/workflows/release.yml": (
+            answers["ci"] == "github" and answers["license"] != "None"
+        ),
         ".gitlab-ci.yml": answers["ci"] == "gitlab",
         ".claude": answers["claude_settings"],
         "LICENSE": answers["license"] != "None",
@@ -262,7 +291,7 @@ def test_ci_configuration_is_valid(project: Project) -> None:
     """The CI file for the chosen provider passes that provider's offline checks."""
     match project.answers["ci"]:
         case "github":
-            _run("actionlint", ".github/workflows/ci.yml", cwd=project.path)
+            _run("actionlint", cwd=project.path)  # every workflow, release.yml too
         case "gitlab":
             # Parse only: real validation needs a GitLab token, which this repo lacks.
             yaml.safe_load((project.path / ".gitlab-ci.yml").read_text("utf-8"))
@@ -290,4 +319,4 @@ def test_update_from_the_latest_release(tmp_path: Path) -> None:
 
     rejects = [p for p in path.rglob("*.rej") if ".git" not in p.parts]
     assert rejects == []
-    _run_every_check(path)
+    _run_every_check(path, github=True)  # ci defaults to github

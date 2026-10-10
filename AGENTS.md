@@ -17,7 +17,7 @@ Copier includes uncommitted template changes (with a `DirtyLocalWarning`), so th
 
 The generated project's ruff-format and mdformat hooks are the load-bearing checks. `_tasks` deliberately runs no formatter, so rendered output is exactly what the template sources produce: template sources must already be formatted the way the shipped config formats them, Markdown included. Don't add a formatter task back — it would hide exactly these bugs from the tests, and on `copier update` it would reformat the user's own code.
 
-A generated project defines its checks once, in `.pre-commit-config.yaml`, and `pre-commit run --all-files --hook-stage manual` runs all of them. Its CI, AGENTS.md and README call that command. Add a check there, never to one of the callers.
+A generated project defines its checks once, in `.pre-commit-config.yaml`, and `prek run --all-files --hook-stage manual` runs all of them. Its CI, AGENTS.md and README call that command. Add a check there, never to one of the callers.
 
 CI (`.github/workflows/ci.yml`) runs the same tests, one answer set per job. Trust it over local eyeballing.
 

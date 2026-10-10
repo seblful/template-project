@@ -7,7 +7,9 @@ stages:
   - audit
 
 default:
-  image: ghcr.io/astral-sh/uv:python{{ python_version }}-bookworm  # has git, for pre-commit
+  # No Python in the image: uv installs the one .python-version names, so a release
+  # too new for a uv:pythonX.Y image still works. buildpack-deps brings git, for prek.
+  image: ghcr.io/astral-sh/uv:trixie
   interruptible: true
   cache:
     key:
@@ -15,11 +17,13 @@ default:
         - uv.lock
     paths:
       - .cache/uv
-      - .cache/pre-commit
+      - .cache/python
+      - .cache/prek
 
 variables:
   UV_CACHE_DIR: $CI_PROJECT_DIR/.cache/uv  # GitLab only caches paths under the project
-  PRE_COMMIT_HOME: $CI_PROJECT_DIR/.cache/pre-commit
+  UV_PYTHON_INSTALL_DIR: $CI_PROJECT_DIR/.cache/python
+  PREK_HOME: $CI_PROJECT_DIR/.cache/prek
   UV_LINK_MODE: copy  # cache and venv are on different filesystems; hardlinks fail
 
 workflow:
@@ -40,7 +44,7 @@ check:
     # Every check lives in .pre-commit-config.yaml; the manual stage runs all of them.
     # --verbose prints the coverage total the `coverage` regex reads. gitleaks scans
     # staged changes, so this is not a full-history secret scan.
-    - uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
+    - uv run prek run --all-files --hook-stage manual --show-diff-on-failure
       --verbose
   coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'
   artifacts:
@@ -72,9 +76,9 @@ pages:
 audit:
   stage: audit
   script:
-    - uv export --format requirements-txt --no-emit-project --all-groups
-      > requirements-audit.txt
-    - uvx pip-audit --disable-pip --requirement requirements-audit.txt
+    # Every group in uv.lock, docs included. --preview-features opts in to a command
+    # uv still marks experimental, instead of printing a warning on every run.
+    - uv audit --locked --preview-features audit-command
   rules:
     - if: $SCHEDULED_AUDIT
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH

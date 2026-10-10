@@ -1,0 +1,68 @@
+# Publishes to PyPI with trusted publishing, so no API token is stored anywhere. Before
+# the first tag, add this repo as a trusted publisher on PyPI (workflow release.yml,
+# environment pypi) and create the `pypi` environment under Settings > Environments.
+#
+# Release by bumping the version, then pushing a matching tag:
+#   uv version --bump patch && git commit -am "chore: release v$(uv version --short)"
+#   git tag "v$(uv version --short)" && git push --follow-tags
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions: {}
+
+jobs:
+  build:
+    name: build distributions
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        # No cache: a release must not restore state that another run could have
+        # written.
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+        with:
+          enable-cache: false
+
+      # A tag that disagrees with pyproject.toml would publish the wrong version.
+      - name: Check the tag matches the project version
+        run: test "v$(uv version --short)" = "$GITHUB_REF_NAME"
+
+      - name: Build
+        run: uv build
+
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9  # v7.0.2
+        with:
+          name: dist
+          path: dist/
+
+  # A separate job, so the OIDC token that PyPI trusts never reaches the build.
+  publish:
+    name: publish to PyPI
+    needs: build
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    environment: pypi
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333  # v8.0.2
+        with:
+          name: dist
+          path: dist/
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+        with:
+          enable-cache: false
+
+      - name: Publish
+        run: uv publish --trusted-publishing always

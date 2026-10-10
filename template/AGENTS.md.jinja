@@ -27,7 +27,7 @@ ______________________________________________________________________
 A task is verified against every check the project has: lint, format, types, secret scan, tests with the coverage gate and the docs build. Fix what they report; never skip the hooks with `--no-verify`.
 
 ```bash
-uv run pre-commit run --all-files --hook-stage manual
+uv run prek run --all-files --hook-stage manual
 ```
 
 `.pre-commit-config.yaml` is where the checks are defined. Add a new one there, not to CI.
@@ -40,7 +40,7 @@ uv run pre-commit run --all-files --hook-stage manual
 | [Ruff](https://docs.astral.sh/ruff/) | Linting and formatting |
 | [ty](https://github.com/astral-sh/ty) | Type checking |
 | [pytest](https://pytest.org/) | Testing + coverage |
-| [pre-commit](https://pre-commit.com/) | Git hooks |
+| [prek](https://prek.j178.dev/) | Git hooks, reading `.pre-commit-config.yaml` |
 | [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
 {% if project_type == 'cli' %}| [structlog](https://www.structlog.org/) | Structured logging |
 | [pydantic](https://docs.pydantic.dev/) | Data validation and settings |

@@ -25,42 +25,49 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        # Full version pin, not `@v10`: astral-sh/setup-uv dropped moving major tags.
-        uses: astral-sh/setup-uv@v10.3.0
+        # Hash pins throughout, as zizmor requires: a tag can be moved to other code.
+        # Dependabot bumps the hash and the version comment together.
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
 
       - name: Install dependencies
         run: uv sync --locked  # fails on a stale lockfile instead of masking it
 
-      - name: Cache pre-commit environments
-        uses: actions/cache@v6
+      - name: Cache prek environments
+        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          path: ~/.cache/pre-commit
-          key: pre-commit-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
+          # prek keeps its environments in ~/.cache on Linux, %LOCALAPPDATA% on Windows.
+          path: |
+            ~/.cache/prek
+            ~/AppData/Local/prek
+          key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
       # Every check lives in .pre-commit-config.yaml; the manual stage runs all of
       # them. gitleaks scans staged changes, so this is not a full-history secret scan.
       - name: Checks
-        run: uv run pre-commit run --all-files --hook-stage manual --show-diff-on-failure
+        run: uv run prek run --all-files --hook-stage manual --show-diff-on-failure
 
   audit:
     name: dependency audit
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v10.3.0
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
 
+      # Every group in uv.lock, docs included. --preview-features opts in to a command
+      # uv still marks experimental, instead of printing a warning on every run.
       - name: Audit locked dependencies
-        run: |
-          uv export --format requirements-txt --no-emit-project --all-groups \
-            > requirements-audit.txt
-          uvx pip-audit --disable-pip --requirement requirements-audit.txt
+        run: uv audit --locked --preview-features audit-command
