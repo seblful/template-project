@@ -1,5 +1,8 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Counter } from "../features/counter/Counter";
+{%- if fullstack %}
+import { HealthBadge } from "../features/health/HealthBadge";
+{%- endif %}
 
 export const Route = createFileRoute("/")({ component: HomePage });
 
@@ -8,6 +11,9 @@ function HomePage() {
   return (
     <>
       <h1 className="text-2xl font-semibold">{{ project_slug }}</h1>
+{%- if fullstack %}
+      <HealthBadge />
+{%- endif %}
       <Counter />
     </>
   );

@@ -74,6 +74,17 @@ def serve(
 
 
 @app.command()
-def openapi() -> None:
+def openapi(
+    output: Annotated[
+        Path | None,
+        typer.Option(dir_okay=False, help="Write to this file instead of stdout."),
+    ] = None,
+) -> None:
     """Print the OpenAPI schema, the contract API clients are generated from."""
-    typer.echo(json.dumps(create_app().openapi(), indent=2))
+    schema = json.dumps(create_app().openapi(), indent=2) + "\n"
+    if output is None:
+        typer.echo(schema, nl=False)
+    else:
+        # LF on every platform, where a redirected stdout would get CRLF on Windows: a
+        # committed schema must not change with the OS that generated it.
+        output.write_text(schema, encoding="utf-8", newline="\n")

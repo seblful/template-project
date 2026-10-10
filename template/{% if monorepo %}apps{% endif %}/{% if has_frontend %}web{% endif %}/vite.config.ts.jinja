@@ -11,6 +11,13 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+{%- if fullstack %}
+  server: {
+    // Forwards API calls to `serve` on its default port, so the app and the API share
+    // one origin in development as they do behind one host in production: no CORS.
+    proxy: { "/api": "http://127.0.0.1:8000" },
+  },
+{%- endif %}
   test: {
     environment: "jsdom",
     setupFiles: ["./src/test-setup.ts"],

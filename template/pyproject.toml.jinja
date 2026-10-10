@@ -90,6 +90,9 @@ docs = [  # a group, not an extra: docs tooling isn't a feature of the installed
     "zensical>=0.0.69,<0.1",  # pre-1.0: breaking changes land between patch releases
 {%- if has_python %}
     "mkdocstrings[python]>=1.0.0,<2",  # renders docs/reference.md from docstrings
+    # 12.2 changed Highlight's constructor, which mkdocstrings 1.0.6 still calls the
+    # old way. Lift the cap once a mkdocstrings release supports it.
+    "pymdown-extensions<12.2",
 {%- endif %}
 ]
 {%- if not monorepo %}
@@ -197,7 +200,7 @@ known-first-party = ["{{ package_name }}"]
 # `Settings` gains nothing either, since the entry point imports every module anyway.
 "{{ python_prefix }}src/{{ package_name }}/cli.py" = ["TC001", "TC003"]
 {%- endif %}
-{%- if project_type == "api" %}
+{%- if has_backend %}
 # FastAPI reads route annotations at runtime to validate and document each response,
 # so a model named only in a return type is a runtime import.
 "{{ python_prefix }}src/{{ package_name }}/**/router.py" = ["TC001"]

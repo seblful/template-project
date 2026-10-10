@@ -6,7 +6,16 @@
     "useIgnoreFile": true
   },
   "files": {
+{%- if fullstack %}
+    "includes": [
+      "**",
+      "!**/routeTree.gen.ts",
+      "!packages/api-client/openapi.json",
+      "!packages/api-client/src/api.ts"
+    ]
+{%- else %}
     "includes": ["**", "!**/routeTree.gen.ts"]
+{%- endif %}
   },
   "formatter": {
     "enabled": true,

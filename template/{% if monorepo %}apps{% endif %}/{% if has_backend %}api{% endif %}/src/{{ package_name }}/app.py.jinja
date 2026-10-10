@@ -1,11 +1,29 @@
 """The FastAPI application."""
 
+# Lets `APIRoute` below be a type-only import on every supported Python, as in
+# settings. Nothing here is a route, so FastAPI never reads these annotations.
+from __future__ import annotations
+
+from typing import TYPE_CHECKING
+
 from fastapi import APIRouter, FastAPI
 
 from {{ package_name }} import PROJECT_NAME, __version__
 from {{ package_name }}.health.router import router as health_router
 from {{ package_name }}.logging import setup_logging
 from {{ package_name }}.settings import load_settings
+
+if TYPE_CHECKING:
+    from fastapi.routing import APIRoute
+
+
+def _operation_id(route: APIRoute) -> str:
+    """Name each operation after its route function.
+
+    A generated API client names its functions after these. FastAPI's default adds
+    the path and method, so `read_health` would become `read_health_api_health_get`.
+    """
+    return route.name
 
 
 def create_app() -> FastAPI:
@@ -24,6 +42,7 @@ def create_app() -> FastAPI:
         docs_url="/api/docs",
         redoc_url=None,
         openapi_url="/api/openapi.json",
+        generate_unique_id_function=_operation_id,
     )
     app.include_router(api)
     return app

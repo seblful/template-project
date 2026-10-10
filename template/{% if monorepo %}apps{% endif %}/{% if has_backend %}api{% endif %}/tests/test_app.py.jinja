@@ -5,8 +5,15 @@ import json
 import pytest
 from fastapi import FastAPI
 
-from {{ package_name }}.app import create_serving_app
+from {{ package_name }}.app import create_app, create_serving_app
 from {{ package_name }}.logging import get_logger
+
+
+def test_operations_are_named_after_their_route_functions() -> None:
+    """A generated client gets `read_health`, not `read_health_api_health_get`."""
+    operation = create_app().openapi()["paths"]["/api/health"]["get"]
+
+    assert operation["operationId"] == "read_health"
 
 
 def test_serving_app_configures_logging_from_the_environment(

@@ -29,6 +29,9 @@
       "Bash(bun run --cwd apps/web build)",
       "Bash(bun run --cwd apps/web dev)",
 {%- endif %}
+{%- if fullstack %}
+      "Bash(bun run --cwd packages/api-client generate)",
+{%- endif %}
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(git switch -c *)",

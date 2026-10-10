@@ -13,12 +13,13 @@ ______________________________________________________________________
 - **Tests**: Every feature and bug fix requires tests
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), subject ≤ 50 chars, imperative mood; no body unless the change needs a "why" (then max 5 bullets); no "Co-Authored-By" footers
 {% if has_frontend -%}
-- **Comments**: a one-sentence `/** ... */` on each exported component and function. Comments are short and explain *why* a design choice was made; never restate what the code already says
+- **{% if has_python %}TypeScript comments{% else %}Comments{% endif %}**: a one-sentence `/** ... */` on each exported component and function. Comments are short and explain *why* a design choice was made; never restate what the code already says
 - **Structure**: pages in `apps/web/src/routes/` only arrange features; each feature is a folder in `apps/web/src/features/`, shaped like `counter/`, with every component's `*.test.tsx` beside it. A new route is a new file in `routes/`; `src/routeTree.gen.ts` is generated from them, never edited by hand
 - **Types**: strict TypeScript; no `any` and no non-null `!`. Data from outside the app is parsed at the boundary, never cast
 - **Dependencies**: `bun add` inside `apps/web/`, never npm, pnpm or yarn; `bun.lock` is committed
-{% else -%}
-- **Docstrings and comments**: Google style, one imperative summary line ending in a period (`Return the cached settings.`), `Args:` on public functions only. Comments are short and explain *why* a design choice was made; never restate what the code already says
+{% endif -%}
+{% if has_python -%}
+- **{% if has_frontend %}Python docstrings and comments{% else %}Docstrings and comments{% endif %}**: Google style, one imperative summary line ending in a period (`Return the cached settings.`), `Args:` on public functions only. Comments are short and explain *why* a design choice was made; never restate what the code already says
 {% endif -%}
 {% if application -%}
 - **Logging**: `from {{ package_name }}.logging import get_logger` — structured key-value pairs (`log.info("user saved", user_id=uid)`), never f-strings, never secrets or PII
@@ -27,15 +28,18 @@ ______________________________________________________________________
 - **Logging**: `logging.getLogger(__name__)` with `%`-style arguments, never f-strings, never secrets or PII; library code never adds handlers or sets levels
 - **Dependencies**: every runtime dependency is forced on each consumer — add one only when the package cannot work without it, and never with an upper bound
 {% endif -%}
-{% if project_type == 'api' -%}
+{% if has_backend -%}
 - **Features**: each one is a package under `apps/api/src/{{ package_name }}/`, shaped like `health/`: `router.py` for HTTP only, `schemas.py` for the request and response models, `service.py` for the logic, with no FastAPI imports so it is testable without HTTP. Every route lives under `/api`
+{% endif -%}
+{% if fullstack -%}
+- **API contract**: `packages/api-client/` holds `openapi.json` and `src/api.ts`, both generated from the API by `bun run --cwd packages/api-client generate`, which a hook runs whenever `apps/api/src/` changes; never edit them by hand. The app calls the API only through the functions in `src/api.ts`, one per route and named after it, so a changed response model fails the type check wherever the app reads it
 {% endif -%}
 {% if has_python -%}
 - **Imports**: `{{ package_name }}/__init__.py` exports only metadata, on purpose — import from the module that owns the name, not the package root
 {% endif %}
 ### Checks
 
-A task is verified against every check the project has: lint, format, types, secret scan, {% if has_python %}tests with the coverage gate{% else %}tests, the production build{% endif %} and the docs build. Fix what they report; never skip the hooks with `--no-verify`.
+A task is verified against every check the project has: lint, format, types, secret scan, {% if has_python %}tests with the coverage gate{% else %}tests{% endif %}{% if has_frontend %}, the production build{% endif %} and the docs build. Fix what they report; never skip the hooks with `--no-verify`.
 
 ```bash
 uv run prek run --all-files --hook-stage manual
@@ -66,7 +70,7 @@ uv run prek run --all-files --hook-stage manual
 {% endif -%}
 | [prek](https://prek.j178.dev/) | Git hooks, reading `.pre-commit-config.yaml` |
 | [mdformat](https://mdformat.readthedocs.io/) | Markdown formatting |
-{% if project_type == 'api' %}| [FastAPI](https://fastapi.tiangolo.com/) | HTTP API, served by [uvicorn](https://www.uvicorn.org/) |
+{% if has_backend %}| [FastAPI](https://fastapi.tiangolo.com/) | HTTP API, served by [uvicorn](https://www.uvicorn.org/) |
 {% endif %}{% if application %}| [structlog](https://www.structlog.org/) | Structured logging |
 | [pydantic](https://docs.pydantic.dev/) | Data validation and settings |
 | [typer](https://typer.tiangolo.com/) | CLI entry points |

@@ -67,20 +67,30 @@ repos:
         pass_filenames: false
         stages: [pre-push, manual]
 {%- if has_frontend %}
+{%- if fullstack %}
+      # Before tsc, so it checks the app against the API as it is now. Fails, like any
+      # fixer, when it rewrites the schema: commit what it wrote.
+      - id: api-client
+        name: api client is current
+        entry: bun run --cwd packages/api-client generate
+        language: system
+        files: ^(apps/api/src/|packages/api-client/)
+        pass_filenames: false
+{%- endif %}
       # `bun run`, not bunx: it runs only what bun.lock installed, never a download.
       - id: biome
         name: biome check
         entry: bun run biome check --write --no-errors-on-unmatched --files-ignore-unknown=true
         language: system
         # The TypeScript world only; Python and its config have their own hooks.
-        files: ^(apps/web/|package\.json$|biome\.json$)
+        files: ^(apps/web/|{% if fullstack %}packages/|{% endif %}package\.json$|biome\.json$)
         types_or: [ts, tsx, javascript, jsx, json, css]
         require_serial: true
       - id: tsc
         name: tsc type check
         entry: bun run --cwd apps/web typecheck
         language: system
-        files: ^apps/web/
+        files: ^{% if fullstack %}(apps/web/|packages/){% else %}apps/web/{% endif %}
         pass_filenames: false  # tsc checks the whole program, not just staged files
       - id: vitest
         name: vitest

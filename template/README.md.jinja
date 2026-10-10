@@ -67,7 +67,7 @@ To add a setting, add a field to a group in `src/{{ package_name }}/settings.py`
 ## Logging
 
 Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`. `LOGGING__LEVEL` sets the lowest level that is logged.
-{%- elif project_type == "api" %}
+{%- elif monorepo %}{% if has_backend %}
 ```bash
 uv run {{ project_slug }} serve            # interactive docs at http://127.0.0.1:8000/api/docs
 uv run {{ project_slug }} serve --reload   # restarts on source changes, for development
@@ -77,6 +77,25 @@ uv run {{ project_slug }} openapi          # the OpenAPI schema, as JSON
 The API lives in `apps/api/`, a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/) member. The root holds the shared tooling and its config, so every command runs from the root.
 
 Each feature is a package under `apps/api/src/{{ package_name }}/`, shaped like `health/`: `router.py` holds the HTTP routes and nothing else, `schemas.py` the request and response models, and `service.py` the logic, free of FastAPI so it is testable without HTTP. Every route lives under `/api`, which leaves the other paths free for a frontend on the same origin.
+{%- endif %}
+{%- if has_frontend %}
+{% if has_backend %}
+{% endif %}```bash
+bun run --cwd apps/web dev     # http://localhost:5173, reloads as you edit
+bun run --cwd apps/web build   # static files in apps/web/dist
+```
+
+The app lives in `apps/web/`, a [Bun workspace](https://bun.sh/docs/install/workspaces): React, [TanStack Router](https://tanstack.com/router) and [TanStack Query](https://tanstack.com/query), styled with [Tailwind CSS](https://tailwindcss.com/), built by [Vite](https://vite.dev/).
+
+`src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `counter/` shows. A file in `src/routes/` is a route at the matching URL: `index.tsx` is `/`, `__root.tsx` the layout around every page. `src/routeTree.gen.ts` is generated from them and committed, so every link is type-checked against the real routes; the dev server and the typecheck regenerate it, so never edit it by hand.
+{%- endif %}
+{%- if fullstack %}
+
+`packages/api-client/` is the contract between the two: `openapi.json`, exported from the API, and `src/api.ts`, generated from it by [Orval](https://orval.dev/): a typed `fetch` function per route, named after the route function, such as `readHealth()`. A renamed field in a Pydantic model breaks the type check of every component that reads it. A hook regenerates both files whenever `apps/api/src/` changes; commit what it writes.
+
+In development, run `serve --reload` and the dev server side by side: the dev server forwards `/api` to the API on port 8000, so both share one origin, as they should behind one host in production.
+{%- endif %}
+{%- if has_backend %}
 
 ## Configuration
 
@@ -94,15 +113,7 @@ To add a setting, add a field to a group in `apps/api/src/{{ package_name }}/set
 ## Logging
 
 Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`, uvicorn's access and error logs included. `LOGGING__LEVEL` sets the lowest level that is logged.
-{%- elif project_type == "frontend" %}
-```bash
-bun run --cwd apps/web dev     # http://localhost:5173, reloads as you edit
-bun run --cwd apps/web build   # static files in apps/web/dist
-```
-
-The app lives in `apps/web/`, a [Bun workspace](https://bun.sh/docs/install/workspaces): React, [TanStack Router](https://tanstack.com/router) and [TanStack Query](https://tanstack.com/query), styled with [Tailwind CSS](https://tailwindcss.com/), built by [Vite](https://vite.dev/).
-
-`src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `counter/` shows. A file in `src/routes/` is a route at the matching URL: `index.tsx` is `/`, `__root.tsx` the layout around every page. `src/routeTree.gen.ts` is generated from them and committed, so every link is type-checked against the real routes; the dev server and the typecheck regenerate it, so never edit it by hand.
+{%- endif %}
 {%- else %}
 ```python
 import {{ package_name }}

@@ -63,6 +63,8 @@ jobs:
           - {os: windows-latest, answers: api-gitlab-py311}
           - {os: ubuntu-latest, answers: frontend-github}
           - {os: windows-latest, answers: frontend-gitlab}
+          - {os: ubuntu-latest, answers: fullstack-github}
+          - {os: windows-latest, answers: fullstack-gitlab-py312}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -97,9 +99,14 @@ jobs:
           uv run pytest -k '${{ matrix.answers }}'
 
   update:
-    name: copier update from latest tag
+    name: copier update (${{ matrix.tests }})
     runs-on: ubuntu-latest
     timeout-minutes: 20
+    strategy:
+      fail-fast: false
+      matrix:
+        # From the latest tag, and from an api or a frontend to fullstack.
+        tests: [update, other_side]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -111,6 +118,11 @@ jobs:
         with:
           enable-cache: true
 
+      - name: Install Bun
+        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
+        with:
+          bun-version: 1.4.2
+
       - name: Cache prek environments
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
@@ -120,7 +132,7 @@ jobs:
             ~/AppData/Local/prek
           key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml.jinja') }}
 
-      - name: Update a project from the latest tag
+      - name: Update a project
         run: |
           uv sync --locked
-          uv run pytest -k update
+          uv run pytest -k '${{ matrix.tests }}'
