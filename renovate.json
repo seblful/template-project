@@ -1,0 +1,78 @@
+{
+  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+  "description": [
+    "Bumps the exact pins inside template/, which Dependabot cannot read because the files are .jinja: action hashes, hook revisions, the Bun version and the web app's npm ranges. Everything else in this repo stays with Dependabot (.github/dependabot.yml).",
+    "A bump changes what the template renders, so on a Renovate branch run `uv run pytest --update-snapshots` and push the refreshed snapshots."
+  ],
+  "extends": ["config:recommended", ":disableDependencyDashboard"],
+  "enabledManagers": ["github-actions", "custom.regex"],
+  "schedule": ["before 6am on monday"],
+  "minimumReleaseAge": "7 days",
+  "github-actions": {
+    "managerFilePatterns": ["/^template/\\.github/workflows/[^/]+$/"]
+  },
+  "customManagers": [
+    {
+      "customType": "regex",
+      "description": "Hook revisions in the template's pre-commit config",
+      "managerFilePatterns": ["/^template/\\.pre-commit-config\\.yaml\\.jinja$/"],
+      "matchStrings": [
+        "repo: https://github\\.com/(?<depName>[^\\s]+)\\n\\s+rev: (?<currentValue>\\S+)"
+      ],
+      "datasourceTemplate": "github-tags"
+    },
+    {
+      "customType": "regex",
+      "description": "The Bun version: the template's packageManager and the CI that tests it",
+      "managerFilePatterns": [
+        "/^template/.+/package\\.json\\.jinja$/",
+        "/^\\.github/workflows/ci\\.yml$/"
+      ],
+      "matchStrings": [
+        "\"packageManager\": \"bun@(?<currentValue>[\\d.]+)\"",
+        "BUN_VERSION: \"(?<currentValue>[\\d.]+)\""
+      ],
+      "depNameTemplate": "bun",
+      "packageNameTemplate": "oven-sh/bun",
+      "datasourceTemplate": "github-releases",
+      "extractVersionTemplate": "^bun-v(?<version>.+)$"
+    },
+    {
+      "customType": "regex",
+      "description": "The web app's npm ranges; package.json.jinja is not valid JSON",
+      "managerFilePatterns": ["/^template/.+/package\\.json\\.jinja$/"],
+      "matchStrings": [
+        "\"(?<depName>(?:@[\\w.-]+/)?[\\w.-]+)\": \"\\^(?<currentValue>[\\d.]+)\""
+      ],
+      "datasourceTemplate": "npm"
+    },
+    {
+      "customType": "regex",
+      "description": "The Biome version in biome.json's $schema URL, which must match the package",
+      "managerFilePatterns": ["/^template/.+/biome\\.json$/"],
+      "matchStrings": ["biomejs\\.dev/schemas/(?<currentValue>[\\d.]+)/schema\\.json"],
+      "depNameTemplate": "@biomejs/biome",
+      "datasourceTemplate": "npm"
+    }
+  ],
+  "packageRules": [
+    {
+      "description": "This repo's own workflows stay with Dependabot; the manager's default patterns match them too",
+      "matchManagers": ["github-actions"],
+      "matchFileNames": [".github/workflows/**"],
+      "enabled": false
+    },
+    {
+      "matchManagers": ["github-actions"],
+      "groupName": "template workflow actions"
+    },
+    {
+      "matchDatasources": ["npm"],
+      "groupName": "web app dependencies"
+    },
+    {
+      "matchDatasources": ["github-tags"],
+      "groupName": "template hooks"
+    }
+  ]
+}

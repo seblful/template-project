@@ -1,16 +1,45 @@
 """Pytest setup for the template tests."""
 
 import os
+import subprocess
+from datetime import UTC, datetime
+from pathlib import Path
 
 import pytest
 
-# The newest dependency release a generated project may resolve to. Every project
-# resolves its dependencies fresh, so without a date any upstream release can fail an
-# unrelated change. Move it forward on purpose, and never before the newest floor in
-# pyproject.toml.jinja, or resolution fails. The weekly canary run sets
-# TEMPLATE_UNPINNED and resolves current releases, so breakage still surfaces. Bun has
-# no such cutoff: the web app's caret ranges resolve fresh either way.
-PINNED_DATE = "2026-10-10T00:00:00Z"
+REPO = Path(__file__).resolve().parents[1]
+# The one file whose floors decide what uv resolves in a generated project.
+DEPENDENCIES = "template/pyproject.toml.jinja"
+
+
+def _dependencies_last_changed() -> str | None:
+    """Return when the generated projects' Python dependencies last changed, or None.
+
+    Every project resolves its dependencies fresh, so without a cutoff any upstream
+    release can fail an unrelated change. Resolving as of the commit that last touched
+    the floors fixes that without a date to maintain: a floor cannot be newer than the
+    commit that added it, so resolution never fails, and an upstream release after it
+    stays out until the floors change again. Uncommitted changes count as now, and the
+    weekly canary run sets TEMPLATE_UNPINNED to resolve the newest releases anyway, so
+    breakage still surfaces. Bun has no such cutoff: the web app's caret ranges resolve
+    fresh either way.
+
+    Needs the full history: a shallow clone reports its tip commit, whatever changed.
+    """
+
+    def git(*args: str) -> str:
+        """Return git's output, or nothing when git is missing or fails."""
+        try:
+            result = subprocess.run(
+                ["git", *args], cwd=REPO, capture_output=True, text=True, check=False
+            )
+        except OSError:
+            return ""
+        return result.stdout.strip() if result.returncode == 0 else ""
+
+    if git("status", "--porcelain", "--", DEPENDENCIES):
+        return datetime.now(UTC).strftime("%Y-%m-%dT%H:%M:%SZ")
+    return git("log", "-1", "--format=%cI", "--", DEPENDENCIES) or None
 
 
 def pytest_addoption(parser: pytest.Parser) -> None:
@@ -31,5 +60,7 @@ def pytest_configure(config: pytest.Config) -> None:
     modules import it, before any fixture.
     """
     os.environ.pop("VIRTUAL_ENV", None)
-    if not os.environ.get("TEMPLATE_UNPINNED"):
-        os.environ.setdefault("UV_EXCLUDE_NEWER", PINNED_DATE)
+    if os.environ.get("TEMPLATE_UNPINNED"):
+        return
+    if cutoff := _dependencies_last_changed():
+        os.environ.setdefault("UV_EXCLUDE_NEWER", cutoff)

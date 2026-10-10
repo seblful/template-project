@@ -53,6 +53,6 @@ uv run pytest --update-snapshots     # after an intended change; then read the d
 uv run pytest -m slow -k cli-github  # slow: generate one answer set, run its checks
 ```
 
-[CI](.github/workflows/ci.yml) runs both, plus `copier update` from the last release, and once a week resolves the newest dependency releases instead of the pinned date. See [AGENTS.md](AGENTS.md).
+[CI](.github/workflows/ci.yml) runs both, plus `copier update` from the last release, and once a week resolves the newest dependency releases, where every other run resolves those current at the template's last dependency change. See [AGENTS.md](AGENTS.md).
 
 Releases are git tags (`v1.0.0`, `v1.0.1`, …).

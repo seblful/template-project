@@ -1,7 +1,7 @@
-# Covers this repo's own pins. Pins inside template/ (action hashes in ci.yml.jinja,
-# hook revs, tool floors) are not .yml files, so Dependabot cannot see them: bump those
-# by hand when a hook run or CI shows a newer release. The cooldown lets a compromised
-# release be yanked before it reaches you.
+# Covers this repo's own pins. The pins inside template/ (action hashes, hook revs, the
+# Bun version, the web app's npm ranges) are .jinja files, which Dependabot cannot read:
+# renovate.json covers those. The cooldown lets a compromised release be yanked before
+# it reaches you.
 version: 2
 updates:
   - package-ecosystem: github-actions
