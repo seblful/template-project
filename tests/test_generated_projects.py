@@ -2,7 +2,7 @@
 
 Slow: this needs uv, Bun and network access, and installs a project per answer set.
 Template sources are not valid Python until rendered, so this is the only real test of
-them. Run one set with `uv run pytest -m slow -k cli-github`.
+them. Run one set with `uv run pytest -m slow -k cli-none-py311`.
 """
 
 import subprocess

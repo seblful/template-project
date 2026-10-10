@@ -11,7 +11,7 @@ This is a [Copier](https://copier.readthedocs.io/) template, not a Python projec
 ```bash
 uv run pytest                            # fast: render every answer set, compare snapshots
 uv run pytest --update-snapshots         # after an intended change: refresh, then read the diff
-uv run pytest -m slow -k cli-github      # slow: generate one answer set, run its checks
+uv run pytest -m slow -k cli-none-py311  # slow: generate one answer set, run its checks
 uv run pytest -m slow -k latest_release  # slow: copier update from the last tag
 ```
 

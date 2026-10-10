@@ -48,9 +48,9 @@ Every project gets an `AGENTS.md` for coding assistants and defines its checks o
 Template files are not valid Python until rendered, so the only real check is to generate a project and run its checks. The tests have two tiers, both in [`tests/`](tests/):
 
 ```bash
-uv run pytest                        # fast: render every answer set, compare snapshots
-uv run pytest --update-snapshots     # after an intended change; then read the diff
-uv run pytest -m slow -k cli-github  # slow: generate one answer set, run its checks
+uv run pytest                            # fast: render every answer set, compare snapshots
+uv run pytest --update-snapshots         # after an intended change; then read the diff
+uv run pytest -m slow -k cli-none-py311  # slow: generate one answer set, run its checks
 ```
 
 [CI](.github/workflows/ci.yml) runs both, plus `copier update` from the last release, and once a week resolves the newest dependency releases, where every other run resolves those current at the template's last dependency change. See [AGENTS.md](AGENTS.md).
