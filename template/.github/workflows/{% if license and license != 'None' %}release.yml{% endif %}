@@ -14,8 +14,17 @@ on:
 permissions: {}
 
 jobs:
+  # The same checks as every push, so a tag on a failing commit never reaches PyPI.
+  checks:
+    name: checks
+    permissions:
+      contents: read
+    # Not GitHub's newer `$/` form, which zizmor prefers: actionlint rejects it so far.
+    uses: ./.github/workflows/ci.yml  # zizmor: ignore[self-repository]
+
   build:
     name: build distributions
+    needs: checks
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

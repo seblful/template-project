@@ -12,3 +12,5 @@ uv_build and pre-commit with prek:
   hooks with prek, removing any .git/hooks/*.legacy files.
 - A commit-msg hook now rejects commit messages that are not Conventional Commits.
 - The dependency audit runs `uv audit` instead of pip-audit.
+- TODO.md is no longer part of the template. If you kept notes in it, check that
+  the update left it in place.

@@ -92,7 +92,3 @@ def info(ctx: typer.Context) -> None:
     ctx.obj.configure()
     get_logger(__name__).debug("reporting project info")
     typer.echo(f"{PROJECT_NAME} v{__version__}")
-
-
-if __name__ == "__main__":
-    app()

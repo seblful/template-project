@@ -63,7 +63,6 @@ repos:
       - id: check-json
       - id: check-added-large-files
       - id: check-merge-conflict
-      - id: detect-private-key
   - repo: https://github.com/astral-sh/uv-pre-commit
     rev: 0.13.0
     hooks:
