@@ -102,7 +102,7 @@ bun run --cwd apps/web build   # static files in apps/web/dist
 
 The app lives in `apps/web/`, a [Bun workspace](https://bun.sh/docs/install/workspaces): React, [TanStack Router](https://tanstack.com/router) and [TanStack Query](https://tanstack.com/query), styled with [Tailwind CSS](https://tailwindcss.com/), built by [Vite](https://vite.dev/).
 
-`src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `counter/` shows. Routes are declared in `src/router.tsx`, which type-checks every link against them.
+`src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `counter/` shows. A file in `src/routes/` is a route at the matching URL: `index.tsx` is `/`, `__root.tsx` the layout around every page. `src/routeTree.gen.ts` is generated from them and committed, so every link is type-checked against the real routes; the dev server and the typecheck regenerate it, so never edit it by hand.
 {%- else %}
 ```python
 import {{ package_name }}

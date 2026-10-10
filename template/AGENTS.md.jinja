@@ -14,7 +14,7 @@ ______________________________________________________________________
 - **Commits**: [Conventional Commits](https://www.conventionalcommits.org/), subject ≤ 50 chars, imperative mood; no body unless the change needs a "why" (then max 5 bullets); no "Co-Authored-By" footers
 {% if has_frontend -%}
 - **Comments**: a one-sentence `/** ... */` on each exported component and function. Comments are short and explain *why* a design choice was made; never restate what the code already says
-- **Structure**: pages in `apps/web/src/routes/` only arrange features; each feature is a folder in `apps/web/src/features/`, shaped like `counter/`, with every component's `*.test.tsx` beside it. New routes are registered in `apps/web/src/router.tsx`
+- **Structure**: pages in `apps/web/src/routes/` only arrange features; each feature is a folder in `apps/web/src/features/`, shaped like `counter/`, with every component's `*.test.tsx` beside it. A new route is a new file in `routes/`; `src/routeTree.gen.ts` is generated from them, never edited by hand
 - **Types**: strict TypeScript; no `any` and no non-null `!`. Data from outside the app is parsed at the boundary, never cast
 - **Dependencies**: `bun add` inside `apps/web/`, never npm, pnpm or yarn; `bun.lock` is committed
 {% else -%}

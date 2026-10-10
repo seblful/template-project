@@ -6,7 +6,8 @@
     "dev": "vite",
     "build": "vite build",
     "preview": "vite preview",
-    "typecheck": "tsc",
+    "routes": "tsr generate",
+    "typecheck": "tsr generate && tsc",
     "test": "vitest run"
   },
   "dependencies": {
@@ -17,6 +18,8 @@
   },
   "devDependencies": {
     "@tailwindcss/vite": "^4.3.3",
+    "@tanstack/router-cli": "^1.167.41",
+    "@tanstack/router-plugin": "^1.168.43",
     "@testing-library/dom": "^10.4.2",
     "@testing-library/react": "^16.3.3",
     "@testing-library/user-event": "^14.6.7",

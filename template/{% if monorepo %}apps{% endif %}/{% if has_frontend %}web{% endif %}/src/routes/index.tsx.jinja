@@ -1,12 +1,7 @@
-import { createRoute } from "@tanstack/react-router";
+import { createFileRoute } from "@tanstack/react-router";
 import { Counter } from "../features/counter/Counter";
-import { rootRoute } from "./root";
 
-export const indexRoute = createRoute({
-  getParentRoute: () => rootRoute,
-  path: "/",
-  component: HomePage,
-});
+export const Route = createFileRoute("/")({ component: HomePage });
 
 /** The home page: a route only arranges features, it holds no logic of its own. */
 function HomePage() {
