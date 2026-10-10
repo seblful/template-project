@@ -30,8 +30,8 @@ env:
   TEMPLATE_UNPINNED: ${{ github.event_name == 'schedule' && '1' || '' }}
 
 jobs:
-  hooks:
-    name: repo hooks
+  fast:
+    name: repo hooks and snapshots
     if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
@@ -53,54 +53,41 @@ jobs:
           path: ~/.cache/prek
           key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      - name: Run hooks
+      # The default pytest run renders every answer set without tasks and compares
+      # the files with tests/snapshots.
+      - name: Run hooks and render
         run: |
           uv sync --locked
           uv run prek run --all-files --show-diff-on-failure
-
-  render:
-    name: render and compare snapshots
-    if: github.event_name != 'schedule'
-    runs-on: ubuntu-latest
-    timeout-minutes: 10
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
-        with:
-          enable-cache: true
-
-      # The default run: renders every answer set without tasks and compares the files.
-      - name: Render
-        run: |
-          uv sync --locked
           uv run pytest
 
-  generate:
-    name: ${{ matrix.os }} / ${{ matrix.answers }}
+  slow:
+    name: ${{ matrix.os }} / ${{ matrix.select }}
     runs-on: ${{ matrix.os }}
     timeout-minutes: 20
     strategy:
       fail-fast: false
       matrix:
-        # Answer sets live in tests/support.py; each job generates one of them and
-        # runs every check the project defines.
+        # Answer sets live in tests/support.py; each generates one and runs every
+        # check the project defines. The last two run `copier update`: from the
+        # latest tag, and from an api to an api with a web app.
         include:
-          - {os: ubuntu-latest, answers: cli-github}
-          - {os: ubuntu-latest, answers: library-github-py312}
-          - {os: ubuntu-latest, answers: api-web-github}
-          - {os: windows-latest, answers: cli-none-py311}
-          - {os: windows-latest, answers: library-gitlab}
-          - {os: windows-latest, answers: api-gitlab-py313}
-          - {os: windows-latest, answers: api-web-gitlab-py312}
+          - {os: ubuntu-latest, select: cli-github}
+          - {os: ubuntu-latest, select: library-github-py312}
+          - {os: ubuntu-latest, select: api-web-github}
+          - {os: windows-latest, select: cli-none-py311}
+          - {os: windows-latest, select: library-gitlab}
+          - {os: windows-latest, select: api-gitlab-py313}
+          - {os: windows-latest, select: api-web-gitlab-py312}
+          - {os: ubuntu-latest, select: latest_release}
+          - {os: ubuntu-latest, select: web_app}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
-          fetch-depth: 0 # the dependency cutoff is a commit date, so it needs history
+          # The dependency cutoff is a commit date, and tags are the released
+          # versions copier updates from: both need the full history.
+          fetch-depth: 0
 
       - name: Install uv
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
@@ -122,43 +109,7 @@ jobs:
             ~/AppData/Local/prek
           key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml.jinja') }}
 
-      - name: Generate and check a project
+      - name: Generate and check
         run: |
           uv sync --locked
-          uv run pytest -m slow -k '${{ matrix.answers }}'
-
-  update:
-    name: copier update (${{ matrix.tests }})
-    runs-on: ubuntu-latest
-    timeout-minutes: 20
-    strategy:
-      fail-fast: false
-      matrix:
-        # From the latest tag, and from an api to an api with a web app.
-        tests: [latest_release, web_app]
-    steps:
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
-        with:
-          persist-credentials: false
-          fetch-depth: 0 # tags are the released versions copier resolves
-
-      - name: Install uv
-        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
-        with:
-          enable-cache: true
-
-      - name: Install Bun
-        uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
-        with:
-          bun-version: ${{ env.BUN_VERSION }}
-
-      - name: Cache prek environments
-        uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
-        with:
-          path: ~/.cache/prek
-          key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml.jinja') }}
-
-      - name: Update a project
-        run: |
-          uv sync --locked
-          uv run pytest -m slow -k '${{ matrix.tests }}'
+          uv run pytest -m slow -k '${{ matrix.select }}'

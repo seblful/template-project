@@ -15,7 +15,7 @@ uv run pytest -m slow -k cli-github      # slow: generate one answer set, run it
 uv run pytest -m slow -k latest_release  # slow: copier update from the last tag
 ```
 
-The fast tier renders each answer set without its tasks and compares the files with `tests/snapshots/`, so a template change shows up in review as the change to every project it affects. Never edit a snapshot by hand; refresh them and read the diff. The slow tier is the load-bearing one, and what CI's `generate` and `update` jobs run.
+The fast tier renders each answer set without its tasks and compares the files with `tests/snapshots/`, so a template change shows up in review as the change to every project it affects. Never edit a snapshot by hand; refresh them and read the diff. The slow tier is the load-bearing one, and what CI's `slow` job runs.
 
 Copier includes uncommitted template changes (with a `DirtyLocalWarning`), so there is no need to commit before testing. Generated projects resolve dependencies as of the commit that last changed `template/pyproject.toml.jinja` (uncommitted changes count as now), so an upstream release cannot fail an unrelated change and there is no date to maintain. That needs full git history, so CI jobs that generate check out with `fetch-depth: 0`. The weekly canary run sets `TEMPLATE_UNPINNED` and resolves the newest releases instead. Bun has no such cutoff.
 
