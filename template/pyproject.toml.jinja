@@ -91,7 +91,8 @@ docs = [  # a group, not an extra: docs tooling isn't a feature of the installed
 {%- if has_python %}
     "mkdocstrings[python]>=1.0.0,<2",  # renders docs/reference.md from docstrings
     # 12.2 changed Highlight's constructor, which mkdocstrings 1.0.6 still calls the
-    # old way. Lift the cap once a mkdocstrings release supports it.
+    # old way: https://github.com/mkdocstrings/mkdocstrings/issues/829. Lift the cap
+    # once a mkdocstrings release supports 12.2.
     "pymdown-extensions<12.2",
 {%- endif %}
 ]

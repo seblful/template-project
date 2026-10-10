@@ -8,6 +8,7 @@ Select one set with `-k`, e.g. `uv run pytest -k cli-config-github`.
 import re
 import shutil
 import subprocess
+import tomllib
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -387,6 +388,25 @@ def test_answers_produce_the_right_files(project: Project) -> None:
     if cli:
         cli_source = (project.path / CLI_FILES[0]).read_text(encoding="utf-8")
         assert ('"--config"' in cli_source) == config
+
+
+def test_pymdown_cap_is_still_needed(project: Project) -> None:
+    """The pymdown-extensions cap goes as soon as a newer mkdocstrings is out.
+
+    pymdown-extensions 12.2 broke mkdocstrings 1.0.6 (mkdocstrings issue 829), so
+    pyproject.toml.jinja caps it. Each project resolves its dependencies fresh, so
+    this fails on the first run after a new mkdocstrings release: drop the cap, and
+    check that the docs still build without it.
+    """
+    if project.answers["project_type"] == "frontend":
+        pytest.skip("a frontend renders no API reference with mkdocstrings")
+    lock = tomllib.loads((project.path / "uv.lock").read_text(encoding="utf-8"))
+    versions = {package["name"]: package["version"] for package in lock["package"]}
+
+    assert versions["mkdocstrings"] == "1.0.6", (
+        f"mkdocstrings {versions['mkdocstrings']} is out: if it supports "
+        "pymdown-extensions 12.2, lift the cap in template/pyproject.toml.jinja"
+    )
 
 
 def test_installed_wheel_works(project: Project, tmp_path: Path) -> None:
