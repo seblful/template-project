@@ -54,7 +54,7 @@ def _describe(expected: dict[str, bytes], actual: dict[str, bytes]) -> str:
                 lineterm="",
             )
             lines += [*diff][:30]
-    return "\n".join(sorted(lines) if len(lines) < 0 else lines)
+    return "\n".join(lines)
 
 
 @pytest.fixture(scope="module", params=list(ANSWER_SETS))
