@@ -1,26 +1,24 @@
 """Command line interface for demo-proj."""
 
-from pathlib import Path
 from typing import Annotated
 
 import typer
 
 from demo_proj import PROJECT_NAME, __version__
 from demo_proj.logging import get_logger, setup_logging
-from demo_proj.settings import Settings, load_settings
+from demo_proj.settings import Settings
 
 app = typer.Typer(help=f"{PROJECT_NAME} CLI", no_args_is_help=True)
 
 
-def configure(ctx: typer.Context) -> Settings:
+def configure() -> Settings:
     """Load settings, set up logging and return the settings.
 
     Every command calls this first. It runs in the command, not in the callback,
     because Click runs the callback before it parses the subcommand: `settings --help`
     would otherwise read and validate configuration just to print help.
     """
-    env_file: Path | None = ctx.obj
-    settings = load_settings(env_file=env_file)
+    settings = Settings()
     setup_logging(settings.logging)
     return settings
 
@@ -34,13 +32,6 @@ def _version_callback(value: bool) -> None:
 
 @app.callback()
 def main(
-    ctx: typer.Context,
-    env_file: Annotated[
-        Path | None,
-        typer.Option(
-            exists=True, dir_okay=False, readable=True, help="Load a dotenv file."
-        ),
-    ] = None,
     _version: Annotated[
         bool,
         typer.Option(
@@ -52,13 +43,12 @@ def main(
     ] = False,
 ) -> None:
     """Run the demo-proj CLI."""
-    ctx.obj = env_file
 
 
 @app.command("settings")
-def show_settings(ctx: typer.Context) -> None:
+def show_settings() -> None:
     """Print the settings the application would run with, as JSON."""
-    settings = configure(ctx)
+    settings = configure()
     get_logger(__name__).debug("showing settings")
     # Secret fields must be SecretStr: it dumps masked, where a plain str would leak.
     typer.echo(settings.model_dump_json(indent=2))

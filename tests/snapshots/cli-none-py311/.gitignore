@@ -41,6 +41,7 @@ site/
 *.pem
 secrets/
 credentials/
+.ssh/
 
 # Claude Code personal files (may contain machine-specific paths or credentials).
 # Creating a CLAUDE.local.md stops Claude Code from reading AGENTS.md, unless /config

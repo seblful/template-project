@@ -10,7 +10,7 @@ import uvicorn
 from demo_proj import PROJECT_NAME, __version__
 from demo_proj.app import create_app
 from demo_proj.logging import setup_logging
-from demo_proj.settings import load_settings
+from demo_proj.settings import Settings
 
 app = typer.Typer(help=f"{PROJECT_NAME} CLI", no_args_is_help=True)
 
@@ -39,12 +39,6 @@ def main(
 
 @app.command()
 def serve(
-    env_file: Annotated[
-        Path | None,
-        typer.Option(
-            exists=True, dir_okay=False, readable=True, help="Load a dotenv file."
-        ),
-    ] = None,
     host: Annotated[str, typer.Option(help="Interface to bind.")] = "127.0.0.1",
     port: Annotated[int, typer.Option(help="Port to bind.")] = 8000,
     reload: Annotated[
@@ -54,16 +48,13 @@ def serve(
     """Serve the API with uvicorn."""
     # Fails fast on bad settings, before uvicorn starts, and sets up logging for the
     # reload supervisor, which never serves itself.
-    setup_logging(load_settings(env_file=env_file).logging)
+    setup_logging(Settings().logging)
     uvicorn.run(
         # A factory by import string, which reload requires: the child imports it.
         "demo_proj.app:create_serving_app",
         factory=True,
         host=host,
         port=port,
-        # Loaded into the environment, which a reload child inherits; variables that
-        # are already set still win, as they do with load_settings(env_file=...).
-        env_file=env_file,
         reload=reload,
         # The package only: the default, the working directory, would poll .venv too.
         reload_dirs=[str(Path(__file__).parent)] if reload else None,

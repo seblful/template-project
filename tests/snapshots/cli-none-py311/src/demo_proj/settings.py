@@ -1,6 +1,5 @@
 """Application settings, loaded and validated with pydantic-settings."""
 
-from pathlib import Path
 from typing import Literal
 
 from pydantic import BaseModel, ConfigDict, Field, field_validator
@@ -31,8 +30,8 @@ class Settings(BaseSettings):
 
     Groups are `__`-delimited, as in `DEMO_PROJ_LOGGING__LEVEL`.
 
-    Precedence: constructor overrides, environment variables, an explicitly selected
-    dotenv file, then model defaults.
+    Constructor arguments win over environment variables, which win over defaults. No
+    dotenv file is read: `uv run --env-file .env` loads one into the environment.
     """
 
     logging: LoggingSettings = Field(default_factory=LoggingSettings)
@@ -40,26 +39,6 @@ class Settings(BaseSettings):
     model_config = SettingsConfigDict(
         # Keeps generic names the platform sets, such as HOST or PORT, from colliding.
         env_prefix="DEMO_PROJ_",
-        env_file_encoding="utf-8",
         env_nested_delimiter="__",
         frozen=True,
-        # Unknown keys belong to other tools; typos inside a settings group still fail.
-        extra="ignore",
     )
-
-
-def load_settings(*, env_file: Path | None = None) -> Settings:
-    """Load and validate settings at application startup without caching.
-
-    A relative path is resolved against the current working directory. No file is
-    discovered automatically, and an explicitly selected path that does not exist is
-    an error. Pass the returned settings to modules that need them.
-
-    Args:
-        env_file: Optional dotenv file.
-    """
-    # Checked here because pydantic-settings silently skips a missing dotenv file.
-    if env_file is not None and not env_file.is_file():
-        message = f"Environment file not found: {env_file}"
-        raise FileNotFoundError(message)
-    return Settings(_env_file=env_file)

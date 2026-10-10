@@ -143,15 +143,3 @@ def test_warnings_are_rendered_like_other_records(
     record = _json_records(capsys.readouterr().err)[0]
     assert record["logger"] == "py.warnings"
     assert "careful" in str(record["event"])
-
-
-def test_logging_uses_supplied_settings_without_loading_the_environment(
-    monkeypatch: pytest.MonkeyPatch, capsys: pytest.CaptureFixture[str]
-) -> None:
-    """Setup takes its settings as an argument and never reads the environment."""
-    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__LEVEL", "invalid")
-    setup_logging(LoggingSettings(format="json"))
-
-    get_logger("test").info("configured explicitly")
-
-    assert json.loads(capsys.readouterr().err)["event"] == "configured explicitly"

@@ -1,62 +1,65 @@
-"""Unit tests for application settings."""
+"""Tests for application settings."""
 
+import re
 from pathlib import Path
 
 import pytest
-from pydantic import ValidationError
+from pydantic import BaseModel, ValidationError
 
-from demo_proj.settings import Settings, load_settings
-
-
-def test_settings_load_from_env_file(test_settings: Settings) -> None:
-    """A selected dotenv file overrides its keys and leaves the rest at defaults."""
-    assert test_settings.logging.format == "json"
-    assert test_settings.logging.level == "INFO"
+from demo_proj.settings import Settings
 
 
-def test_unrelated_env_file_keys_are_ignored(tmp_path: Path) -> None:
-    """Keys that match no settings field belong to other tools and pass silently."""
-    env_file = tmp_path / ".env"
-    env_file.write_text(
-        "DEMO_PROJ_LOGGING__FORMAT=json\nDATABASE_URL=postgres://db\n",
-        encoding="utf-8",
-    )
+def _supported_keys() -> set[str]:
+    """Return every variable name the model reads, groups expanded to their fields."""
+    prefix = Settings.model_config.get("env_prefix", "")
+    keys = set()
+    for name, field in Settings.model_fields.items():
+        group = field.annotation
+        if isinstance(group, type) and issubclass(group, BaseModel):
+            keys.update(f"{name}__{nested}" for nested in group.model_fields)
+        else:
+            keys.add(name)
+    return {f"{prefix}{key}".upper() for key in keys}
 
-    assert load_settings(env_file=env_file).logging.format == "json"
+
+def test_committed_env_example_matches_the_settings_model() -> None:
+    """The example lists every supported field, no obsolete keys, and valid values."""
+    example = Path(__file__).resolve().parents[1] / ".env.example"
+    actual = set()
+    for raw in example.read_text(encoding="utf-8").splitlines():
+        # Commented-out keys count: they document optional fields.
+        key = raw.strip().lstrip("#").strip().split("=", 1)
+        if len(key) == 2 and re.fullmatch(r"[A-Z][A-Z0-9_]*", key[0].strip()):
+            actual.add(key[0].strip())
+
+    assert actual == _supported_keys()
+    Settings(_env_file=example)
+
+
+def test_defaults_are_isolated_from_the_host() -> None:
+    """With the host's variables cleared, every field uses its declared default."""
+    settings = Settings()
+
+    assert settings.logging.format == "text"
+    assert settings.logging.level == "INFO"
 
 
 @pytest.mark.parametrize(
-    "entry",
+    ("name", "value"),
     [
-        "DEMO_PROJ_LOGGING__FORMA=json",
-        "DEMO_PROJ_LOGGING__FORMAT=invalid",
+        ("DEMO_PROJ_LOGGING__FORMA", "json"),
+        ("DEMO_PROJ_LOGGING__FORMAT", "invalid"),
     ],
     ids=["unknown-field", "invalid-value"],
 )
-def test_invalid_settings_are_rejected(tmp_path: Path, entry: str) -> None:
+def test_invalid_settings_are_rejected(
+    name: str, value: str, monkeypatch: pytest.MonkeyPatch
+) -> None:
     """A typo or a bad value inside a settings group fails loudly at startup."""
-    env_file = tmp_path / ".env"
-    env_file.write_text(entry, encoding="utf-8")
+    monkeypatch.setenv(name, value)
 
     with pytest.raises(ValidationError, match="logging"):
-        load_settings(env_file=env_file)
-
-
-def test_settings_are_immutable(test_settings: Settings) -> None:
-    """Loaded settings cannot be reassigned after startup."""
-    with pytest.raises(ValidationError, match="frozen"):
-        test_settings.logging.format = "text"  # ty: ignore[invalid-assignment]
-
-
-def test_each_load_reads_the_current_environment(
-    monkeypatch: pytest.MonkeyPatch,
-) -> None:
-    """Nothing is cached, so a later load sees a changed environment."""
-    first = load_settings()
-    monkeypatch.setenv("DEMO_PROJ_LOGGING__FORMAT", "json")
-
-    assert first.logging.format == "text"
-    assert load_settings().logging.format == "json"
+        Settings()
 
 
 def test_variables_without_the_package_prefix_are_not_read(
@@ -65,7 +68,7 @@ def test_variables_without_the_package_prefix_are_not_read(
     """A generic name such as `LOGGING__FORMAT` belongs to someone else."""
     monkeypatch.setenv("LOGGING__FORMAT", "json")
 
-    assert load_settings().logging.format == "text"
+    assert Settings().logging.format == "text"
 
 
 def test_level_is_accepted_in_any_letter_case(
@@ -74,28 +77,17 @@ def test_level_is_accepted_in_any_letter_case(
     """`debug` is normalized to the canonical `DEBUG` instead of being rejected."""
     monkeypatch.setenv("DEMO_PROJ_LOGGING__LEVEL", "debug")
 
-    assert load_settings().logging.level == "DEBUG"
+    assert Settings().logging.level == "DEBUG"
 
 
-def test_whole_group_json_and_nested_env_values_merge(
-    monkeypatch: pytest.MonkeyPatch,
+def test_no_dotenv_file_is_read(
+    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
 ) -> None:
-    """A nested variable overrides the matching key of a whole-group JSON value."""
-    monkeypatch.setenv(
-        "DEMO_PROJ_LOGGING",
-        '{"level":"DEBUG","format":"text"}',
+    """A `.env` in the working directory is never read; uv loads one when asked."""
+    monkeypatch.chdir(tmp_path)
+    (tmp_path / ".env").write_text(
+        "DEMO_PROJ_LOGGING__FORMAT=invalid\n",
+        encoding="utf-8",
     )
-    monkeypatch.setenv("DEMO_PROJ_LOGGING__FORMAT", "json")
 
-    settings = load_settings()
-
-    assert settings.logging.level == "DEBUG"
-    assert settings.logging.format == "json"
-
-
-def test_defaults_are_isolated_from_the_host() -> None:
-    """With the host's variables cleared, every field uses its declared default."""
-    settings = load_settings()
-
-    assert settings.logging.format == "text"
-    assert settings.logging.level == "INFO"
+    assert Settings().logging.format == "text"

@@ -52,43 +52,16 @@ def test_reload_watches_only_the_package(served: dict[str, object]) -> None:
     assert served["reload_dirs"] == [str(Path({{ package_name }}.__file__).parent)]
 
 
-def test_serve_passes_the_env_file_on_to_the_serving_process(
-    tmp_path: Path, served: dict[str, object]
-) -> None:
-    """The selected file reaches uvicorn, which loads it where the app is built."""
-    env_file = tmp_path / "selected.env"
-    env_file.write_text(
-        "{{ package_name | upper }}_LOGGING__FORMAT=json\n",
-        encoding="utf-8",
-    )
-
-    result = runner.invoke(app, ["serve", "--env-file", str(env_file)])
-
-    assert result.exit_code == 0, result.output
-    assert served["env_file"] == env_file
-
-
 def test_serve_validates_settings_before_starting(
-    tmp_path: Path, served: dict[str, object]
+    monkeypatch: pytest.MonkeyPatch, served: dict[str, object]
 ) -> None:
     """Invalid settings fail in `serve` itself, and uvicorn never starts."""
-    env_file = tmp_path / "selected.env"
-    env_file.write_text(
-        "{{ package_name | upper }}_LOGGING__FORMAT=invalid\n",
-        encoding="utf-8",
-    )
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__FORMAT", "invalid")
 
-    result = runner.invoke(app, ["serve", "--env-file", str(env_file)])
+    result = runner.invoke(app, ["serve"])
 
     assert result.exit_code != 0
     assert served == {}
-
-
-def test_serve_rejects_a_missing_env_file(tmp_path: Path) -> None:
-    """A missing path is a usage error, reported before anything loads."""
-    result = runner.invoke(app, ["serve", "--env-file", str(tmp_path / "absent")])
-
-    assert result.exit_code == 2
 
 
 def test_openapi_writes_the_schema_with_lf_line_endings(tmp_path: Path) -> None:

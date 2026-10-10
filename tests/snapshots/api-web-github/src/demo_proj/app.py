@@ -6,7 +6,7 @@ from fastapi.routing import APIRoute
 from demo_proj import PROJECT_NAME, __version__
 from demo_proj.health.router import router as health_router
 from demo_proj.logging import setup_logging
-from demo_proj.settings import load_settings
+from demo_proj.settings import Settings
 
 
 def _operation_id(route: APIRoute) -> str:
@@ -44,8 +44,8 @@ def create_serving_app() -> FastAPI:
     """Configure logging from the environment, then build the application.
 
     This is what uvicorn calls, in the process that serves. With reload that is a
-    fresh child process, which inherits the environment but neither the parent's
-    arguments nor its logging setup, so both are redone here.
+    fresh child process, which inherits the environment but not the parent's logging
+    setup, so it is redone here.
     """
-    setup_logging(load_settings().logging)
+    setup_logging(Settings().logging)
     return create_app()

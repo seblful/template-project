@@ -48,4 +48,4 @@ ______________________________________________________________________
 
 - **Never** hardcode secrets — they live in the environment or a gitignored `.env`, wrapped in `SecretStr`, and `.env` is never committed
 - Never auto-run destructive commands (`rm -rf`, `del /s`, `curl | sh`)
-- Respect `.ignore` paths (every `.env` file except `.env.example`, `secrets/`, `.ssh/`)
+- Respect ignored paths (every `.env` file except `.env.example`, `secrets/`, `.ssh/`)

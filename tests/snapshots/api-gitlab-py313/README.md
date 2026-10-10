@@ -22,16 +22,14 @@ Each feature is a package under `src/demo_proj/`, shaped like `health/`: `router
 
 ## Configuration
 
-Settings come from environment variables such as `DEMO_PROJ_LOGGING__FORMAT=json`, where the upper-cased package name prefixes every variable and `__` separates a group from its field. A dotenv file is read only when you select it:
+Settings come from environment variables such as `DEMO_PROJ_LOGGING__FORMAT=json`, where the upper-cased package name prefixes every variable and `__` separates a group from its field. The application reads no dotenv file itself; uv loads one into the environment when you select it:
 
 ```bash
 cp .env.example .env   # local overrides, gitignored
-uv run demo-proj serve --env-file .env
+uv run --env-file .env demo-proj serve
 ```
 
-In Python, pass the same path to `load_settings(env_file=...)`.
-
-Highest priority first: constructor arguments, environment variables, the `.env` file, defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
+Set `UV_ENV_FILE=.env` to select it for every `uv run`. Variables already set in the shell win over the file. A missing file, or a misspelled key inside a group, fails at startup.
 
 To add a setting, add a field to a group in `src/demo_proj/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`. A test checks that they match. To read a TOML file as well, override `settings_customise_sources` on `Settings`, as the [pydantic-settings documentation](https://docs.pydantic.dev/latest/concepts/pydantic_settings/#customise-settings-sources) shows.
 

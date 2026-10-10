@@ -30,9 +30,9 @@ From Python:
 
 ```python
 from {{ package_name }}.logging import get_logger, setup_logging
-from {{ package_name }}.settings import load_settings
+from {{ package_name }}.settings import Settings
 
-settings = load_settings()
+settings = Settings()
 setup_logging(settings.logging)
 get_logger(__name__).info("started", user_id=42)
 ```
@@ -70,20 +70,18 @@ print({{ package_name }}.__version__)
 
 ## Configuration
 
-Settings come from environment variables such as `{{ package_name | upper }}_LOGGING__FORMAT=json`, where the upper-cased package name prefixes every variable and `__` separates a group from its field. A dotenv file is read only when you select it:
+Settings come from environment variables such as `{{ package_name | upper }}_LOGGING__FORMAT=json`, where the upper-cased package name prefixes every variable and `__` separates a group from its field. The application reads no dotenv file itself; uv loads one into the environment when you select it:
 
 ```bash
 cp .env.example .env   # local overrides, gitignored
 {%- if project_type == "cli" %}
-uv run {{ project_slug }} --env-file .env settings
+uv run --env-file .env {{ project_slug }} settings
 {%- else %}
-uv run {{ project_slug }} serve --env-file .env
+uv run --env-file .env {{ project_slug }} serve
 {%- endif %}
 ```
 
-In Python, pass the same path to `load_settings(env_file=...)`.
-
-Highest priority first: constructor arguments, environment variables, the `.env` file, defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
+Set `UV_ENV_FILE=.env` to select it for every `uv run`. Variables already set in the shell win over the file. A missing file, or a misspelled key inside a group, fails at startup.
 
 To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`. A test checks that they match. To read a TOML file as well, override `settings_customise_sources` on `Settings`, as the [pydantic-settings documentation](https://docs.pydantic.dev/latest/concepts/pydantic_settings/#customise-settings-sources) shows.
 

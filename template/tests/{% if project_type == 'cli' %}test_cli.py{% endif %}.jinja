@@ -10,7 +10,6 @@ from typer.testing import CliRunner
 
 from {{ package_name }} import __version__
 from {{ package_name }}.cli import app
-from {{ package_name }}.logging import reset_logging
 
 runner = CliRunner()
 
@@ -56,44 +55,18 @@ def test_module_is_executable(tmp_path: Path) -> None:
     assert __version__ in result.stdout
 
 
-def test_cli_loads_an_explicit_file_for_each_invocation(
-    tmp_path: Path, monkeypatch: pytest.MonkeyPatch
+def test_settings_command_reads_the_environment(
+    monkeypatch: pytest.MonkeyPatch,
 ) -> None:
-    """`--env-file` applies to its own run only; a `.env` in the cwd is never read."""
-    monkeypatch.chdir(tmp_path)
-    env_file = tmp_path / "selected.env"
-    prefix = "{{ package_name | upper }}_"
-    env_file.write_text(
-        f"{prefix}LOGGING__FORMAT=json\n{prefix}LOGGING__LEVEL=DEBUG\n",
-        encoding="utf-8",
-    )
-    (tmp_path / ".env").write_text(
-        f"{prefix}LOGGING__FORMAT=invalid\n",
-        encoding="utf-8",
-    )
+    """`settings` prints what the environment selects and logs in that format."""
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__FORMAT", "json")
+    monkeypatch.setenv("{{ package_name | upper }}_LOGGING__LEVEL", "DEBUG")
 
-    assert runner.invoke(app, ["settings"]).exit_code == 0
-    reset_logging()
-    selected = runner.invoke(app, ["--env-file", str(env_file), "settings"])
-    reset_logging()
-    default = runner.invoke(app, ["settings"])
+    result = runner.invoke(app, ["settings"])
 
-    assert selected.exit_code == 0, selected.output
-    assert json.loads(selected.stderr)["event"] == "showing settings"
-    assert json.loads(selected.stdout)["logging"] == {
-        "format": "json",
-        "level": "DEBUG",
-    }
-    assert default.exit_code == 0, default.output
-    assert json.loads(default.stdout)["logging"]["level"] == "INFO"
-    assert default.stderr == ""
-
-
-def test_cli_rejects_a_missing_env_file(tmp_path: Path) -> None:
-    """A missing path is a usage error, reported before any command runs."""
-    result = runner.invoke(app, ["--env-file", str(tmp_path / "absent"), "settings"])
-
-    assert result.exit_code == 2
+    assert result.exit_code == 0, result.output
+    assert json.loads(result.stderr)["event"] == "showing settings"
+    assert json.loads(result.stdout)["logging"] == {"format": "json", "level": "DEBUG"}
 
 
 @pytest.mark.parametrize("args", [["--version"], ["settings", "--help"]])

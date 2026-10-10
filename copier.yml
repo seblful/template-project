@@ -192,14 +192,14 @@ _message_after_copy: |
   {%- if application %}
       cp .env.example .env
   {%- if project_type == 'cli' %}
-      uv run {{ project_slug }} --env-file .env settings
+      uv run --env-file .env {{ project_slug }} settings
   {%- else %}
-      uv run {{ project_slug }} serve --env-file .env
+      uv run --env-file .env {{ project_slug }} serve
   {%- endif %}
 
   .env.example is the committed contract listing every supported key; your own .env is
-  gitignored and yours to edit. Select it explicitly with --env-file or
-  load_settings(env_file=Path(".env")); files are never discovered automatically.
+  gitignored and yours to edit. uv loads it only when selected, with --env-file or
+  UV_ENV_FILE; the application never reads a dotenv file itself.
   {%- endif %}
   {%- if project_type == 'api' %}
 

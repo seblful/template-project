@@ -36,3 +36,7 @@ uv_build and pre-commit with prek, and trims the defaults:
   without an error.
 - LOGGING__LEVEL accepts any letter case, and Python warnings are logged through the
   same handler. Loggers no longer cache their setup on first use.
+- The application reads no dotenv file itself any more: the --env-file option and
+  load_settings are gone. Load a file with `uv run --env-file .env <command>`, or set
+  UV_ENV_FILE=.env, and build settings with Settings(). test_config_roundtrip.py is
+  merged into test_settings.py; an unmodified copy is deleted by this update.
