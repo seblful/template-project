@@ -7,8 +7,8 @@ stages:
   - audit
 
 default:
-  # No Python in the image: uv installs the one .python-version names, so a release
-  # too new for a uv:pythonX.Y image still works. buildpack-deps brings git, for prek.
+  # No Python in the image: uv installs the one .python-version names. buildpack-deps
+  # brings git, for prek.
   image: ghcr.io/astral-sh/uv:trixie
   interruptible: true
   cache:
@@ -35,14 +35,14 @@ workflow:
       when: never
     - if: $CI_COMMIT_BRANCH
     - if: $CI_COMMIT_TAG
-{%- if has_frontend %}
+{%- if web %}
 
-# The uv image has no Bun. Rather than piping the bun.sh install script into a shell,
-# this unpacks a pinned release: the version packageManager names in package.json, as
-# setup-bun reads it on GitHub. Python's zipfile, through uv, stands in for unzip.
+# The uv image has no Bun. Rather than piping an install script into a shell, this
+# unpacks the pinned release that web/package.json names. Python's zipfile, through
+# uv, stands in for unzip.
 .bun:
   before_script:
-    - BUN_VERSION=$(sed -n 's/.*"packageManager"[^"]*"bun@\([^"]*\)".*/\1/p' package.json)
+    - BUN_VERSION=$(sed -n 's/.*"packageManager"[^"]*"bun@\([^"]*\)".*/\1/p' web/package.json)
     - curl -fsSLo /tmp/bun.zip
       "https://github.com/oven-sh/bun/releases/download/bun-v${BUN_VERSION}/bun-linux-x64.zip"
     - uv run --no-project python -m zipfile -e /tmp/bun.zip /tmp
@@ -51,7 +51,7 @@ workflow:
 
 check:
   stage: check
-{%- if has_frontend %}
+{%- if web %}
   extends: .bun
 {%- endif %}
   rules:
@@ -59,39 +59,29 @@ check:
     - if: $SCHEDULED_AUDIT
       when: never
     - when: on_success
-{%- if has_python %}
   variables:
     # Reports for GitLab's merge request widgets, added to the pytest hook's own run.
     PYTEST_ADDOPTS: --cov-report=xml --cov-report=term --junitxml=report.xml
-{%- endif %}
   script:
     - uv sync --locked  # fails on a stale lockfile instead of masking it
-{%- if has_frontend %}
-    - bun install --frozen-lockfile  # fails on a stale bun.lock, as uv does
+{%- if web %}
+    - bun install --cwd web --frozen-lockfile  # fails on a stale bun.lock
 {%- endif %}
-    # Every check lives in .pre-commit-config.yaml; the manual stage runs all of them.
-{%- if has_python %}
     # --verbose prints the coverage total the `coverage` regex reads. gitleaks scans
     # staged changes, so this is not a full-history secret scan.
     - uv run prek run --all-files --hook-stage manual --show-diff-on-failure
       --verbose
   coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'
-{%- else %}
-    # gitleaks scans staged changes, so this is not a full-history secret scan.
-    - uv run prek run --all-files --hook-stage manual --show-diff-on-failure
-{%- endif %}
   artifacts:
     when: always
     paths:
       - site  # built by the zensical hook, published by `pages`
     expire_in: 1 week
-{%- if has_python %}
     reports:
       junit: report.xml
       coverage_report:
         coverage_format: cobertura
         path: coverage.xml
-{%- endif %}
 
 pages:
   stage: deploy
@@ -112,15 +102,14 @@ pages:
 
 audit:
   stage: audit
-{%- if has_frontend %}
+{%- if web %}
   extends: .bun
 {%- endif %}
   script:
-    # Every group in uv.lock, docs included. --preview-features opts in to a command
-    # uv still marks experimental, instead of printing a warning on every run.
+    # --preview-features opts in to a command uv still marks experimental.
     - uv audit --locked --preview-features audit-command
-{%- if has_frontend %}
-    - bun audit  # reads bun.lock against the npm advisory database
+{%- if web %}
+    - (cd web && bun audit)  # reads bun.lock against the npm advisory database
 {%- endif %}
   rules:
     - if: $SCHEDULED_AUDIT

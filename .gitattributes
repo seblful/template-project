@@ -2,3 +2,6 @@
 # Linux CI. Committing LF everywhere keeps `ruff format --check` and the
 # end-of-file-fixer hook from disagreeing across platforms.
 * text=auto eol=lf
+
+# Rendered by the tests; `uv run pytest --update-snapshots` rewrites them.
+tests/snapshots/** linguist-generated

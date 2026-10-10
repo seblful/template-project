@@ -1,7 +1,6 @@
 # The delta over .gitignore: committed paths, or ones .gitignore un-ignores, that
 # still have no business in an assistant's context.
 
-# .env.example is the committed config contract; every other .env holds real values.
 .env
 .env.*
 !.env.example
@@ -9,9 +8,10 @@
 # Committed, generated, thousands of lines long. Comments get their own line: in this
 # syntax a trailing `# ...` is part of the pattern, not a comment.
 uv.lock
-{%- if has_frontend %}
+{%- if web %}
 bun.lock
 routeTree.gen.ts
+src/api/
 {%- endif %}
 
 # Belt and suspenders: .gitignore covers these too, but a leaked key stays unindexed.

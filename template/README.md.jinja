@@ -4,12 +4,12 @@
 
 ## Setup
 
-{% if has_frontend -%}
-Needs [Bun](https://bun.sh/) for the app and [uv](https://docs.astral.sh/uv/) for the git hooks and the docs, which bring their own Python {{ python_version }}.
+{% if web -%}
+Needs [uv](https://docs.astral.sh/uv/), which brings its own Python {{ python_version }}, and [Bun](https://bun.sh/) for the web app.
 
 ```bash
 uv sync
-bun install
+bun install --cwd web
 ```
 {%- else -%}
 Needs Python {{ python_version }}+ and [uv](https://docs.astral.sh/uv/).
@@ -22,7 +22,7 @@ uv sync
 ## Usage
 {% if project_type == "cli" %}
 ```bash
-uv run {{ project_slug }} info
+uv run {{ project_slug }} settings
 uv run {{ project_slug }} --version
 ```
 
@@ -36,83 +36,28 @@ settings = load_settings()
 setup_logging(settings.logging)
 get_logger(__name__).info("started", user_id=42)
 ```
-
-## Configuration
-
-Settings come from environment variables such as `LOGGING__FORMAT=json`, where `__` separates a group from its field. Files are read only when you select them:
-{% if config_file %}
-```bash
-cp config.example.toml config.toml   # shared baseline, one table per group
-cp .env.example .env                 # local overrides, gitignored
-uv run {{ project_slug }} --config config.toml --env-file .env info
-```
-
-In Python, pass the same paths to `load_settings_with_config()` from `{{ package_name }}.config_file`.
-
-Highest priority first: constructor arguments, environment variables, the `.env` file, the config file, defaults. A missing selected path, or a misspelled key, fails at startup.
-
-To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example` and `config.example.toml`. A test checks that they match.
-{% else %}
-```bash
-cp .env.example .env                 # local overrides, gitignored
-uv run {{ project_slug }} --env-file .env info
-```
-
-In Python, pass the same path to `load_settings(env_file=...)`.
-
-Highest priority first: constructor arguments, environment variables, the `.env` file, defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
-
-To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`. A test checks that they match.
-{% endif %}
-## Logging
-
-Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`. `LOGGING__LEVEL` sets the lowest level that is logged.
-{%- elif monorepo %}{% if has_backend %}
+{%- elif project_type == "api" %}
 ```bash
 uv run {{ project_slug }} serve            # interactive docs at http://127.0.0.1:8000/api/docs
 uv run {{ project_slug }} serve --reload   # restarts on source changes, for development
 uv run {{ project_slug }} openapi          # the OpenAPI schema, as JSON
 ```
 
-The API lives in `apps/api/`, a [uv workspace](https://docs.astral.sh/uv/concepts/projects/workspaces/) member. The root holds the shared tooling and its config, so every command runs from the root.
+Each feature is a package under `src/{{ package_name }}/`, shaped like `health/`: `router.py` holds the HTTP routes and nothing else, `schemas.py` the request and response models, and `service.py` the logic, free of FastAPI so it is testable without HTTP. Every route lives under `/api`, which leaves the other paths free for a web app on the same origin.
+{%- if web %}
 
-Each feature is a package under `apps/api/src/{{ package_name }}/`, shaped like `health/`: `router.py` holds the HTTP routes and nothing else, `schemas.py` the request and response models, and `service.py` the logic, free of FastAPI so it is testable without HTTP. Every route lives under `/api`, which leaves the other paths free for a frontend on the same origin.
-{%- endif %}
-{%- if has_frontend %}
-{% if has_backend %}
-{% endif %}```bash
-bun run --cwd apps/web dev     # http://localhost:5173, reloads as you edit
-bun run --cwd apps/web build   # static files in apps/web/dist
-```
-
-The app lives in `apps/web/`, a [Bun workspace](https://bun.sh/docs/install/workspaces): React, [TanStack Router](https://tanstack.com/router) and [TanStack Query](https://tanstack.com/query), styled with [Tailwind CSS](https://tailwindcss.com/), built by [Vite](https://vite.dev/).
-
-`src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `counter/` shows. A file in `src/routes/` is a route at the matching URL: `index.tsx` is `/`, `__root.tsx` the layout around every page. `src/routeTree.gen.ts` is generated from them and committed, so every link is type-checked against the real routes; the dev server and the typecheck regenerate it, so never edit it by hand.
-{%- endif %}
-{%- if fullstack %}
-
-`packages/api-client/` is the contract between the two: `openapi.json`, exported from the API, and `src/api.ts`, generated from it by [Orval](https://orval.dev/): a typed `fetch` function per route, named after the route function, such as `readHealth()`. A renamed field in a Pydantic model breaks the type check of every component that reads it. A hook regenerates both files whenever `apps/api/src/` changes; commit what it writes.
-
-In development, run `serve --reload` and the dev server side by side: the dev server forwards `/api` to the API on port 8000, so both share one origin, as they should behind one host in production.
-{%- endif %}
-{%- if has_backend %}
-
-## Configuration
-
-Settings come from environment variables such as `LOGGING__FORMAT=json`, where `__` separates a group from its field. A file is read only when you select it:
+The web app lives in `web/`, a self-contained [Bun](https://bun.sh/) project:
 
 ```bash
-cp apps/api/.env.example apps/api/.env   # local overrides, gitignored
-uv run {{ project_slug }} serve --env-file apps/api/.env
+bun run --cwd web dev     # http://localhost:5173, reloads as you edit
+bun run --cwd web build   # static files in web/dist
 ```
 
-Highest priority first: environment variables, the `.env` file, defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
+It is React, [TanStack Router](https://tanstack.com/router) and [TanStack Query](https://tanstack.com/query), styled with [Tailwind CSS](https://tailwindcss.com/), built by [Vite](https://vite.dev/). `src/routes/` holds the pages, which only arrange features; `src/features/` holds the features, each with its components and their tests side by side, as `health/` shows. A file in `src/routes/` is a route at the matching URL: `index.tsx` is `/`, `__root.tsx` the layout around every page. `src/routeTree.gen.ts` is generated from them and committed, so every link is type-checked against the real routes; never edit it by hand.
 
-To add a setting, add a field to a group in `apps/api/src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `apps/api/.env.example`. A test checks that they match.
+`web/src/api/` is the contract between the two: `openapi.json`, exported from the API, and `client.ts`, generated from it by [Orval](https://orval.dev/): a typed `fetch` function per route, named after the route function, such as `readHealth()`. A renamed field in a Pydantic model breaks the type check of every component that reads it. A hook regenerates both files whenever `src/` changes; commit what it writes.
 
-## Logging
-
-Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`, uvicorn's access and error logs included. `LOGGING__LEVEL` sets the lowest level that is logged.
+In development, run `serve --reload` and the dev server side by side: the dev server forwards `/api` to the API on port 8000, so both share one origin, as they should behind one host in production.
 {%- endif %}
 {%- else %}
 ```python
@@ -120,6 +65,32 @@ import {{ package_name }}
 
 print({{ package_name }}.__version__)
 ```
+{%- endif %}
+{%- if application %}
+
+## Configuration
+
+Settings come from environment variables such as `LOGGING__FORMAT=json`, where `__` separates a group from its field. A dotenv file is read only when you select it:
+
+```bash
+cp .env.example .env   # local overrides, gitignored
+{%- if project_type == "cli" %}
+uv run {{ project_slug }} --env-file .env settings
+{%- else %}
+uv run {{ project_slug }} serve --env-file .env
+{%- endif %}
+```
+
+In Python, pass the same path to `load_settings(env_file=...)`.
+
+Highest priority first: constructor arguments, environment variables, the `.env` file, defaults. A missing selected path, or a misspelled key inside a group, fails at startup.
+
+To add a setting, add a field to a group in `src/{{ package_name }}/settings.py` (use `SecretStr` for secrets) and list it in `.env.example`. A test checks that they match. To read a TOML file as well, override `settings_customise_sources` on `Settings`, as the [pydantic-settings documentation](https://docs.pydantic.dev/latest/concepts/pydantic_settings/#customise-settings-sources) shows.
+
+## Logging
+
+Logs go to stderr as text, or as JSON with `LOGGING__FORMAT=json`{% if project_type == "api" %}, uvicorn's access and error logs included{% endif %}. `LOGGING__LEVEL` sets the lowest level that is logged.
+{%- elif project_type == "library" %}
 
 ## Logging
 
@@ -130,14 +101,10 @@ Use `logging.getLogger(__name__)` and leave handlers and levels to the applicati
 
 ```bash
 uv run prek run --all-files --hook-stage manual   # every check{% if ci != "none" %}, as CI runs it{% endif %}
-uv run --group docs zensical serve                # docs at http://localhost:{{ '8001' if monorepo else '8000' }}
+uv run --group docs zensical serve                # docs at http://localhost:{{ '8001' if project_type == 'api' else '8000' }}
 ```
 
-{% if has_python -%}
-Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests and the docs build. Test order is random; replay a failure with `uv run pytest -p randomly --randomly-seed=<seed>`.
-{%- else -%}
-Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests, the production build and the docs build.
-{%- endif %}
+Commits run lint, formatting and types, and check that the message is a [Conventional Commit](https://www.conventionalcommits.org/); pushes run the tests{% if web %}, the production build{% endif %} and the docs build.
 {%- if ci == "gitlab" %}
 
 For the weekly dependency audit, add a pipeline schedule in GitLab with `SCHEDULED_AUDIT` set to `1`. The `pages` job publishes the docs when run manually.

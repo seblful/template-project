@@ -22,12 +22,15 @@ package = false
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
-addopts = "-ra --strict-markers --strict-config"
+# Slow tests generate a project with its tasks and run its checks, which needs uv, Bun
+# and network access; run them with `-m slow`. The default run renders only.
+addopts = "-ra --strict-markers --strict-config -m 'not slow' --ignore=tests/snapshots"
+markers = ["slow: generate a project, install its dependencies and run its checks"]
 xfail_strict = true
 
 [tool.ruff]
 line-length = 88
-extend-exclude = ["template"]  # linted once rendered, by its own config
+extend-exclude = ["template", "tests/snapshots"]  # linted once rendered, by their own config
 
 [tool.ruff.lint]
 select = ["B", "D", "E", "F", "I", "PT", "PTH", "RUF", "SIM", "UP", "W"]

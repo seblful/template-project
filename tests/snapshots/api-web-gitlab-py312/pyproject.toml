@@ -1,0 +1,84 @@
+[project]
+name = "demo-proj"
+description = "A generated demo project."
+readme = "README.md"
+requires-python = ">=3.12"
+version = "0.1.0"
+
+authors = [
+    { name = "Demo Author", email = "demo@example.com" }
+]
+classifiers = [
+    "Private :: Do Not Upload",  # PyPI rejects any upload that carries this classifier
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.12",
+    "Typing :: Typed",
+]
+dependencies = [
+    "fastapi>=0.143.0",
+    "uvicorn>=0.54.0",
+    "typer>=0.12.0",
+    "structlog>=24.1.0",
+    "pydantic>=2.7.0",
+    "pydantic-settings>=2.14.2",
+]
+
+[project.scripts]
+demo-proj = "demo_proj.cli:app"
+
+# ty, prek and zensical are pre-1.0: breaking changes land between patch releases.
+[dependency-groups]
+dev = [
+    "pytest>=9.0.0,<10",
+    "pytest-cov>=7.0.0,<8",
+    "ruff>=0.17.0,<0.18",
+    "mdformat>=1.0.0,<2",
+    "ty>=0.0.28,<0.1",
+    "prek>=0.5.5,<0.6",
+    "httpx2>=2.13.1,<3",  # what FastAPI's TestClient sends its requests through
+]
+docs = [
+    "zensical>=0.0.69,<0.1",
+]
+
+[build-system]
+requires = ["uv_build>=0.13.0,<0.14"]  # capped, as uv recommends
+build-backend = "uv_build"
+
+[tool.uv.build-backend]
+module-name = "demo_proj"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-ra --strict-markers --strict-config"
+xfail_strict = true
+
+[tool.ruff.lint]
+select = [
+    "E",    # pycodestyle errors
+    "F",    # Pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific
+    "PT",   # flake8-pytest-style
+]
+# Worth adding as the code base grows: A, ANN, ARG, ASYNC, BLE, C4, C90, D, DTZ, ERA,
+# FURB, G, INP, LOG, N, PERF, PL, PTH, RET, S, SLF, TC, TID, TRY.
+
+[tool.ruff.format]
+line-ending = "lf"
+
+[tool.coverage.run]
+source = ["src/demo_proj"]
+branch = true
+
+[tool.coverage.report]
+show_missing = true
+exclude_also = [
+    "if __name__ == .__main__.:",
+    "raise NotImplementedError",
+    "@(abc\\.)?abstractmethod",
+]

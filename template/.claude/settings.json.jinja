@@ -2,35 +2,30 @@
   "$schema": "https://json.schemastore.org/claude-code-settings.json",
   "$comment": [
     "Committed, project-scoped rules only. Machine-local overrides go in .claude/settings.local.json, which is gitignored.",
-    "allow names exact commands, never `uv *` or `git *`: `uv run` executes whatever follows it, so a broad rule would auto-approve `uv run rm -rf .` past every deny rule. Read-only git needs no rule; Claude Code already runs it without asking. `uv add`, `git push` and anything else unlisted still prompt.",
-    "Read(!.env.example) carves the committed contract back out of Read(.env.*). An allow rule couldn't, because deny always wins.",
-    "Deny rules are guardrails, not a boundary: they miss `bash -c`, absolute paths and scripts that open files themselves. For enforcement, turn on the sandbox with /sandbox (macOS, Linux, WSL2)."
+    "allow names exact commands, never `uv *`: `uv run` executes whatever follows it, so a broad rule would auto-approve `uv run rm -rf .` past every deny rule. Deny rules are guardrails, not a boundary: for enforcement, turn on the sandbox with /sandbox.",
+    "Read(!.env.example) carves the committed contract back out of Read(.env.*); an allow rule couldn't, because deny always wins."
   ],
   "permissions": {
     "allow": [
       "Bash(uv sync *)",
       "Bash(uv lock *)",
       "Bash(uv tree *)",
-{%- if has_python %}
       "Bash(uv run pytest *)",
       "Bash(uv run ruff *)",
       "Bash(uv run ty *)",
-{%- endif %}
       "Bash(uv run mdformat *)",
       "Bash(uv run prek run *)",
       "Bash(uv run prek install *)",
       "Bash(uv run --group docs zensical build *)",
       "Bash(uv run --group docs zensical serve *)",
-{%- if has_frontend %}
-      "Bash(bun install --frozen-lockfile)",
-      "Bash(bun run biome *)",
-      "Bash(bun run --cwd apps/web typecheck)",
-      "Bash(bun run --cwd apps/web test *)",
-      "Bash(bun run --cwd apps/web build)",
-      "Bash(bun run --cwd apps/web dev)",
-{%- endif %}
-{%- if fullstack %}
-      "Bash(bun run --cwd packages/api-client generate)",
+{%- if web %}
+      "Bash(bun install --cwd web --frozen-lockfile)",
+      "Bash(bun run --cwd web check)",
+      "Bash(bun run --cwd web typecheck)",
+      "Bash(bun run --cwd web test *)",
+      "Bash(bun run --cwd web build)",
+      "Bash(bun run --cwd web dev)",
+      "Bash(bun run --cwd web generate)",
 {%- endif %}
       "Bash(git add *)",
       "Bash(git commit *)",

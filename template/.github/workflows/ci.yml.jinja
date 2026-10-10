@@ -1,5 +1,5 @@
 {#- GitHub's own ${{ }} expressions would collide with Jinja's, so the file is raw
-    except where a frontend adds its steps. -#}
+    except where a web app adds its steps. -#}
 {% raw -%}
 name: CI
 
@@ -11,7 +11,6 @@ on:
     - cron: "0 6 * * 1"  # weekly dependency audit
   workflow_call:  # release.yml runs every check before it publishes, if there is one
 
-# Least privilege: nothing in this workflow writes to the repo.
 permissions:
   contents: read
 
@@ -31,13 +30,13 @@ jobs:
       matrix:
         os: [ubuntu-latest, windows-latest]
     steps:
+      # Actions are pinned by hash, as zizmor requires: a tag can be moved to other
+      # code. Dependabot bumps the hash and the version comment together.
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        # Hash pins throughout, as zizmor requires: a tag can be moved to other code.
-        # Dependabot bumps the hash and the version comment together.
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
@@ -45,17 +44,16 @@ jobs:
       - name: Install dependencies
         run: uv sync --locked  # fails on a stale lockfile instead of masking it
 {%- endraw %}
-{%- if has_frontend %}
+{%- if web %}
 
-      # package.json's packageManager field pins the Bun version, as .python-version
-      # pins Python's.
+      # packageManager in web/package.json pins the Bun version.
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
-          bun-version-file: package.json
+          bun-version-file: web/package.json
 
-      - name: Install frontend dependencies
-        run: bun install --frozen-lockfile  # fails on a stale bun.lock, as uv does
+      - name: Install web dependencies
+        run: bun install --cwd web --frozen-lockfile  # fails on a stale bun.lock
 {%- endif %}
 {% raw %}
       - name: Cache prek environments
@@ -67,8 +65,7 @@ jobs:
             ~/AppData/Local/prek
           key: prek-${{ runner.os }}-${{ hashFiles('.pre-commit-config.yaml') }}
 
-      # Every check lives in .pre-commit-config.yaml; the manual stage runs all of
-      # them. gitleaks scans staged changes, so this is not a full-history secret scan.
+      # gitleaks scans staged changes, so this is not a full-history secret scan.
       - name: Checks
         run: uv run prek run --all-files --hook-stage manual --show-diff-on-failure
 
@@ -89,19 +86,19 @@ jobs:
         with:
           enable-cache: true
 
-      # Every group in uv.lock, docs included. --preview-features opts in to a command
-      # uv still marks experimental, instead of printing a warning on every run.
+      # --preview-features opts in to a command uv still marks experimental.
       - name: Audit locked dependencies
         run: uv audit --locked --preview-features audit-command
 {%- endraw %}
-{%- if has_frontend %}
+{%- if web %}
 
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
-          bun-version-file: package.json
+          bun-version-file: web/package.json
 
       # Reads bun.lock against the npm advisory database; installs nothing.
-      - name: Audit frontend dependencies
+      - name: Audit web dependencies
+        working-directory: web
         run: bun audit
 {%- endif %}

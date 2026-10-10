@@ -1,0 +1,118 @@
+# The one definition of this project's checks: commits run the fast ones, pushes add
+# the tests and the docs build, and the manual stage runs all of them. CI runs
+# `uv run prek run --all-files --hook-stage manual`, so add a check here, not to CI.
+#
+# Local hooks go through `uv run` or `bun run`, so the lockfile pins their versions
+# instead of prek's own environments.
+default_install_hook_types: [pre-commit, pre-push, commit-msg]
+default_stages: [pre-commit, manual]
+
+repos:
+  - repo: local
+    hooks:
+      - id: ruff-check
+        name: ruff check
+        entry: uv run ruff check --fix --exit-non-zero-on-fix --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: ruff-format
+        name: ruff format
+        entry: uv run ruff format --force-exclude
+        language: system
+        types_or: [python, pyi]
+        require_serial: true
+      - id: mdformat
+        name: mdformat
+        entry: uv run mdformat
+        language: system
+        types: [markdown]
+        # mdformat escapes the `--8<--` include marker, which snippets then ignores.
+        exclude: ^docs/index\.md$
+      - id: ty
+        name: ty type check
+        entry: uv run ty check
+        language: system
+        types: [python]
+        pass_filenames: false  # ty needs the whole project, not just staged files
+      - id: pytest
+        name: pytest
+        entry: uv run pytest --cov
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+      - id: zensical
+        name: zensical build
+        entry: uv run --group docs zensical build --strict
+        language: system
+        # README.md because docs/index.md includes it.
+        files: ^(docs/|README\.md$|zensical\.toml$)
+        pass_filenames: false
+        stages: [pre-push, manual]
+      # Before tsc, so it checks the app against the API as it is now. Fails, like any
+      # fixer, when it rewrites the schema: commit what it wrote.
+      - id: api-client
+        name: api client is current
+        entry: bun run --cwd web generate
+        language: system
+        files: ^(src/|web/src/api/)
+        pass_filenames: false
+      - id: biome
+        name: biome check
+        entry: bun run --cwd web check
+        language: system
+        files: ^web/
+        types_or: [ts, tsx, javascript, jsx, json, css]
+        pass_filenames: false
+      - id: tsc
+        name: tsc type check
+        entry: bun run --cwd web typecheck
+        language: system
+        files: ^web/
+        pass_filenames: false  # tsc checks the whole program, not just staged files
+      - id: vitest
+        name: vitest
+        entry: bun run --cwd web test
+        language: system
+        pass_filenames: false
+        always_run: true
+        stages: [pre-push, manual]
+      # The bundler sees what tsc does not: CSS, plugins and the production build.
+      - id: vite-build
+        name: vite build
+        entry: bun run --cwd web build
+        language: system
+        files: ^web/
+        pass_filenames: false
+        stages: [pre-push, manual]
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v6.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: mixed-line-ending
+        args: [--fix=lf]
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-added-large-files
+      - id: check-merge-conflict
+  - repo: https://github.com/astral-sh/uv-pre-commit
+    rev: 0.13.0
+    hooks:
+      - id: uv-lock
+  - repo: https://github.com/gitleaks/gitleaks
+    rev: v8.30.1
+    hooks:
+      - id: gitleaks
+  # Skips itself when there is no workflow to scan, as in a GitLab project.
+  - repo: https://github.com/zizmorcore/zizmor-pre-commit
+    rev: v1.30.1
+    hooks:
+      - id: zizmor
+  - repo: https://github.com/compilerla/conventional-pre-commit
+    rev: v4.4.0
+    hooks:
+      - id: conventional-pre-commit
+        stages: [commit-msg]

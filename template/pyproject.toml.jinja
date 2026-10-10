@@ -1,30 +1,3 @@
-{%- if monorepo -%}
-{%- if has_python -%}
-# The workspace root ships nothing. It pins the shared dev tooling, installs the apps
-# into one environment, and holds the tool config every app is checked against.
-{%- else -%}
-# The root ships nothing. It pins the tooling uv provides for every project, whatever
-# its language: the git hooks and the docs.
-{%- endif %}
-[project]
-name = "{{ project_slug }}-workspace"
-version = "0"
-requires-python = ">={{ python_version }}"
-dependencies = [{% if has_backend %}"{{ project_slug }}"{% endif %}]
-
-[tool.uv]
-package = false
-{%- if has_backend %}
-
-[tool.uv.workspace]
-# Listed, not globbed: a TypeScript app in apps/ has no pyproject.toml to find.
-members = ["apps/api"]
-
-[tool.uv.sources]
-{{ project_slug }} = { workspace = true }
-{%- endif %}
-
-{% else -%}
 [project]
 name = "{{ project_slug }}"
 description = "{{ project_description }}"
@@ -42,187 +15,88 @@ authors = [
     { name = "{{ author_name }}", email = "{{ author_email }}" }
 ]
 classifiers = [
-{%- if license == "None" %}
-    "Private :: Do Not Upload",  # unregistered on purpose: PyPI rejects any such upload
+{%- if not publish %}
+    "Private :: Do Not Upload",  # PyPI rejects any upload that carries this classifier
 {%- endif %}
-    "Development Status :: 3 - Alpha",
-    "Intended Audience :: Developers",
     "Programming Language :: Python :: 3",
     "Programming Language :: Python :: {{ python_version }}",
     "Typing :: Typed",
 ]
-{%- if project_type == "cli" %}
-# Uncapped: an upper bound here propagates to everyone installing this package.
+{%- if application %}
 dependencies = [
+{%- if project_type == "api" %}
+    "fastapi>=0.143.0",
+    "uvicorn>=0.54.0",
+{%- endif %}
     "typer>=0.12.0",
     "structlog>=24.1.0",
     "pydantic>=2.7.0",
     "pydantic-settings>=2.14.2",
 ]
 {%- else %}
-# Every dependency declared here is forced on each consumer, so add them sparingly
-# and without upper bounds, which would propagate to everyone installing this.
+# Every dependency is forced on each consumer: add one only when the package cannot
+# work without it, and never with an upper bound.
 dependencies = []
 {%- endif %}
-{% if project_type == "cli" %}
+{% if application %}
 [project.scripts]
 {{ project_slug }} = "{{ package_name }}.cli:app"
 {% endif %}
-{% endif -%}
+# ty, prek and zensical are pre-1.0: breaking changes land between patch releases.
 [dependency-groups]
 dev = [
-{%- if has_python %}
     "pytest>=9.0.0,<10",
     "pytest-cov>=7.0.0,<8",
-    "pytest-randomly>=5.0.0,<6",  # catches order-dependence from shared module state
     "ruff>=0.17.0,<0.18",
-{%- endif %}
     "mdformat>=1.0.0,<2",
-{%- if has_python %}
-    "ty>=0.0.28,<0.1",  # pre-1.0: breaking changes land between patch releases
-{%- endif %}
-    "prek>=0.5.5,<0.6",  # pre-1.0: breaking changes land between patch releases
-{%- if has_backend %}
-    "httpx2>=2.13.1,<3",  # what Starlette's TestClient sends its requests through
+    "ty>=0.0.28,<0.1",
+    "prek>=0.5.5,<0.6",
+{%- if project_type == "api" %}
+    "httpx2>=2.13.1,<3",  # what FastAPI's TestClient sends its requests through
 {%- endif %}
 ]
-docs = [  # a group, not an extra: docs tooling isn't a feature of the installed package
-    "zensical>=0.0.69,<0.1",  # pre-1.0: breaking changes land between patch releases
-{%- if has_python %}
-    "mkdocstrings[python]>=1.0.0,<2",  # renders docs/reference.md from docstrings
-    # 12.2 changed Highlight's constructor, which mkdocstrings 1.0.6 still calls the
-    # old way: https://github.com/mkdocstrings/mkdocstrings/issues/829. Lift the cap
-    # once a mkdocstrings release supports 12.2.
-    "pymdown-extensions<12.2",
-{%- endif %}
+docs = [
+    "zensical>=0.0.69,<0.1",
 ]
-{%- if not monorepo %}
 
 [build-system]
-# Capped as uv itself recommends: uv_build may change its settings in a minor release.
-requires = ["uv_build>=0.13.0,<0.14"]
+requires = ["uv_build>=0.13.0,<0.14"]  # capped, as uv recommends
 build-backend = "uv_build"
 
 [tool.uv.build-backend]
-# Explicit because package_name need not be project_slug with underscores.
 module-name = "{{ package_name }}"
-{%- endif %}
-{%- if has_python %}
 
 [tool.pytest.ini_options]
-testpaths = ["{{ python_prefix }}tests"]
-# No --cov-fail-under here: a partial run (a single file, or -k) would then report
-# false-low coverage. Measure explicitly: `uv run pytest --cov` (see [tool.coverage]).
+testpaths = ["tests"]
 addopts = "-ra --strict-markers --strict-config"
 xfail_strict = true
-# A DeprecationWarning from a dependency is a scheduled outage; catch it here. If one
-# is genuinely not actionable, narrow it with `ignore:<msg>:<category>:<module>` rather
-# than dropping "error" entirely.
-filterwarnings = ["error"]
-markers = [
-    "integration: tests that hit real I/O (DB, filesystem, network)",
-    "slow: tests that take more than a second",
-]
-
-[tool.ruff]
-# No target-version: ruff infers it from requires-python.
-line-length = 88
-src = ["{{ python_prefix }}src"]
 
 [tool.ruff.lint]
-# COM/ISC001/Q are absent: the formatter already owns commas, quotes and string joins,
-# and ruff's own COM812 docs advise against pairing it with the formatter.
 select = [
-    "A",     # flake8-builtins — shadowed builtins
-    "ANN",   # flake8-annotations — py.typed is a promise; this makes annotations exist
-    "ARG",   # flake8-unused-arguments
-    "ASYNC", # flake8-async
-    "B",     # flake8-bugbear
-    "BLE",   # flake8-blind-except
-    "C4",    # flake8-comprehensions
-    "C90",   # mccabe — complexity ceiling (max-complexity defaults to 10)
-    "D",     # pydocstyle — enforce Google-style docstrings
-    "DTZ",   # flake8-datetimez — naive datetimes are a production bug class
-    "E",     # pycodestyle errors
-    "ERA",   # eradicate — commented-out code
-    "F",     # Pyflakes
-    "FLY",   # flynt — static string joins
-    "FURB",  # refurb — modernization (40 stable rules; the rest need preview)
-    "G",     # flake8-logging-format — no f-strings in log calls
-    "I",     # isort
-    "INP",   # flake8-no-pep420 — missing __init__.py
-    "LOG",   # flake8-logging — stdlib logging misuse
-    "N",     # pep8-naming
-    "PERF",  # perflint
-    "PGH",   # pygrep-hooks — blanket `type: ignore`, bare `noqa`
-    "PIE",   # flake8-pie
-    "PL",    # Pylint rules
-    "PT",    # flake8-pytest-style
-    "PTH",   # flake8-use-pathlib
-    "RET",   # flake8-return
-    "RSE",   # flake8-raise
-    "RUF",   # Ruff-specific (incl. RUF100, which flags stale noqa)
-    "S",     # flake8-bandit — security checks
-    "SIM",   # flake8-simplify
-    "SLF",   # flake8-self — private member access
-    "TC",    # flake8-type-checking
-    "TID",   # flake8-tidy-imports
-    "TRY",   # tryceratops — exception antipatterns
-    "UP",    # pyupgrade
-    "W",     # pycodestyle warnings
+    "E",    # pycodestyle errors
+    "F",    # Pyflakes
+    "W",    # pycodestyle warnings
+    "I",    # isort
+    "B",    # flake8-bugbear
+    "UP",   # pyupgrade
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific
+    "PT",   # flake8-pytest-style
 ]
-# No `ignore` list: prefer `# noqa: X` at the site, or per-file-ignores below.
-
-[tool.ruff.lint.pydocstyle]
-convention = "google"
-{% if application %}
-[tool.ruff.lint.flake8-bugbear]
-extend-immutable-calls = ["typer.Argument", "typer.Option"]
-
-[tool.ruff.lint.flake8-type-checking]
-# Pydantic resolves field annotations at runtime, so their imports must stay real.
-runtime-evaluated-base-classes = [
-    "pydantic.BaseModel",
-    "pydantic_settings.BaseSettings",
-]
-{% endif %}
-[tool.ruff.lint.flake8-tidy-imports]
-ban-relative-imports = "all"
-
-[tool.ruff.lint.isort]
-known-first-party = ["{{ package_name }}"]
-
-[tool.ruff.lint.per-file-ignores]
-# Tests don't need docstrings, may use asserts, magic values, and unused fixture args,
-# and gain nothing from hiding annotation-only imports behind TYPE_CHECKING.
-"{{ python_prefix }}tests/**" = ["D", "S101", "PLR2004", "ARG", "TC"]
-{%- if application %}
-# Typer reads parameter annotations at runtime to build options, so `Path` stays real;
-# `Settings` gains nothing either, since the entry point imports every module anyway.
-"{{ python_prefix }}src/{{ package_name }}/cli.py" = ["TC001", "TC003"]
-{%- endif %}
-{%- if has_backend %}
-# FastAPI reads route annotations at runtime to validate and document each response,
-# so a model named only in a return type is a runtime import.
-"{{ python_prefix }}src/{{ package_name }}/**/router.py" = ["TC001"]
-{%- endif %}
+# Worth adding as the code base grows: A, ANN, ARG, ASYNC, BLE, C4, C90, D, DTZ, ERA,
+# FURB, G, INP, LOG, N, PERF, PL, PTH, RET, S, SLF, TC, TID, TRY.
 
 [tool.ruff.format]
-# Format code inside docstring examples, since the google convention invites them.
-docstring-code-format = true
 line-ending = "lf"
 
 [tool.coverage.run]
-source = ["{{ python_prefix }}src/{{ package_name }}"]
+source = ["src/{{ package_name }}"]
 branch = true
 
 [tool.coverage.report]
 show_missing = true
-fail_under = 80
 exclude_also = [
     "if __name__ == .__main__.:",
-    "if TYPE_CHECKING:",
     "raise NotImplementedError",
     "@(abc\\.)?abstractmethod",
 ]
-{%- endif %}

@@ -1,3 +1,6 @@
 # template/.pre-commit-config.yaml is a file the template ships, not a project here:
 # its hooks only make sense in a generated project, which the tests run them in.
 template/
+# Rendered projects, each with a .pre-commit-config.yaml of its own and sources that
+# only pass the generated project's rules. tests/test_rendering.py guards their content.
+tests/snapshots/

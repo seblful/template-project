@@ -11,15 +11,14 @@ dist/
 
 # Virtual environments (uv)
 .venv/
-{%- if has_frontend %}
+{%- if web %}
 
-# Frontend (Bun, Vite); dist/ above already covers the build output.
+# Web app (Bun, Vite); dist/ above already covers the build output.
 node_modules/
 *.tsbuildinfo
 {%- endif %}
 
-# Environments
-# .env.example is the committed config contract; every other .env file stays local.
+# Environments; .env.example is the committed config contract.
 .env
 .env.*
 !.env.example
@@ -42,14 +41,6 @@ htmlcov/
 
 # Docs
 site/
-
-# Jupyter
-.ipynb_checkpoints/
-
-# Database
-*.db
-*.sqlite
-*.sqlite3
 
 # Secrets
 *.key

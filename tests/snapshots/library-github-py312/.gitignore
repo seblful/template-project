@@ -1,0 +1,53 @@
+# Not the stock GitHub Python list: entries like `lib/` and `var/` are setuptools-era
+# and would silently swallow a real source directory.
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Packaging (uv build)
+dist/
+
+# Virtual environments (uv)
+.venv/
+
+# Environments; .env.example is the committed config contract.
+.env
+.env.*
+!.env.example
+
+# Testing / coverage
+.pytest_cache/
+.coverage
+.coverage.*
+coverage.xml
+htmlcov/
+
+# Type checking
+.ty_cache/
+
+# Ruff
+.ruff_cache/
+
+# Logs
+*.log
+
+# Docs
+site/
+
+# Secrets
+*.key
+*.pem
+secrets/
+credentials/
+
+# Claude Code personal files (may contain machine-specific paths or credentials).
+# Creating a CLAUDE.local.md stops Claude Code from reading AGENTS.md, unless /config
+# sets Project instructions to claude-md-and-agents-md.
+.claude/settings.local.json
+CLAUDE.local.md
+
+# OS
+.DS_Store
+Thumbs.db

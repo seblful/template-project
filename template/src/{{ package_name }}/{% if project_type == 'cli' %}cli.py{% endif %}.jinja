@@ -1,0 +1,63 @@
+"""Command line interface for {{ project_slug }}."""
+
+from pathlib import Path
+from typing import Annotated
+
+import typer
+
+from {{ package_name }} import PROJECT_NAME, __version__
+from {{ package_name }}.logging import get_logger, setup_logging
+from {{ package_name }}.settings import Settings, load_settings
+
+app = typer.Typer(help=f"{PROJECT_NAME} CLI", no_args_is_help=True)
+
+
+def configure(ctx: typer.Context) -> Settings:
+    """Load settings, set up logging and return the settings.
+
+    Every command calls this first. It runs in the command, not in the callback,
+    because Click runs the callback before it parses the subcommand: `settings --help`
+    would otherwise read and validate configuration just to print help.
+    """
+    env_file: Path | None = ctx.obj
+    settings = load_settings(env_file=env_file)
+    setup_logging(settings.logging)
+    return settings
+
+
+def _version_callback(value: bool) -> None:
+    """Print the version and exit, before any subcommand is resolved."""
+    if value:
+        typer.echo(f"{PROJECT_NAME} {__version__}")
+        raise typer.Exit
+
+
+@app.callback()
+def main(
+    ctx: typer.Context,
+    env_file: Annotated[
+        Path | None,
+        typer.Option(
+            exists=True, dir_okay=False, readable=True, help="Load a dotenv file."
+        ),
+    ] = None,
+    _version: Annotated[
+        bool,
+        typer.Option(
+            "--version",
+            callback=_version_callback,
+            is_eager=True,  # else no_args_is_help resolves first, before --version runs
+            help="Show the version and exit.",
+        ),
+    ] = False,
+) -> None:
+    """Run the {{ project_slug }} CLI."""
+    ctx.obj = env_file
+
+
+@app.command("settings")
+def show_settings(ctx: typer.Context) -> None:
+    """Print the settings the application would run with, as JSON."""
+    settings = configure(ctx)
+    get_logger(__name__).debug("showing settings")
+    typer.echo(settings.model_dump_json(indent=2))

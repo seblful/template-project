@@ -4,6 +4,8 @@ on:
   push:
     branches: [main, master]
   pull_request:
+  schedule:
+    - cron: "0 6 * * 1"  # weekly canary: resolves the newest dependency releases
 
 permissions:
   contents: read
@@ -18,10 +20,18 @@ env:
   GIT_AUTHOR_EMAIL: ci@example.com
   GIT_COMMITTER_NAME: template-ci
   GIT_COMMITTER_EMAIL: ci@example.com
+  # The only place this repo names a Bun version; the template's packageManager must
+  # match it, which tests/test_rendering.py checks.
+  BUN_VERSION: "1.4.2"
+  # Generated projects resolve dependencies as of the date in tests/conftest.py, so an
+  # upstream release cannot fail an unrelated change. The schedule resolves the newest
+  # releases instead, and so finds that breakage on its own.
+  TEMPLATE_UNPINNED: ${{ github.event_name == 'schedule' && '1' || '' }}
 
 jobs:
   hooks:
     name: repo hooks
+    if: github.event_name != 'schedule'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     steps:
@@ -30,6 +40,8 @@ jobs:
           persist-credentials: false
 
       - name: Install uv
+        # Hash pins throughout, as zizmor requires: a tag can be moved to other code.
+        # Dependabot bumps the hash and the version comment together.
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
@@ -45,6 +57,27 @@ jobs:
           uv sync --locked
           uv run prek run --all-files --show-diff-on-failure
 
+  render:
+    name: render and compare snapshots
+    if: github.event_name != 'schedule'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
+        with:
+          enable-cache: true
+
+      # The default run: renders every answer set without tasks and compares the files.
+      - name: Render
+        run: |
+          uv sync --locked
+          uv run pytest
+
   generate:
     name: ${{ matrix.os }} / ${{ matrix.answers }}
     runs-on: ${{ matrix.os }}
@@ -52,37 +85,31 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Answer sets live in tests/test_template.py; each job generates one of them.
+        # Answer sets live in tests/support.py; each job generates one of them and
+        # runs every check the project defines.
         include:
-          - {os: ubuntu-latest, answers: cli-config-github}
-          - {os: ubuntu-latest, answers: library-gitlab}
-          - {os: ubuntu-latest, answers: cli-config-py311}
-          - {os: ubuntu-latest, answers: library-py312-github}
-          - {os: windows-latest, answers: cli-gitlab}
-          - {os: ubuntu-latest, answers: api-github}
-          - {os: windows-latest, answers: api-gitlab-py311}
-          - {os: ubuntu-latest, answers: frontend-github}
-          - {os: windows-latest, answers: frontend-gitlab}
-          - {os: ubuntu-latest, answers: fullstack-github}
-          - {os: windows-latest, answers: fullstack-gitlab-py312}
+          - {os: ubuntu-latest, answers: cli-github}
+          - {os: ubuntu-latest, answers: library-github-py312}
+          - {os: ubuntu-latest, answers: api-web-github}
+          - {os: windows-latest, answers: cli-none-py311}
+          - {os: windows-latest, answers: library-gitlab}
+          - {os: windows-latest, answers: api-gitlab-py313}
+          - {os: windows-latest, answers: api-web-gitlab-py312}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
           persist-credentials: false
 
       - name: Install uv
-        # Hash pins throughout, as zizmor requires: a tag can be moved to other code.
-        # Dependabot bumps the hash and the version comment together.
         uses: astral-sh/setup-uv@1c37ad07a6a961277cf70c0d37d6f313000f5884  # v10.3.0
         with:
           enable-cache: true
 
-      # Frontend answer sets run `bun install` while generating; the version matches
-      # the packageManager field the template ships.
+      # Web answer sets run `bun install` while generating.
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
-          bun-version: 1.4.2
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache prek environments
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
@@ -96,7 +123,7 @@ jobs:
       - name: Generate and check a project
         run: |
           uv sync --locked
-          uv run pytest -k '${{ matrix.answers }}'
+          uv run pytest -m slow -k '${{ matrix.answers }}'
 
   update:
     name: copier update (${{ matrix.tests }})
@@ -105,8 +132,8 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # From the latest tag, and from an api or a frontend to fullstack.
-        tests: [update, other_side]
+        # From the latest tag, and from an api to an api with a web app.
+        tests: [latest_release, web_app]
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:
@@ -121,18 +148,15 @@ jobs:
       - name: Install Bun
         uses: oven-sh/setup-bun@0c5077e51419868618aeaa5fe8019c62421857d6  # v2.2.0
         with:
-          bun-version: 1.4.2
+          bun-version: ${{ env.BUN_VERSION }}
 
       - name: Cache prek environments
         uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9  # v6.1.0
         with:
-          # prek keeps its environments in ~/.cache on Linux, %LOCALAPPDATA% on Windows.
-          path: |
-            ~/.cache/prek
-            ~/AppData/Local/prek
+          path: ~/.cache/prek
           key: prek-${{ runner.os }}-${{ hashFiles('template/.pre-commit-config.yaml.jinja') }}
 
       - name: Update a project
         run: |
           uv sync --locked
-          uv run pytest -k '${{ matrix.tests }}'
+          uv run pytest -m slow -k '${{ matrix.tests }}'
