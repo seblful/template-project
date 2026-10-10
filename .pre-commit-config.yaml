@@ -1,3 +1,4 @@
+# Local hooks run via `uv run`, so uv.lock pins their versions, as in the template.
 repos:
   - repo: local
     hooks:
@@ -17,14 +18,14 @@ repos:
         files: ^tests/
       - id: mdformat
         name: mdformat
-        entry: uvx mdformat<2
+        entry: uv run mdformat
         language: system
         types: [markdown]
         # mdformat escapes the `--8<--` include marker, which snippets then ignores.
         exclude: ^template/docs/index\.md$
       - id: actionlint
         name: actionlint
-        entry: uvx --from actionlint-py<2 actionlint
+        entry: uv run actionlint
         language: system
         files: ^(\.github|template/\.github)/workflows/.*\.ya?ml$
       # These formats have no inline comments: `uv.lock  # note` silently stops

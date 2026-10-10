@@ -47,4 +47,4 @@ Every project gets an `AGENTS.md` for coding assistants and defines its checks o
 
 Template files are not valid Python until rendered, so the only real check is to generate a project and run its checks. `uv run pytest` does that for every answer set in [`tests/test_template.py`](tests/test_template.py) and tests `copier update` from the last release; [CI](.github/workflows/ci.yml) runs the same tests. See [AGENTS.md](AGENTS.md).
 
-Releases are git tags (`v0.9.2`, `v0.9.3`, …).
+Releases are git tags (`v1.0.0`, `v1.0.1`, …).
