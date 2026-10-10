@@ -13,8 +13,10 @@ default:
   interruptible: true
   cache:
     key:
+      # prek's environments follow the hook revs, not the lockfile.
       files:
         - uv.lock
+        - .pre-commit-config.yaml
     paths:
       - .cache/uv
       - .cache/python
@@ -36,6 +38,11 @@ workflow:
 
 check:
   stage: check
+  rules:
+    # The schedule exists for the audit; an unchanged lockfile needs no re-check.
+    - if: $SCHEDULED_AUDIT
+      when: never
+    - when: on_success
   variables:
     # Reports for GitLab's merge request widgets, added to the pytest hook's own run.
     PYTEST_ADDOPTS: --cov-report=xml --cov-report=term --junitxml=report.xml
@@ -68,6 +75,8 @@ pages:
     paths:
       - public
   rules:
+    - if: $SCHEDULED_AUDIT  # `needs: check`, which a scheduled pipeline skips
+      when: never
     # Manual: a project that starts "Private :: Do Not Upload" shouldn't auto-publish.
     - if: $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
       when: manual
