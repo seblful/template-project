@@ -8,12 +8,12 @@ dependencies = []
 
 [dependency-groups]
 dev = [
-    "copier>=9.3.0,<10",  # the floor copier.yml's _min_copier_version sets
+    "copier>=9.19.1,<10",  # the floor copier.yml's _min_copier_version sets
     "pytest>=9.0.0,<10",
     "actionlint-py>=1.7.0,<2",
-    "ruff>=0.17.0,<0.18",
+    "ruff>=0.17.2,<0.18",
     "mdformat>=1.0.0,<2",
-    "prek>=0.5.5,<0.6",  # pre-1.0: breaking changes land between patch releases
+    "prek>=0.5.7,<0.6",  # pre-1.0: breaking changes land between patch releases
 ]
 
 [tool.uv]
