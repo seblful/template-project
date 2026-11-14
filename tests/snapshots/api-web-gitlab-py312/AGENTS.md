@@ -6,6 +6,8 @@
 
 **Every task needs a check that can fail.** Restate the request as something verifiable — a test, a command, an observable output — then work until it holds. If a task admits no such check, say so before starting instead of calling it done by inspection.
 
+**Refactor before you extend.** When new code would duplicate a code path or add a special case beside an existing one, first reshape the existing code so the new case fits — a shared abstraction, a generalized signature — then add it. Keep the refactor in scope: only the code the change touches.
+
 ______________________________________________________________________
 
 ## Project Standards
