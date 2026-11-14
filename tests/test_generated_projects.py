@@ -72,6 +72,28 @@ def test_commit_message_hook_enforces_conventional_commits(project: Project) -> 
     assert accepted.returncode == 0, accepted.stdout + accepted.stderr
 
 
+def test_copy_into_an_existing_repo_commits_nothing(tmp_path: Path) -> None:
+    """Copied over a repo that has commits, the template leaves committing to its owner.
+
+    The first-commit task stages everything, which there would include whatever the
+    owner had not committed yet.
+    """
+    path = tmp_path / "demo-proj"
+    path.mkdir()
+    identity = ("-c", "user.name=Demo Author", "-c", "user.email=demo@example.com")
+    run("git", "init", "--quiet", cwd=path)
+    run("git", *identity, "commit", "--allow-empty", "-m", "chore: theirs", cwd=path)
+    (path / "notes.txt").write_text("uncommitted work\n", encoding="utf-8")
+
+    generate(path, {**BASE_ANSWERS, "project_type": "library"})
+
+    log = run("git", "log", "--format=%s", cwd=path).stdout.splitlines()
+    assert log == ["chore: theirs"]
+    status = run("git", "status", "--porcelain", cwd=path).stdout
+    assert "?? notes.txt" in status
+    assert "?? pyproject.toml" in status
+
+
 def test_installed_wheel_works(project: Project, tmp_path: Path) -> None:
     """The built wheel imports and runs from an empty directory, and writes nothing.
 

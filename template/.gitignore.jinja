@@ -18,6 +18,12 @@ node_modules/
 *.tsbuildinfo
 {%- endif %}
 
+{%- if ci == 'gitlab' %}
+
+# GitLab CI keeps its caches inside the project, where ty would check them.
+.cache/
+{%- endif %}
+
 # Environments; .env.example is the committed config contract.
 .env
 .env.*

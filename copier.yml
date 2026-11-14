@@ -53,7 +53,7 @@ project_description:
   validator: >-
     {% if not project_description.strip() %}
     project_description must not be empty
-    {% elif project_description | regex_search('["\\\x00-\x1f]') %}
+    {% elif project_description | regex_search('["\\\\\x00-\x1f]') %}
     project_description must not contain double quotes, backslashes or control
     characters such as line breaks
     {% endif %}
@@ -62,8 +62,8 @@ author_name:
   type: str
   help: What is the author name?
   # No default: an empty answer must fail, not silently attribute the project to us.
-  # The character check matches project_description's: this lands in quoted strings
-  # too, in pyproject.toml and __init__.py.
+  # The character check matches project_description's: this lands in a quoted TOML
+  # string too.
   validator: >-
     {% if not author_name.strip() %}
     author_name must not be empty
@@ -109,6 +109,18 @@ python_version:
     produces an invalid "Programming Language :: Python :: X" classifier)
     {% endif %}
 
+# Derived like application, and empty unless a library can run on a newer Python than
+# its floor: its CI then runs both ends of what requires-python promises. The one
+# place the newest released minor is named; bump it when uv can install the next.
+newest_python:
+  type: str
+  default: >-
+    {%- set newest = 15 -%}
+    {%- if project_type == 'library' and (python_version.split('.')[1] | int) < newest -%}
+    3.{{ newest }}
+    {%- endif -%}
+  when: false
+
 ci:
   type: str
   help: Which CI should run the project's checks?
@@ -151,19 +163,29 @@ _tasks:
   # --force because a shim left by pre-commit would otherwise survive as a legacy hook
   # that prek still runs, and it fails now that pre-commit is no longer installed.
   - ["uv", "run", "prek", "install", "--force"]
-  - command: ["git", "add", "-A"]
-    when: "{{ _copier_operation == 'copy' }}"
+  # The first commit, only where there is none yet: copied over an existing repo,
+  # `git add -A` would sweep its owner's uncommitted work into the template's commit.
+  # Through uv's Python because a task list has no shell to test for HEAD with, and
   # -c avoids needing a global git identity (e.g. a fresh CI runner).
   - command:
-      - "git"
-      - "-c"
-      - "user.name={{ author_name }}"
-      - "-c"
-      - "user.email={{ author_email }}"
-      - "commit"
-      - "-m"
-      - "chore: initial commit from template"
-      - "--no-verify"
+      - uv
+      - run
+      - --no-project
+      - python
+      - -c
+      - |
+        import subprocess, sys
+
+        def git(*args):
+            return subprocess.run(['git', *args], check=False).returncode
+
+        if git('rev-parse', '--quiet', '--verify', 'HEAD') == 0:
+            sys.exit(0)
+        identity = ['-c', 'user.name=' + sys.argv[1], '-c', 'user.email=' + sys.argv[2]]
+        message = 'chore: initial commit from template'
+        sys.exit(git('add', '-A') or git(*identity, 'commit', '-m', message, '--no-verify'))
+      - "{{ author_name }}"
+      - "{{ author_email }}"
     when: "{{ _copier_operation == 'copy' }}"
 
 _migrations:
@@ -190,6 +212,7 @@ _migrations:
   - {version: v0.9.3, command: *print-note}
   - {version: v1.0.0, command: *print-note}
   - {version: v1.1.0, command: *print-note}
+  - {version: v1.1.1, command: *print-note}
 
 _message_after_copy: |
   {{ project_slug }} is ready.

@@ -124,7 +124,8 @@ REQUIRED_HOOKS = [
     "mdformat",
     "trim trailing whitespace",
     "uv-lock",
-    "Detect hardcoded secrets",
+    # The staged-changes hook would pass on anything here: nothing is staged.
+    "Detect hardcoded secrets in history",
 ]
 WEB_HOOKS = [
     "api client is current",

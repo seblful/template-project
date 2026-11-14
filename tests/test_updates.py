@@ -30,17 +30,33 @@ def _update(path: Path, **data: object) -> None:
     assert rejects == []
 
 
-def test_update_from_the_latest_release(tmp_path: Path) -> None:
-    """A project generated at the latest tag updates to HEAD with no conflicts."""
+@pytest.mark.parametrize(
+    "answers",
+    [
+        pytest.param({"license": "MIT"}, id="cli"),
+        pytest.param({"project_type": "api", "web": True}, id="api-web"),
+    ],
+)
+def test_update_from_the_latest_release(
+    answers: dict[str, object], tmp_path: Path
+) -> None:
+    """A project generated at the latest tag updates to HEAD with no conflicts.
+
+    Once as the default cli and once as the widest project, an api with a web app,
+    whose `web/` an update has the most ways to conflict with.
+    """
     tags = run("git", "tag", "--sort=-v:refname", cwd=REPO).stdout.split()
     if not tags:
         pytest.skip("no release tag to update from")
     path = tmp_path / "demo-proj"
-    generate(path, {**BASE_ANSWERS, "license": "MIT"}, vcs_ref=tags[0])
+    generate(path, {**BASE_ANSWERS, **answers}, vcs_ref=tags[0])
 
     _update(path)
 
-    run_every_check(path, github=True)  # ci defaults to github
+    # ci defaults to github. Staged first: hooks only see tracked files, and an update
+    # leaves the files it adds untracked.
+    run("git", "add", "--all", cwd=path)
+    run_every_check(path, web=bool(answers.get("web")), github=True)
 
 
 def _committed_copy(dst: Path) -> Path:

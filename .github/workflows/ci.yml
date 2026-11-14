@@ -55,7 +55,7 @@ jobs:
       - name: Run hooks and render
         run: |
           uv sync --locked
-          uv run prek run --all-files --show-diff-on-failure
+          uv run prek run --all-files --hook-stage manual --show-diff-on-failure
           uv run pytest
 
   slow:
@@ -66,8 +66,9 @@ jobs:
       fail-fast: false
       matrix:
         # Answer sets live in tests/support.py; each generates one and runs every
-        # check the project defines. The last two run `copier update`: from the
-        # latest tag, and from an api to an api with a web app.
+        # check the project defines. Then `copier update`, from the latest tag (as a
+        # cli and as an api with a web app) and from an api to one with a web app,
+        # and a copy over a repo that already has commits.
         include:
           - {os: ubuntu-latest, select: cli-github}
           - {os: ubuntu-latest, select: library-github-py312}
@@ -76,8 +77,10 @@ jobs:
           - {os: windows-latest, select: library-gitlab}
           - {os: windows-latest, select: api-gitlab-py313}
           - {os: windows-latest, select: api-web-gitlab-py312}
-          - {os: ubuntu-latest, select: latest_release}
+          - {os: ubuntu-latest, select: latest_release and cli}
+          - {os: ubuntu-latest, select: latest_release and api-web}
           - {os: ubuntu-latest, select: web_app}
+          - {os: ubuntu-latest, select: existing_repo}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1  # v7.0.1
         with:

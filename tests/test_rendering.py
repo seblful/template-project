@@ -18,7 +18,8 @@ from pathlib import Path
 from typing import Any
 
 import pytest
-from support import ANSWER_SETS, BASE_ANSWERS, Project, generate, run
+import yaml
+from support import ANSWER_SETS, BASE_ANSWERS, REPO, Project, generate, run
 
 SNAPSHOTS = Path(__file__).parent / "snapshots"
 # Names the rendered project has no say in: the answers file records where the
@@ -88,6 +89,26 @@ def test_output_matches_the_snapshot(
     assert actual == expected, _describe(expected, actual)
 
 
+def test_every_snapshot_belongs_to_an_answer_set() -> None:
+    """No snapshot outlives its answer set, as a renamed set's old folder would."""
+    assert {path.name for path in SNAPSHOTS.iterdir()} == set(ANSWER_SETS)
+
+
+def test_every_migration_has_its_note() -> None:
+    """Each versioned migration prints a note that exists, and no note is orphaned.
+
+    No update test crosses a released version, so a missing file would first fail
+    at the end of a user's `copier update`.
+    """
+    config = yaml.safe_load((REPO / "copier.yml").read_text(encoding="utf-8"))
+    versions = {
+        entry["version"] for entry in config["_migrations"] if "version" in entry
+    }
+    notes = {path.stem for path in (REPO / "migrations").glob("*.txt")}
+
+    assert versions == notes
+
+
 def test_no_unrendered_jinja_survives(rendered: Project) -> None:
     """No rendered file still contains a Jinja expression or tag."""
     leftovers = [
@@ -114,7 +135,9 @@ def test_github_workflows_pass_actionlint(rendered: Project) -> None:
         ("project_slug", "My Project"),
         ("package_name", "1st_package"),
         ("project_description", 'says "hi"'),
+        ("project_description", r"reads C:\new files"),
         ("author_name", ""),
+        ("author_name", r"Back\slash"),
         ("author_email", "not-an-email"),
         ("python_version", "3.10"),
         ("python_version", "3.14.1"),

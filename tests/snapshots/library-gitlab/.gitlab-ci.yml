@@ -7,8 +7,8 @@ stages:
 
 default:
   # No Python in the image: uv installs the one .python-version names. buildpack-deps
-  # brings git, for prek.
-  image: ghcr.io/astral-sh/uv:trixie
+  # brings git, for prek. The tag follows the line pyproject.toml caps uv_build to.
+  image: ghcr.io/astral-sh/uv:0.13-trixie
   interruptible: true
   cache:
     key:
@@ -37,6 +37,10 @@ workflow:
 
 check:
   stage: check
+  parallel:
+    matrix:
+      # requires-python promises every version from the oldest up, so both ends run.
+      - UV_PYTHON: ["3.14", "3.15"]
   rules:
     # The schedule exists for the audit; an unchanged lockfile needs no re-check.
     - if: $SCHEDULED_AUDIT
@@ -47,8 +51,7 @@ check:
     PYTEST_ADDOPTS: --cov-report=xml --cov-report=term --junitxml=report.xml
   script:
     - uv sync --locked  # fails on a stale lockfile instead of masking it
-    # --verbose prints the coverage total the `coverage` regex reads. gitleaks scans
-    # staged changes, so this is not a full-history secret scan.
+    # --verbose prints the coverage total the `coverage` regex reads.
     - uv run prek run --all-files --hook-stage manual --show-diff-on-failure
       --verbose
   coverage: '/^TOTAL.*?(\d+(?:\.\d+)?)%$/'

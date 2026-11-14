@@ -16,6 +16,9 @@ dist/
 node_modules/
 *.tsbuildinfo
 
+# GitLab CI keeps its caches inside the project, where ty would check them.
+.cache/
+
 # Environments; .env.example is the committed config contract.
 .env
 .env.*

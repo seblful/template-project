@@ -1,0 +1,14 @@
+This update crossed v1.1.1, which makes a few checks stricter:
+
+- The secret scan now covers the commit history, not only staged changes, wherever
+  every check runs (CI and `uv run prek run --all-files --hook-stage manual`). A
+  secret committed in the past now fails it: rotate the secret, then allowlist its
+  fingerprint in a .gitleaksignore file.
+- A library's CI also runs the newest Python, beside the oldest it supports. On
+  GitHub the check jobs are renamed to carry the Python version, so update any
+  required status checks in your branch protection.
+- CI uses uv's 0.13 line, the one pyproject.toml caps uv_build to, instead of the
+  newest release.
+- A GitLab project ignores .cache/, where its CI keeps the uv and prek caches: ty
+  was checking the files inside them.
+- A project with a web app gets Dependabot updates for web/.

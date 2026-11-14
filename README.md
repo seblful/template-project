@@ -41,7 +41,7 @@ Your answers are kept in `.copier-answers.yml`. Notes for a breaking release pri
 | `python_version` | 3.11 or newer (default 3.14) |
 | `ci` | `github` (Ubuntu and Windows), `gitlab` or `none` |
 
-Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan and `pytest --cov`. Git hooks run them on commit and push and check commit messages; `uv run prek run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit, and a GitHub project that publishes gets a release workflow for PyPI.
+Every project gets an `AGENTS.md` for coding assistants and defines its checks once, in `.pre-commit-config.yaml`: lint, format, types, a secret scan and `pytest --cov`. Git hooks run them on commit and push and check commit messages; `uv run prek run --all-files --hook-stage manual` runs all of them, locally and in CI. CI adds a weekly dependency audit, a library's CI also runs the newest Python, and a GitHub project that publishes gets a release workflow for PyPI.
 
 ## Developing the template
 
@@ -55,4 +55,4 @@ uv run pytest -m slow -k cli-none-py311  # slow: generate one answer set, run it
 
 [CI](.github/workflows/ci.yml) runs both, plus `copier update` from the last release, and once a week resolves the newest dependency releases, where every other run resolves those current at the template's last dependency change. See [AGENTS.md](AGENTS.md).
 
-Releases are git tags (`v1.0.0`, `v1.0.1`, …).
+Releases are git tags (`v1.1.0`, `v1.1.1`, …).

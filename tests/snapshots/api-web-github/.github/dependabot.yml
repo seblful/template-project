@@ -22,3 +22,13 @@ updates:
     groups:
       pre-commit:
         patterns: ["*"]
+
+  - package-ecosystem: bun
+    directory: /web
+    schedule:
+      interval: weekly
+    cooldown:
+      default-days: 7
+    groups:
+      bun:
+        patterns: ["*"]
